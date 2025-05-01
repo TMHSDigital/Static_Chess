@@ -675,27 +675,49 @@ function recalculateKingPositions() {
  */
 function updateMoveHistoryDisplay() {
     moveHistoryElement.innerHTML = ''; // Clear existing
+    let listItems = {}; // Store list items by turn number
+
     moveHistory.forEach((move, index) => {
         const turnNumber = Math.floor(index / 2) + 1;
-        const playerColor = index % 2 === 0 ? WHITE : BLACK;
-        const prefix = playerColor === WHITE ? `${turnNumber}. ` : ' ... '; // Indicate black's move
+        const isWhiteMove = index % 2 === 0;
 
-        const listItem = document.createElement('li');
-        listItem.textContent = prefix + move.notation;
-        if (playerColor === BLACK) {
-             // Append black's move to the existing white move list item if possible
-             const lastItem = moveHistoryElement.lastElementChild;
-             if(lastItem && index % 2 !== 0) {
-                 lastItem.textContent += ` ${move.notation}`;
-             } else {
-                 // Should not happen normally if moves alternate correctly
-                  moveHistoryElement.appendChild(listItem);
-             }
-        } else {
+        let listItem;
+        if (!listItems[turnNumber]) {
+            // Create new list item for the turn
+            listItem = document.createElement('li');
+            const turnSpan = document.createElement('span');
+            turnSpan.classList.add('turn-number');
+            turnSpan.textContent = `${turnNumber}.`;
+            
+            const whiteMoveSpan = document.createElement('span');
+            whiteMoveSpan.classList.add('move', 'white-move');
+            
+            const blackMoveSpan = document.createElement('span');
+            blackMoveSpan.classList.add('move', 'black-move');
+
+            listItem.appendChild(turnSpan);
+            listItem.appendChild(whiteMoveSpan);
+            listItem.appendChild(blackMoveSpan);
+            
             moveHistoryElement.appendChild(listItem);
+            listItems[turnNumber] = listItem; // Store reference
+        } else {
+            listItem = listItems[turnNumber];
         }
 
+        // Populate the correct move span
+        if (isWhiteMove) {
+            listItem.querySelector('.white-move').textContent = move.notation;
+        } else {
+            listItem.querySelector('.black-move').textContent = move.notation;
+        }
     });
+    
+    // Highlight the last list item
+    if (moveHistoryElement.lastElementChild) {
+        moveHistoryElement.lastElementChild.classList.add('last-move-entry');
+    }
+
     // Scroll to bottom
     moveHistoryElement.scrollTop = moveHistoryElement.scrollHeight;
 }

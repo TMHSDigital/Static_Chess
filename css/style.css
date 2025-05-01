@@ -91,9 +91,26 @@ body {
 }
 
 .move-history li {
-    padding: 8px 15px;
+    padding: 8px 10px;
     border-bottom: 1px solid #555;
     transition: background-color 0.2s ease;
+    display: grid; /* Use grid for column layout */
+    grid-template-columns: 30px 1fr 1fr; /* Turn # | White Move | Black Move */
+    gap: 10px;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.move-history li span.turn-number {
+    text-align: right;
+    color: #aaa;
+    font-weight: normal;
+}
+
+.move-history li span.move {
+    text-align: center;
+    font-weight: 500;
+    min-height: 1.2em; /* Ensure alignment even if empty */
 }
 
 .move-history li:hover {
@@ -102,7 +119,12 @@ body {
 
 .move-history li:last-child {
     border-bottom: none;
+}
+
+/* Style the last move entry differently */
+.move-history li.last-move-entry {
     background-color: rgba(95, 158, 160, 0.2);
+    font-weight: bold;
 }
 
 .game-status {

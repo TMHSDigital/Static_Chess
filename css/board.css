@@ -81,10 +81,18 @@
 
 .square.light {
     background-color: var(--light-square);
+    /* Subtle noise texture using CSS gradients */
+    background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 3px 3px; /* Adjust size of noise pattern */
 }
 
 .square.dark {
     background-color: var(--dark-square);
+    /* Subtle noise texture using CSS gradients */
+    background-image: linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+    background-size: 3px 3px; /* Adjust size of noise pattern */
 }
 
 .square.selected {
