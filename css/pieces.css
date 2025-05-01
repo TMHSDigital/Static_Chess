@@ -1,20 +1,18 @@
+/**
+ * Chess piece styling using SVG files for reliable cross-browser rendering
+ */
+
 .piece {
-    font-size: calc(var(--board-size) / 10);
+    width: 80%;
+    height: 80%;
     cursor: grab;
     user-select: none;
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
-    height: 80%;
-    width: 80%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: transform 0.15s ease;
     position: relative;
-    will-change: transform; /* Optimize for animations */
-    max-height: 100%; /* Ensure pieces don't overflow */
-    overflow: visible;
-    /* Use fonts known to render chess symbols well */
-    font-family: "DejaVu Sans", "Arial Unicode MS", "Segoe UI Symbol", sans-serif;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    transition: transform 0.15s ease;
+    will-change: transform;
 }
 
 .piece:hover {
@@ -32,68 +30,21 @@
     z-index: 100;
 }
 
-/* === Enhanced Unicode Pieces === */
+/* White pieces */
+.piece.w.p { background-image: url("../assets/wp.svg"); }
+.piece.w.r { background-image: url("../assets/wr.svg"); }
+.piece.w.n { background-image: url("../assets/wn.svg"); }
+.piece.w.b { background-image: url("../assets/wb.svg"); }
+.piece.w.q { background-image: url("../assets/wq.svg"); }
+.piece.w.k { background-image: url("../assets/wk.svg"); }
 
-/* White Pieces */
-.piece.w::before { 
-    color: #fff;
-    filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.5));
-}
-
-/* Ensure specific white piece styles override any general rules */
-.chess-board .piece.w.p::before { content: '\2659'; color: #fff; } /* ♙ White Pawn */
-.chess-board .piece.w.r::before { content: '\2656'; color: #fff; } /* ♖ White Rook */
-.chess-board .piece.w.n::before { content: '\2658'; color: #fff; } /* ♘ White Knight */
-.chess-board .piece.w.b::before { 
-    content: '\2657'; /* ♗ White Bishop */
-    color: #fff !important; /* Force white color */
-} 
-.chess-board .piece.w.q::before { content: '\2655'; color: #fff; } /* ♕ White Queen */
-.chess-board .piece.w.k::before { content: '\2654'; color: #fff; } /* ♔ White King */
-
-/* Black Pieces */
-.piece.b::before { 
-    color: #111;
-    text-shadow: 0px 0px 2px rgba(255, 255, 255, 0.5);
-    filter: drop-shadow(0.5px 0.5px 0.5px rgba(255,255,255,0.1));
-}
-
-/* Black piece content with improved specificity */
-.chess-board .piece.b.p::before { 
-    content: '\265F';  /* ♟ Black Pawn */
-    color: #111; 
-} 
-.chess-board .piece.b.r::before { 
-    content: '\265C';  /* ♜ Black Rook */
-    color: #111; 
-} 
-.chess-board .piece.b.n::before { 
-    content: '\265E';  /* ♞ Black Knight */
-    color: #111; 
-} 
-.chess-board .piece.b.b::before { 
-    content: '\265D';  /* ♝ Black Bishop */
-    color: #111 !important; 
-} 
-.chess-board .piece.b.q::before { 
-    content: '\265B';  /* ♛ Black Queen */
-    color: #111; 
-} 
-.chess-board .piece.b.k::before { 
-    content: '\265A';  /* ♚ Black King */
-    color: #111; 
-}
-
-/* Alternative approach: Use white unicode chars for black pieces */
-/* Uncomment this section and comment out the above black pieces section if the black pieces don't render correctly */
-/*
-.chess-board .piece.b.p::before { content: '\2659'; color: #111; }
-.chess-board .piece.b.r::before { content: '\2656'; color: #111; }
-.chess-board .piece.b.n::before { content: '\2658'; color: #111; }
-.chess-board .piece.b.b::before { content: '\2657'; color: #111 !important; }
-.chess-board .piece.b.q::before { content: '\2655'; color: #111; }
-.chess-board .piece.b.k::before { content: '\2654'; color: #111; }
-*/
+/* Black pieces */
+.piece.b.p { background-image: url("../assets/bp.svg"); }
+.piece.b.r { background-image: url("../assets/br.svg"); }
+.piece.b.n { background-image: url("../assets/bn.svg"); }
+.piece.b.b { background-image: url("../assets/bb.svg"); }
+.piece.b.q { background-image: url("../assets/bq.svg"); }
+.piece.b.k { background-image: url("../assets/bk.svg"); }
 
 /* Move animations */
 @keyframes move-piece {
@@ -104,27 +55,4 @@
 
 .piece.moved {
     animation: move-piece 0.3s ease;
-}
-
-/* Optional: CSS for SVG pieces (uncomment and add SVGs to the assets folder) */
-/*
-.piece::before {
-    display: none; /* Hide Unicode when using SVG */
-/*
-}
-
-.piece.w.p {
-    background-image: url('../assets/wp.svg');
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-}
-
-.piece.b.p {
-    background-image: url('../assets/bp.svg');
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-}
-
-/* Add other pieces similarly */ 
+} 
