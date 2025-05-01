@@ -1,28 +1,17 @@
-<pre>
-  ____  _        _   _        ____ _                    
- / ___|| |_ __ _| |_(_) ___  / ___| |__   ___  ___ ___ 
- \___ \| __/ _` | __| |/ __|| |   | '_ \ / _ \/ __/ __|
-  ___) | || (_| | |_| | (__ | |___| | | |  __/\__ \__ \
- |____/ \__\__,_|\__|_|\___| \____|_| |_|\___||___/___/
-</pre>
-
 # Static Chess
 
-<div align="center">
+---
 
-![Chess Banner](https://i.imgur.com/jC5rGQc.png)
+<!-- Replace broken banner, remove centering -->
+![Static Chess Banner](https://images.unsplash.com/photo-1580541832626-2a7131ee809f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wzOTczOTZ8MHwxfHNlYXJjaHw1fHxjaGVzc3xlbnwwfHx8fDE3MTQ2MzY3ODh8MA&ixlib=rb-4.0.3&q=80&w=1080) 
 
-[![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/HTML)
-[![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/CSS)
-[![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
-[![MIT License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-222222?style=for-the-badge&logo=GitHub%20Pages&logoColor=white)](https://tmhsdigital.github.io/Static_Chess/)
+[![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/HTML) [![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/CSS) [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript) [![MIT License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](https://opensource.org/licenses/MIT) [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-222222?style=for-the-badge&logo=GitHub%20Pages&logoColor=white)](https://tmhsdigital.github.io/Static_Chess/)
 
 A lightweight chess game built with pure vanilla web technologies - no frameworks, no libraries, just clean code.
 
-[Play Now](https://tmhsdigital.github.io/Static_Chess/) | [View Source](https://github.com/TMHSDigital/Static_Chess) | [Report Issue](https://github.com/TMHSDigital/Static_Chess/issues)
+**[Play Now](https://tmhsdigital.github.io/Static_Chess/) | [View Source](https://github.com/TMHSDigital/Static_Chess) | [Report Issue](https://github.com/TMHSDigital/Static_Chess/issues)**
 
-</div>
+---
 
 ## Table of Contents
 
@@ -36,11 +25,15 @@ A lightweight chess game built with pure vanilla web technologies - no framework
 - [Future Enhancements](#future-enhancements)
 - [License](#license)
 
+---
+
 ## Overview
 
 Static Chess is a fully functional chess game playable in a web browser. It is built using pure vanilla JavaScript, HTML, and CSS, with no external frameworks or libraries. The game features standard chess rules, move validation, check/checkmate detection, move history, and game state persistence using `localStorage`.
 
 It is designed to be simple, lightweight, and easily deployable on static hosting platforms like GitHub Pages.
+
+---
 
 ## Features
 
@@ -66,11 +59,15 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 
 </details>
 
+---
+
 ## Demo
 
-<div align="center">
-  <img src="https://i.imgur.com/XdatvSm.gif" alt="Static Chess Gameplay" width="600px">
-</div>
+A snapshot of the gameplay:
+
+![Static Chess Gameplay](https://i.imgur.com/XdatvSm.gif)
+
+---
 
 ## Setup and Installation
 
@@ -84,6 +81,8 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 
 That's it! No build process or dependencies are required.
 
+---
+
 ## How to Play
 
 1. Open `index.html` in your browser
@@ -96,6 +95,8 @@ That's it! No build process or dependencies are required.
 8. Click "New Game" to reset the board
 9. Toggle "Show coordinates" to display board coordinates
 10. Game state is saved automatically to localStorage
+
+---
 
 ## Code Structure
 
@@ -132,6 +133,8 @@ The project follows a clear separation of concerns:
 
 </details>
 
+---
+
 ## Deployment
 
 Since this is a purely static website, it can be easily deployed on any static hosting service.
@@ -144,6 +147,8 @@ Since this is a purely static website, it can be easily deployed on any static h
 4. Set source to your preferred branch
 5. Set folder to `/ (root)`
 6. Your site will be available at `https://tmhsdigital.github.io/Static_Chess/`
+
+---
 
 ## Future Enhancements
 
@@ -164,12 +169,12 @@ Since this is a purely static website, it can be easily deployed on any static h
 
 </details>
 
+---
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-<div align="center">
 Made with ❤️ by <a href="https://github.com/TMHSDigital">TMHSDigital</a>
-</div>
