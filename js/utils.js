@@ -52,6 +52,164 @@ function isWithinBounds(row, col) {
     return row >= 0 && row < 8 && col >= 0 && col < 8;
 }
 
+/**
+ * Creates a deep clone of an object or array.
+ * @param {object|array} source - The source object or array to clone.
+ * @returns {object|array} A deep clone of the source.
+ */
+function deepClone(source) {
+    if (source === null || typeof source !== 'object') {
+        return source;
+    }
+    
+    // Handle Date
+    if (source instanceof Date) {
+        return new Date(source.getTime());
+    }
+    
+    // Handle Array
+    if (Array.isArray(source)) {
+        return source.map(item => deepClone(item));
+    }
+    
+    // Handle Object
+    const clone = {};
+    Object.keys(source).forEach(key => {
+        clone[key] = deepClone(source[key]);
+    });
+    
+    return clone;
+}
+
+/**
+ * Save data to localStorage with error handling.
+ * @param {string} key - The key to store under.
+ * @param {any} data - Data to store (will be JSON serialized).
+ * @returns {boolean} True if successful, false if failed.
+ */
+function saveToLocalStorage(key, data) {
+    try {
+        const serialized = JSON.stringify(data);
+        localStorage.setItem(key, serialized);
+        return true;
+    } catch (err) {
+        console.error('Error saving to localStorage:', err);
+        return false;
+    }
+}
+
+/**
+ * Load data from localStorage with error handling.
+ * @param {string} key - The key to retrieve.
+ * @param {any} defaultValue - Default value if key doesn't exist or error occurs.
+ * @returns {any} The retrieved data or defaultValue.
+ */
+function loadFromLocalStorage(key, defaultValue = null) {
+    try {
+        const serialized = localStorage.getItem(key);
+        if (serialized === null) {
+            return defaultValue;
+        }
+        return JSON.parse(serialized);
+    } catch (err) {
+        console.error('Error loading from localStorage:', err);
+        return defaultValue;
+    }
+}
+
+/**
+ * Format a move in Standard Algebraic Notation (SAN).
+ * This is a simplified version - future enhancements will make this more complete.
+ * @param {object} move - The move object with from, to, piece, etc.
+ * @param {boolean} isCheck - Whether the move results in check.
+ * @param {boolean} isCheckmate - Whether the move results in checkmate.
+ * @returns {string} The move in SAN format.
+ */
+function formatSAN(move, isCheck = false, isCheckmate = false) {
+    if (!move) return '';
+    
+    const piece = move.piece;
+    
+    // Special case for castling
+    if (move.isCastling) {
+        return move.isKingsideCastling ? 'O-O' : 'O-O-O';
+    }
+    
+    // Piece letter (uppercase) - omit for pawns
+    let notation = '';
+    if (piece.type !== 'p') {
+        notation += piece.type.toUpperCase();
+    }
+    
+    // Add 'x' for captures
+    if (move.isCapture) {
+        // If pawn, add file of origin
+        if (piece.type === 'p') {
+            notation += coordsToAlgebraic(move.from.row, move.from.col)[0];
+        }
+        notation += 'x';
+    }
+    
+    // Add destination square
+    notation += coordsToAlgebraic(move.to.row, move.to.col);
+    
+    // Add promotion piece
+    if (move.promotion) {
+        notation += '=' + move.promotion.toUpperCase();
+    }
+    
+    // Add check/checkmate symbol
+    if (isCheckmate) {
+        notation += '#';
+    } else if (isCheck) {
+        notation += '+';
+    }
+    
+    return notation;
+}
+
+/**
+ * Creates a sound effect for a chess move.
+ * Will be used when sound effects feature is enabled.
+ * @param {string} soundType - Type of sound ('move', 'capture', 'check', etc.)
+ */
+function playSound(soundType) {
+    if (!CONFIG.FEATURES.SOUND_EFFECTS) return;
+    
+    const soundPath = CONFIG.ASSETS.SOUNDS[soundType.toUpperCase()];
+    if (!soundPath) return;
+    
+    try {
+        const sound = new Audio(soundPath);
+        sound.volume = 0.5; // 50% volume
+        sound.play().catch(err => {
+            // Handle autoplay restrictions gracefully
+            console.log('Sound playback prevented:', err);
+        });
+    } catch (err) {
+        console.error('Error playing sound:', err);
+    }
+}
+
+/**
+ * Get the opposite color.
+ * @param {string} color - 'w' for white or 'b' for black.
+ * @returns {string} The opposite color ('w' or 'b').
+ */
+function getOppositeColor(color) {
+    return color === WHITE ? BLACK : WHITE;
+}
+
+/**
+ * Debug logging function that only logs when debug mode is enabled.
+ * @param {...any} args - Arguments to log.
+ */
+function debugLog(...args) {
+    if (CONFIG.DEBUG) {
+        console.log('[DEBUG]', ...args);
+    }
+}
+
 // Add more utility functions as needed, e.g.,
 // - Deep cloning objects/arrays
 // - Formatting move history entries 

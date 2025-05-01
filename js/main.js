@@ -61,5 +61,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Initialize Game --- 
-    initializeGame(); 
+    initializeGame();
+    
+    // --- Initialize Feature Modules ---
+    initializeFeatureModules();
 }); 
+
+/**
+ * Initialize optional feature modules based on feature flags.
+ * This function initializes the skeleton implementations when their
+ * corresponding feature flags are enabled in config.js.
+ */
+function initializeFeatureModules() {
+    // Enable debug logging for initialization
+    const originalDebug = CONFIG.DEBUG;
+    CONFIG.DEBUG = true;
+    
+    debugLog('Initializing optional feature modules...');
+    
+    // Initialize drag and drop if enabled
+    if (CONFIG.FEATURES.DRAG_AND_DROP && typeof window.initDragAndDrop === 'function') {
+        debugLog('Initializing drag and drop feature');
+        window.initDragAndDrop();
+    }
+    
+    // Initialize promotion UI if enabled
+    if (CONFIG.FEATURES.PROMOTION_UI && typeof window.initPromotionUI === 'function') {
+        debugLog('Initializing pawn promotion UI');
+        window.initPromotionUI();
+    }
+    
+    // Initialize AI opponent if enabled
+    if (CONFIG.FEATURES.AI_OPPONENT && typeof window.ChessAI === 'function') {
+        debugLog('Initializing AI opponent');
+        // AI is initialized when needed in game.js
+    }
+    
+    // Restore original debug setting
+    CONFIG.DEBUG = originalDebug;
+} 

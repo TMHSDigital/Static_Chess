@@ -40,8 +40,10 @@
 - [Setup and Installation](#setup-and-installation)
 - [How to Play](#how-to-play)
 - [Code Structure](#code-structure)
+- [Documentation](#documentation)
 - [Deployment](#deployment)
 - [Future Enhancements](#future-enhancements)
+- [Contributing](#contributing)
 - [License](#license)
 
 ---
@@ -146,23 +148,31 @@ That's it! No build process or dependencies are required.
 ```
 Static_Chess/
 ├── index.html           # Main HTML entry point
-├── css/
+├── css/                 # CSS styles
 │   ├── style.css        # General page styles
 │   ├── board.css        # Chessboard specific styles
 │   └── pieces.css       # Chess pieces styles
-├── js/
+├── js/                  # JavaScript logic
+│   ├── config.js        # Configuration and feature flags
 │   ├── utils.js         # Utility functions
 │   ├── pieces.js        # Piece definitions and movement rules
 │   ├── board.js         # Board rendering and interaction
 │   ├── game.js          # Core game logic
-│   └── main.js          # Application entry point
-└── assets/              # SVG files for chess pieces
-    ├── wp.svg, bp.svg   # White and black pawns
-    ├── wr.svg, br.svg   # White and black rooks
-    ├── wn.svg, bn.svg   # White and black knights
-    ├── wb.svg, bb.svg   # White and black bishops
-    ├── wq.svg, bq.svg   # White and black queens
-    └── wk.svg, bk.svg   # White and black kings
+│   ├── main.js          # Application entry point
+│   ├── drag.js          # Drag and drop functionality
+│   ├── ai.js            # AI opponent
+│   └── promotion.js     # Pawn promotion UI
+├── assets/              # SVG files for chess pieces
+│   ├── wp.svg, bp.svg   # White and black pawns
+│   ├── wr.svg, br.svg   # White and black rooks
+│   ├── wn.svg, bn.svg   # White and black knights
+│   ├── wb.svg, bb.svg   # White and black bishops
+│   ├── wq.svg, bq.svg   # White and black queens
+│   └── wk.svg, bk.svg   # White and black kings
+├── docs/                # Documentation
+│   ├── ARCHITECTURE.md  # Architecture and design documentation
+│   └── ROADMAP.md       # Development roadmap
+└── LICENSE              # MIT License file
 ```
 
 The project follows a clear separation of concerns:
@@ -170,14 +180,30 @@ The project follows a clear separation of concerns:
 - **`index.html`:** Main structure and layout
 - **CSS files:** Visual presentation and animations
 - **JS files:** Game logic and behavior
+  - `config.js`: Feature flags and game settings
   - `utils.js`: Helper functions like coordinate conversions
   - `pieces.js`: Piece objects and basic movement rules
   - `board.js`: DOM manipulation for the board interface
   - `game.js`: Core chess logic including special moves, check detection, etc.
   - `main.js`: Bootstraps the application
+  - Additional files for upcoming feature implementations
 - **SVG assets:** Vector graphics for all chess pieces, ensuring consistent rendering across browsers
+- **Documentation:** Architecture guides and development roadmap
 
 </details>
+
+---
+
+## Documentation
+
+The project includes comprehensive documentation to help developers understand the architecture and implement new features:
+
+- **Architecture Documentation:** The `docs/ARCHITECTURE.md` file explains the component interactions, data flow, and state management approach.
+- **Development Roadmap:** The `docs/ROADMAP.md` file outlines planned features, priorities, and implementation timeline.
+- **Code Comments:** All files include thorough JSDoc comments explaining functionality and usage.
+- **Feature Implementation Guides:** The architecture document includes detailed guides for implementing each planned feature.
+
+To contribute to the project or implement new features, please review these documentation files first.
 
 ---
 
@@ -198,6 +224,8 @@ Since this is a purely static website, it can be easily deployed on any static h
 
 ## Future Enhancements
 
+See the [Development Roadmap](docs/ROADMAP.md) for a detailed plan of upcoming features.
+
 <details>
 <summary><b>Planned Features</b></summary>
 <br>
@@ -213,6 +241,19 @@ Since this is a purely static website, it can be easily deployed on any static h
 - **Full SAN Implementation:** Complete algebraic notation with disambiguation
 
 </details>
+
+---
+
+## Contributing
+
+Contributions are welcome! Please check the [Development Roadmap](docs/ROADMAP.md) for planned features and follow these steps:
+
+1. Fork the repository
+2. Create a feature branch
+3. Implement your changes following project coding standards
+4. Submit a pull request
+
+For major changes, please open an issue first to discuss what you would like to change.
 
 ---
 
