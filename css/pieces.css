@@ -34,12 +34,17 @@
     color: #fff;
     filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.5));
 }
-.piece.w.p::before { content: '\2659'; } 
-.piece.w.r::before { content: '\2656'; } 
-.piece.w.n::before { content: '\2658'; } 
-.piece.w.b::before { content: '\2657'; } 
-.piece.w.q::before { content: '\2655'; } 
-.piece.w.k::before { content: '\2654'; } 
+
+/* Ensure specific white piece styles override any general rules */
+.chess-board .piece.w.p::before { content: '\2659'; color: #fff; } 
+.chess-board .piece.w.r::before { content: '\2656'; color: #fff; } 
+.chess-board .piece.w.n::before { content: '\2658'; color: #fff; } 
+.chess-board .piece.w.b::before { 
+    content: '\2657';
+    color: #fff !important; /* Force white color */
+} 
+.chess-board .piece.w.q::before { content: '\2655'; color: #fff; } 
+.chess-board .piece.w.k::before { content: '\2654'; color: #fff; }
 
 /* Black Pieces */
 .piece.b::before { 
