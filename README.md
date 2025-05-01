@@ -9,14 +9,26 @@
 
 ---
 
-<!-- Replace broken banner, remove centering -->
-![Static Chess Banner](https://images.unsplash.com/photo-1580541832626-2a7131ee809f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wzOTczOTZ8MHwxfHNlYXJjaHw1fHxjaGVzc3xlbnwwfHx8fDE3MTQ2MzY3ODh8MA&ixlib=rb-4.0.3&q=80&w=1080) 
+<!-- Center aligned content -->
+<p align="center">
+  <img src="https://images.unsplash.com/photo-1580541832626-2a7131ee809f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wzOTczOTZ8MHwxfHNlYXJjaHw1fHxjaGVzc3xlbnwwfHx8fDE3MTQ2MzY3ODh8MA&ixlib=rb-4.0.3&q=80&w=1080" alt="Static Chess Banner">
+</p>
 
-[![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/HTML) [![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/CSS) [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript) [![MIT License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](https://opensource.org/licenses/MIT) [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-222222?style=for-the-badge&logo=GitHub%20Pages&logoColor=white)](https://tmhsdigital.github.io/Static_Chess/)
+<p align="center">
+  <a href="https://developer.mozilla.org/en-US/docs/Web/HTML"><img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white" alt="HTML5"></a>
+  <a href="https://developer.mozilla.org/en-US/docs/Web/CSS"><img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white" alt="CSS3"></a>
+  <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript"><img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge" alt="MIT License"></a>
+  <a href="https://tmhsdigital.github.io/Static_Chess/"><img src="https://img.shields.io/badge/GitHub%20Pages-222222?style=for-the-badge&logo=GitHub%20Pages&logoColor=white" alt="GitHub Pages"></a>
+</p>
 
-A lightweight chess game built with pure vanilla web technologies - no frameworks, no libraries, just clean code.
+<p align="center">
+  A lightweight chess game built with pure vanilla web technologies - no frameworks, no libraries, just clean code.
+</p>
 
-**[Play Now](https://tmhsdigital.github.io/Static_Chess/) | [View Source](https://github.com/TMHSDigital/Static_Chess) | [Report Issue](https://github.com/TMHSDigital/Static_Chess/issues)**
+<p align="center">
+  <strong><a href="https://tmhsdigital.github.io/Static_Chess/">Play Now</a> | <a href="https://github.com/TMHSDigital/Static_Chess">View Source</a> | <a href="https://github.com/TMHSDigital/Static_Chess/issues">Report Issue</a></strong>
+</p>
 
 ---
 
