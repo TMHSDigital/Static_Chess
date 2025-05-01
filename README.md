@@ -104,7 +104,18 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 
 The game features an elegant, professional-looking interface with a dark theme and subtle visual cues:
 
-![Static Chess Gameplay GIF](https://i.imgur.com/XdatvSm.gif)
+<p align="center">
+  <img src="https://i.imgur.com/XdatvSm.gif" alt="Static Chess Gameplay GIF">
+</p>
+
+<p align="center"><em>Gameplay demonstration</em></p>
+
+<p align="center">
+  <img src="ui-without-settings.png" alt="UI Without Settings Panel" width="45%" style="margin-right: 2%;">
+  <img src="ui-with-settings.png" alt="UI With Settings Panel" width="45%">
+</p>
+
+<p align="center"><em>Game interface without settings panel (left) and with settings panel (right)</em></p>
 
 *Note: The above GIF may show an earlier version. The current version features enhanced aesthetics.*
 
