@@ -149,6 +149,7 @@
     height: 15%;
     background-color: rgba(70, 130, 180, 0.7); /* Steel Blue */
     z-index: 1;
+    display: var(--show-last-move); /* Control visibility */
 }
 
 /* Top-left corner */

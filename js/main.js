@@ -10,12 +10,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Initialize Toggles --- 
     const coordsToggle = document.getElementById('coords-toggle');
     const possibleMovesToggle = document.getElementById('possible-moves-toggle');
+    const lastMoveToggle = document.getElementById('last-move-toggle');
     const body = document.body;
     const rootStyle = document.documentElement.style;
 
     // Load saved settings or set defaults
     const showCoords = localStorage.getItem('showCoords') === 'true';
     const showPossibleMoves = localStorage.getItem('showPossibleMoves') !== 'false'; // Default true
+    const showLastMove = localStorage.getItem('showLastMove') !== 'false'; // Default true
 
     // Apply Coordinate setting
     if (coordsToggle) {
@@ -43,6 +45,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const displayValue = this.checked ? 'block' : 'none';
             rootStyle.setProperty('--show-possible-moves', displayValue);
             localStorage.setItem('showPossibleMoves', this.checked.toString());
+        });
+    }
+
+    // Apply Last Move setting
+    if (lastMoveToggle) {
+        lastMoveToggle.checked = showLastMove;
+        rootStyle.setProperty('--show-last-move', showLastMove ? 'block' : 'none');
+
+        lastMoveToggle.addEventListener('change', function() {
+            const displayValue = this.checked ? 'block' : 'none';
+            rootStyle.setProperty('--show-last-move', displayValue);
+            localStorage.setItem('showLastMove', this.checked.toString());
         });
     }
 

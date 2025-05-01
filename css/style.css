@@ -13,6 +13,7 @@
     --border-radius: 8px;
     --show-coords: none; /* 'block' to show coordinates, 'none' to hide */
     --show-possible-moves: block; /* Default to show */
+    --show-last-move: block; /* Default to show */
 }
 
 body {
