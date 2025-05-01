@@ -30,68 +30,29 @@
 /* === Enhanced Unicode Pieces === */
 
 /* White Pieces */
-.piece.w.p::before { 
-    content: '\2659'; 
+.piece.w::before { 
     color: #fff;
-    filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.5));
+    filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.6));
 }
-.piece.w.r::before { 
-    content: '\2656'; 
-    color: #fff;
-    filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.5));
-}
-.piece.w.n::before { 
-    content: '\2658'; 
-    color: #fff;
-    filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.5));
-}
-.piece.w.b::before { 
-    content: '\2657'; 
-    color: #fff;
-    filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.5));
-}
-.piece.w.q::before { 
-    content: '\2655'; 
-    color: #fff;
-    filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.5));
-}
-.piece.w.k::before { 
-    content: '\2654'; 
-    color: #fff;
-    filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.5));
-}
+.piece.w.p::before { content: '\2659'; } 
+.piece.w.r::before { content: '\2656'; } 
+.piece.w.n::before { content: '\2658'; } 
+.piece.w.b::before { content: '\2657'; } 
+.piece.w.q::before { content: '\2655'; } 
+.piece.w.k::before { content: '\2654'; } 
 
 /* Black Pieces */
-.piece.b.p::before { 
-    content: '\265F'; 
-    color: #000;
-    text-shadow: 0 0 2px rgba(255,255,255,0.8);
+.piece.b::before { 
+    color: #111; /* Slightly off-black */
+    text-shadow: 0px 0px 3px rgba(255, 255, 255, 0.7); /* Subtle white glow */
+    filter: drop-shadow(1px 1px 1px rgba(255,255,255,0.2)); /* Very faint light shadow */
 }
-.piece.b.r::before { 
-    content: '\265C'; 
-    color: #000;
-    text-shadow: 0 0 2px rgba(255,255,255,0.8);
-}
-.piece.b.n::before { 
-    content: '\265E'; 
-    color: #000;
-    text-shadow: 0 0 2px rgba(255,255,255,0.8);
-}
-.piece.b.b::before { 
-    content: '\265D'; 
-    color: #000;
-    text-shadow: 0 0 2px rgba(255,255,255,0.8);
-}
-.piece.b.q::before { 
-    content: '\265B'; 
-    color: #000;
-    text-shadow: 0 0 2px rgba(255,255,255,0.8);
-}
-.piece.b.k::before { 
-    content: '\265A'; 
-    color: #000;
-    text-shadow: 0 0 2px rgba(255,255,255,0.8);
-}
+.piece.b.p::before { content: '\265F'; } 
+.piece.b.r::before { content: '\265C'; } 
+.piece.b.n::before { content: '\265E'; } 
+.piece.b.b::before { content: '\265D'; } 
+.piece.b.q::before { content: '\265B'; } 
+.piece.b.k::before { content: '\265A'; }
 
 /* Move animations */
 @keyframes move-piece {
