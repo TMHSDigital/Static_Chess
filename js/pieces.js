@@ -102,12 +102,14 @@ function isPseudoLegalMove(piece, startRow, startCol, endRow, endCol, isCapture)
  * @returns {Array<Array<Piece|null>>} A 2D array representing the board state.
  */
 function getInitialPieces() {
+    console.log("Initializing pieces...");
     const board = Array(8).fill(null).map(() => Array(8).fill(null));
 
     // Place pawns
     for (let col = 0; col < 8; col++) {
         board[1][col] = new Piece(PAWN, BLACK);
         board[6][col] = new Piece(PAWN, WHITE);
+        console.log(`Created pawns at: [1,${col}] (Black) and [6,${col}] (White)`);
     }
 
     // Place other pieces
@@ -115,7 +117,12 @@ function getInitialPieces() {
     for (let col = 0; col < 8; col++) {
         board[0][col] = new Piece(backRank[col], BLACK);
         board[7][col] = new Piece(backRank[col], WHITE);
+        console.log(`Created ${backRank[col]} at: [0,${col}] (Black) and [7,${col}] (White)`);
     }
+
+    // Log the first row to validate
+    console.log("First row (black pieces):", board[0].map(p => p ? p.type : 'null'));
+    console.log("Last row (white pieces):", board[7].map(p => p ? p.type : 'null'));
 
     return board;
 } 
