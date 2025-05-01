@@ -26,8 +26,9 @@ function createBoard() {
 /**
  * Renders the pieces on the board based on the current board state.
  * @param {Array<Array<Piece|null>>} boardState - The 2D array representing the board.
+ * @param {Object|null} movedPiece - Optional. The coordinates of a piece that just moved, for animation.
  */
-function renderPieces(boardState) {
+function renderPieces(boardState, movedPiece = null) {
     // Clear existing pieces first
     document.querySelectorAll('.piece').forEach(p => p.remove());
 
@@ -39,6 +40,17 @@ function renderPieces(boardState) {
                 if (squareElement) {
                     const pieceElement = document.createElement('div');
                     pieceElement.classList.add('piece', piece.color, piece.type);
+                    
+                    // Add animation class if this is the piece that just moved
+                    if (movedPiece && movedPiece.row === row && movedPiece.col === col) {
+                        pieceElement.classList.add('moved');
+                        
+                        // Remove the animation class after animation completes
+                        setTimeout(() => {
+                            pieceElement.classList.remove('moved');
+                        }, 300); // Match with animation duration
+                    }
+                    
                     // Add data attributes for easier identification if needed
                     pieceElement.dataset.piece = `${piece.color}${piece.type}`;
                     squareElement.appendChild(pieceElement);
@@ -65,8 +77,8 @@ function getSquareElement(row, col) {
  */
 function updateBoardVisuals(boardState, kingInCheckCoords = null) {
     // Clear previous visual states
-    document.querySelectorAll('.square.selected, .square.possible-move, .square.in-check').forEach(el => {
-        el.classList.remove('selected', 'possible-move', 'in-check');
+    document.querySelectorAll('.square.selected, .square.possible-move, .square.in-check, .square.last-move-from, .square.last-move-to').forEach(el => {
+        el.classList.remove('selected', 'possible-move', 'in-check', 'last-move-from', 'last-move-to');
     });
 
     // Highlight selected square
@@ -90,6 +102,23 @@ function updateBoardVisuals(boardState, kingInCheckCoords = null) {
         const checkElement = getSquareElement(kingInCheckCoords.row, kingInCheckCoords.col);
         if (checkElement) {
             checkElement.classList.add('in-check');
+        }
+    }
+
+    // Highlight last move if available
+    if (moveHistory && moveHistory.length > 0) {
+        const lastMove = moveHistory[moveHistory.length - 1];
+        
+        // From square
+        const fromElement = getSquareElement(lastMove.from.row, lastMove.from.col);
+        if (fromElement) {
+            fromElement.classList.add('last-move-from');
+        }
+        
+        // To square
+        const toElement = getSquareElement(lastMove.to.row, lastMove.to.col);
+        if (toElement) {
+            toElement.classList.add('last-move-to');
         }
     }
 

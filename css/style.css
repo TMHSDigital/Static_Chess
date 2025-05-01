@@ -2,37 +2,53 @@
     --board-size: min(90vw, 600px); /* Responsive board size */
     --light-square: #f0d9b5;
     --dark-square: #b58863;
-    --selected-square: rgba(255, 255, 0, 0.5);
-    --possible-move-square: rgba(0, 128, 0, 0.3);
-    --check-square: rgba(255, 0, 0, 0.5);
-    --info-panel-width: 250px;
+    --selected-square: rgba(255, 217, 0, 0.6);
+    --possible-move-square: rgba(20, 150, 20, 0.4);
+    --check-square: rgba(220, 20, 20, 0.6);
+    --info-panel-width: 300px;
+    --main-bg: #2c2c2c;
+    --panel-bg: #3a3a3a;
+    --text-color: #f0f0f0;
+    --accent-color: #5f9ea0;
+    --border-radius: 8px;
+    --show-coords: none; /* 'block' to show coordinates, 'none' to hide */
 }
 
 body {
-    font-family: sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     display: flex;
     justify-content: center;
-    align-items: flex-start; /* Align items to the top */
-    margin: 20px;
-    background-color: #333;
-    color: #fff;
+    align-items: flex-start;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+    background-color: var(--main-bg);
+    color: var(--text-color);
+    box-sizing: border-box;
 }
 
 .game-container {
     display: flex;
-    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    flex-wrap: wrap;
     gap: 20px;
     justify-content: center;
+    max-width: 1200px;
+}
+
+.chess-board {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    border-radius: var(--border-radius);
+    overflow: hidden;
 }
 
 .game-info {
     width: var(--info-panel-width);
-    background-color: #444;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    height: fit-content; /* Adjust height based on content */
-    max-height: calc(var(--board-size) + 2 * 1px); /* Match board height + borders */
+    background-color: var(--panel-bg);
+    padding: 20px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    height: fit-content;
+    max-height: calc(var(--board-size) - 40px);
     display: flex;
     flex-direction: column;
 }
@@ -40,60 +56,95 @@ body {
 .game-info h2 {
     margin-top: 0;
     text-align: center;
-    border-bottom: 1px solid #555;
-    padding-bottom: 10px;
+    border-bottom: 2px solid var(--accent-color);
+    padding-bottom: 15px;
+    color: var(--accent-color);
+    font-size: 1.8rem;
+    font-weight: 600;
 }
 
 .move-history {
     list-style: none;
     padding: 0;
-    margin: 10px 0;
-    height: calc(var(--board-size) - 150px); /* Adjust height dynamically */
+    margin: 15px 0;
+    height: calc(var(--board-size) - 220px);
     overflow-y: auto;
     border: 1px solid #555;
+    border-radius: var(--border-radius);
+    background-color: rgba(0, 0, 0, 0.2);
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-color) #444;
+}
+
+.move-history::-webkit-scrollbar {
+    width: 8px;
+}
+
+.move-history::-webkit-scrollbar-track {
+    background: #444;
     border-radius: 4px;
-    background-color: #3a3a3a;
+}
+
+.move-history::-webkit-scrollbar-thumb {
+    background-color: var(--accent-color);
+    border-radius: 4px;
 }
 
 .move-history li {
-    padding: 5px 10px;
+    padding: 8px 15px;
     border-bottom: 1px solid #555;
+    transition: background-color 0.2s ease;
+}
+
+.move-history li:hover {
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 .move-history li:last-child {
     border-bottom: none;
+    background-color: rgba(95, 158, 160, 0.2);
 }
 
 .game-status {
-    margin-top: auto; /* Push status and button to the bottom */
-    padding: 10px;
+    margin-top: auto;
+    padding: 12px;
     font-weight: bold;
     text-align: center;
-    background-color: #555;
-    border-radius: 4px;
-    margin-bottom: 10px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius);
+    margin-bottom: 15px;
+    letter-spacing: 0.5px;
 }
 
 #reset-button {
-    padding: 10px;
-    font-size: 1em;
+    padding: 12px;
+    font-size: 1.1em;
     cursor: pointer;
-    background-color: #666;
+    background-color: var(--accent-color);
     color: white;
     border: none;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
+    border-radius: var(--border-radius);
+    transition: all 0.3s ease;
+    font-weight: 600;
+    letter-spacing: 0.5px;
 }
 
 #reset-button:hover {
-    background-color: #777;
+    background-color: #75b9bb;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+#reset-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* Responsive adjustments */
-@media (max-width: 900px) { /* Adjust breakpoint as needed */
+@media (max-width: 900px) {
     body {
-        align-items: center; /* Center items when stacking */
-        margin: 10px;
+        align-items: center;
+        padding: 10px;
     }
 
     .game-container {
@@ -102,11 +153,73 @@ body {
     }
 
     .game-info {
-        width: var(--board-size); /* Make info panel same width as board */
-        max-height: none; /* Remove max-height */
+        width: var(--board-size);
+        max-height: none;
     }
 
     .move-history {
-        height: 150px; /* Fixed height for move history on smaller screens */
+        height: 180px;
     }
+}
+
+/* Toggle Switch */
+.toggle-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 10px 0;
+}
+
+.toggle-label {
+    margin-right: 10px;
+    font-size: 0.9rem;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #555;
+    transition: 0.4s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--accent-color);
+}
+
+input:checked + .slider:before {
+    transform: translateX(20px);
+}
+
+body.coords-visible {
+    --show-coords: block;
 } 

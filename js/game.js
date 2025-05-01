@@ -225,7 +225,7 @@ function makeMove(startRow, startCol, endRow, endCol) {
     }
 
     // --- Update UI --- 
-    renderPieces(boardState);
+    renderPieces(boardState, { row: endRow, col: endCol });
     if (!isGameOver) {
         currentStatus = `${currentPlayer === WHITE ? 'White' : 'Black'}'s turn`;
     }
@@ -753,4 +753,57 @@ function generateNotation(move) {
     }
 
     return notation;
+}
+
+/**
+ * Updates the visual state of the board (selection, possible moves, checks).
+ * @param {Array<Array<Piece|null>>} boardState - Current board state.
+ * @param {{row: number, col: number} | null} kingInCheckCoords - Coordinates of the king in check, or null.
+ */
+function updateBoardVisuals(boardState, kingInCheckCoords = null) {
+    // Clear previous visual states
+    document.querySelectorAll('.square.selected, .square.possible-move, .square.in-check, .square.last-move-from, .square.last-move-to').forEach(el => {
+        el.classList.remove('selected', 'possible-move', 'in-check', 'last-move-from', 'last-move-to');
+    });
+
+    // Highlight selected square
+    if (selectedSquare) {
+        const selectedElement = getSquareElement(selectedSquare.row, selectedSquare.col);
+        if (selectedElement) {
+            selectedElement.classList.add('selected');
+        }
+    }
+
+    // Highlight possible moves
+    possibleMoves.forEach(move => {
+        const moveElement = getSquareElement(move.row, move.col);
+        if (moveElement) {
+            moveElement.classList.add('possible-move');
+        }
+    });
+
+    // Highlight king in check
+    if (kingInCheckCoords) {
+        const checkElement = getSquareElement(kingInCheckCoords.row, kingInCheckCoords.col);
+        if (checkElement) {
+            checkElement.classList.add('in-check');
+        }
+    }
+
+    // Highlight last move if available
+    if (moveHistory.length > 0) {
+        const lastMove = moveHistory[moveHistory.length - 1];
+        
+        // From square
+        const fromElement = getSquareElement(lastMove.from.row, lastMove.from.col);
+        if (fromElement) {
+            fromElement.classList.add('last-move-from');
+        }
+        
+        // To square
+        const toElement = getSquareElement(lastMove.to.row, lastMove.to.col);
+        if (toElement) {
+            toElement.classList.add('last-move-to');
+        }
+    }
 } 

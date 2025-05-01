@@ -27,7 +27,7 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/your-username/Static_Chess.git
+    git clone https://github.com/TMHSDigital/Static_Chess.git
     cd Static_Chess
     ```
 2.  **Open `index.html`:** Simply open the `index.html` file in your web browser.
@@ -77,7 +77,7 @@ Since this is a purely static website (HTML, CSS, JS files only), it can be easi
 5.  Choose the branch you want to deploy from (e.g., `main` or `master`).
 6.  Ensure the folder is set to `/ (root)`.
 7.  Click "Save".
-8.  GitHub will build and deploy your site. The URL will be displayed in the Pages settings (usually `https://your-username.github.io/repository-name/`). It might take a minute or two for the site to become live.
+8.  GitHub will build and deploy your site. The URL will be displayed in the Pages settings (usually `https://tmhsdigital.github.io/Static_Chess/`). It might take a minute or two for the site to become live.
 
 ## Potential Future Enhancements (Bonus Features)
 
