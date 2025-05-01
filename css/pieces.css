@@ -1,21 +1,16 @@
 /**
- * Chess piece styling using SVG files for reliable cross-browser rendering
+ * Chess piece styling - core styles only
+ * All piece-specific styling handled by inline styles in board.js
  */
 
-/* Base piece styling */
 .piece {
     width: 80%;
     height: 80%;
     cursor: grab;
     user-select: none;
     position: relative;
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
     transition: transform 0.15s ease;
     will-change: transform;
-    
-    /* Disable any content-based display */
     color: transparent !important;
 }
 
@@ -41,22 +36,6 @@
     opacity: 0.8;
     z-index: 100;
 }
-
-/* WHITE PIECES */
-.piece.w.p { background-image: url("../assets/wp.svg") !important; }
-.piece.w.r { background-image: url("../assets/wr.svg") !important; }
-.piece.w.n { background-image: url("../assets/wn.svg") !important; }
-.piece.w.b { background-image: url("../assets/wb.svg") !important; }
-.piece.w.q { background-image: url("../assets/wq.svg") !important; }
-.piece.w.k { background-image: url("../assets/wk.svg") !important; }
-
-/* BLACK PIECES */
-.piece.b.p { background-image: url("../assets/bp.svg") !important; }
-.piece.b.r { background-image: url("../assets/br.svg") !important; }
-.piece.b.n { background-image: url("../assets/bn.svg") !important; }
-.piece.b.b { background-image: url("../assets/bb.svg") !important; }
-.piece.b.q { background-image: url("../assets/bq.svg") !important; }
-.piece.b.k { background-image: url("../assets/bk.svg") !important; }
 
 /* Move animations */
 @keyframes move-piece {

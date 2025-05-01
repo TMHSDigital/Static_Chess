@@ -32,6 +32,10 @@ function renderPieces(boardState, movedPiece = null) {
     // Clear existing pieces first
     document.querySelectorAll('.piece').forEach(p => p.remove());
 
+    // Generate a cache-busting token
+    const cacheBuster = Date.now();
+    console.log("Rendering pieces with cache buster:", cacheBuster);
+
     for (let row = 0; row < 8; row++) {
         for (let col = 0; col < 8; col++) {
             const piece = boardState[row][col];
@@ -39,7 +43,25 @@ function renderPieces(boardState, movedPiece = null) {
                 const squareElement = getSquareElement(row, col);
                 if (squareElement) {
                     const pieceElement = document.createElement('div');
-                    pieceElement.classList.add('piece', piece.color, piece.type);
+                    pieceElement.classList.add('piece');
+                    
+                    // Add piece color and type as classes for potential styling
+                    pieceElement.classList.add(piece.color, piece.type);
+                    
+                    // Use absolute path with cache busting
+                    const svgPath = `assets/${piece.color}${piece.type}.svg?v=${cacheBuster}`;
+                    console.log(`Setting background for ${piece.color}${piece.type} at [${row},${col}] to: ${svgPath}`);
+                    
+                    pieceElement.style.backgroundImage = `url('${svgPath}')`;
+                    pieceElement.style.backgroundSize = 'contain';
+                    pieceElement.style.backgroundRepeat = 'no-repeat';
+                    pieceElement.style.backgroundPosition = 'center';
+                    
+                    // Force image preload to debug loading issues
+                    const img = new Image();
+                    img.onload = () => console.log(`✓ Successfully loaded: ${svgPath}`);
+                    img.onerror = () => console.error(`✗ Failed to load: ${svgPath}`);
+                    img.src = svgPath;
                     
                     // Add animation class if this is the piece that just moved
                     if (movedPiece && movedPiece.row === row && movedPiece.col === col) {
@@ -53,6 +75,9 @@ function renderPieces(boardState, movedPiece = null) {
                     
                     // Add data attributes for easier identification if needed
                     pieceElement.dataset.piece = `${piece.color}${piece.type}`;
+                    pieceElement.dataset.color = piece.color;
+                    pieceElement.dataset.type = piece.type;
+                    
                     squareElement.appendChild(pieceElement);
                 }
             }
