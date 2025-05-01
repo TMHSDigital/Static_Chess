@@ -49,4 +49,3 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Initialize Game --- 
     initializeGame(); 
 }); 
-}); 
