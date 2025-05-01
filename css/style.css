@@ -1,5 +1,5 @@
 :root {
-    --board-size: min(90vw, 580px); /* Slightly reduce default board size */
+    --board-size: min(80vh, 580px); /* Change to use viewport height instead of width for better scaling */
     --light-square: #f0d9b5;
     --dark-square: #b58863;
     --selected-square: rgba(255, 255, 0, 0.3);
@@ -16,6 +16,11 @@
     --show-last-move: block; /* Default to show */
 }
 
+html {
+    height: 100%;
+    overflow-y: auto;
+}
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     display: flex;
@@ -27,6 +32,7 @@ body {
     background-color: var(--main-bg);
     color: var(--text-color);
     box-sizing: border-box;
+    overflow-y: auto; /* Add overflow to ensure content is accessible */
 }
 
 .game-container {
@@ -35,6 +41,8 @@ body {
     gap: 24px;
     justify-content: center;
     max-width: 1200px;
+    margin-top: 20px;
+    margin-bottom: 20px;
 }
 
 .board-container {
@@ -42,12 +50,16 @@ body {
     padding: 12px;
     border-radius: 8px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    max-height: 90vh; /* Ensure it doesn't exceed viewport height */
+    display: flex;
+    flex-direction: column;
 }
 
 .chess-board {
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
     border-radius: 2px;
     overflow: hidden;
+    aspect-ratio: 1 / 1; /* Maintain square aspect ratio */
 }
 
 .game-info {
@@ -174,14 +186,23 @@ body {
 
 /* Responsive adjustments */
 @media (max-width: 900px) {
+    :root {
+        --board-size: min(85vw, 85vh); /* Adjust for mobile */
+    }
+    
     body {
-        align-items: center;
+        align-items: flex-start; /* Align to top on mobile */
         padding: 10px;
     }
 
     .game-container {
         flex-direction: column;
         align-items: center;
+        margin-top: 10px;
+    }
+
+    .board-container {
+        max-height: none; /* Remove height constraint on mobile */
     }
 
     .game-info {

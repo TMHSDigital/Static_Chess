@@ -10,6 +10,9 @@
     align-items: center;
     transition: transform 0.15s ease;
     position: relative;
+    will-change: transform; /* Optimize for animations */
+    max-height: 100%; /* Ensure pieces don't overflow */
+    overflow: visible;
 }
 
 .piece:hover {
