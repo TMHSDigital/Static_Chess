@@ -84,7 +84,7 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 
 A snapshot of the gameplay:
 
-![Static Chess Gameplay](https://i.imgur.com/XdatvSm.gif)
+![Static Chess Gameplay GIF](https://i.imgur.com/XdatvSm.gif)
 
 ---
 

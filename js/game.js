@@ -345,7 +345,9 @@ function generateLegalMovesForPiece(startRow, startCol) {
 
     // 2. Filter out moves that leave the king in check
     const legalMoves = pseudoLegalMoves.filter(move => {
-        // Simulate the move
+        // --- Simulation --- 
+        // Temporarily make the move on a deep copy of the board
+        // to see if the player's own king would be in check.
         const tempBoard = JSON.parse(JSON.stringify(boardState)); // Deep copy needed
         const tempPiece = tempBoard[startRow][startCol];
         const tempCaptured = tempBoard[move.row][move.col];
@@ -384,23 +386,13 @@ function generateLegalMovesForPiece(startRow, startCol) {
             kingPositions[playerColor] = { row: move.row, col: move.col };
         }
 
-        // Check if the king is now in check
+        // Check if the king is now in check after the simulated move
         const kingInCheck = isKingInCheck(playerColor, tempBoard);
 
-        // Restore king position
+        // Restore king position (board state is not restored as it's a temporary copy)
         kingPositions[playerColor] = originalKingPos;
 
-        // Restore board (no need to restore piece.hasMoved for this check)
-        // tempBoard[startRow][startCol] = tempPiece;
-        // tempBoard[move.row][move.col] = tempCaptured;
-        // if (isSimulatedEnPassant && tempEnPassantCapturedPawn) {
-        //     tempBoard[startRow][move.col] = tempEnPassantCapturedPawn;
-        // }
-        // if (isSimulatedCastling && tempRook) {
-        //     tempBoard[startRow][tempRookStartCol] = tempRook;
-        //     tempBoard[startRow][tempRookEndCol] = null;
-        // }
-
+        // If the king is NOT in check after this move, it's a legal move.
         return !kingInCheck;
     });
 
