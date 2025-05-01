@@ -110,6 +110,7 @@
     border-radius: 50%;
     pointer-events: none;
     animation: pulse 1.5s infinite;
+    display: var(--show-possible-moves);
 }
 
 @keyframes pulse {

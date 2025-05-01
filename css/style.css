@@ -12,6 +12,7 @@
     --accent-color: #5f9ea0;
     --border-radius: 8px;
     --show-coords: none; /* 'block' to show coordinates, 'none' to hide */
+    --show-possible-moves: block; /* Default to show */
 }
 
 body {
@@ -244,4 +245,12 @@ input:checked + .slider:before {
 
 body.coords-visible {
     --show-coords: block;
+}
+
+/* Settings Container */
+.settings-container {
+    background-color: rgba(0, 0, 0, 0.15);
+    padding: 10px;
+    border-radius: var(--border-radius);
+    margin-bottom: 15px;
 } 
