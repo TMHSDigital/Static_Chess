@@ -75,6 +75,23 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 - **Game Persistence:** Automatically saves game state to `localStorage`
 - **Responsive Design:** Adapts layout for both desktop and mobile devices
 - **Coordinate Toggle:** Option to display board coordinates
+- **Professional UI:** Clean, minimalist design with subtle animations and visual cues
+- **Customizable Settings:** Toggle visibility of coordinates, move indicators, and highlights
+
+</details>
+
+<details>
+<summary><b>UI Features</b></summary>
+<br>
+
+- **Elegant Board Design:** Professional-looking chess board with subtle texturing
+- **Responsive Layout:** Adapts to different screen sizes while maintaining playability
+- **Visual Clarity:** Clean, uncluttered interface that focuses on the gameplay
+- **Sophisticated Colors:** Carefully selected color palette for optimal contrast and reduced eye strain
+- **Subtle Move Indicators:** Non-intrusive indicators for possible moves and last move played
+- **Animated Pieces:** Smooth animations enhance the playing experience
+- **Settings Panel:** Customizable display options with toggle switches
+- **Mobile-Friendly Design:** Works well on touchscreens with appropriate sizing
 
 </details>
 
@@ -82,9 +99,11 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 
 ## Demo
 
-A snapshot of the gameplay:
+The game features an elegant, professional-looking interface with a dark theme and subtle visual cues:
 
 ![Static Chess Gameplay GIF](https://i.imgur.com/XdatvSm.gif)
+
+*Note: The above GIF may show an earlier version. The current version features enhanced aesthetics.*
 
 ---
 

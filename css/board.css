@@ -4,8 +4,8 @@
     display: grid;
     grid-template-columns: repeat(8, 1fr);
     grid-template-rows: repeat(8, 1fr);
-    border: 2px solid #111;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    border: 1px solid #000;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
     position: relative;
 }
 
@@ -15,14 +15,14 @@
 .square::before,
 .square::after {
     position: absolute;
-    color: rgba(0, 0, 0, 0.6);
-    font-size: 0.75rem;
-    font-weight: bold;
+    color: rgba(0, 0, 0, 0.5);
+    font-size: 0.7rem;
+    font-weight: normal;
     z-index: 2;
     pointer-events: none;
     padding: 0 2px;
     border-radius: 2px;
-    background-color: rgba(255, 255, 255, 0.4);
+    background-color: rgba(255, 255, 255, 0.3);
     line-height: 1;
     display: var(--show-coords, none);
 }
@@ -30,8 +30,8 @@
 /* Adjust color specifically for dark squares */
 .square.dark::before,
 .square.dark::after {
-    color: rgba(255, 255, 255, 0.7);
-    background-color: rgba(0, 0, 0, 0.3);
+    color: rgba(255, 255, 255, 0.6);
+    background-color: rgba(0, 0, 0, 0.2);
 }
 
 /* File coordinates (a-h) - Positioned slightly inside */
@@ -76,47 +76,47 @@
 }
 
 .square:hover {
-    filter: brightness(1.1);
+    filter: brightness(1.08);
 }
 
 .square.light {
     background-color: var(--light-square);
-    /* Subtle noise texture using CSS gradients */
-    background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-                      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-    background-size: 3px 3px; /* Adjust size of noise pattern */
+    /* Subtle texture - reduced intensity */
+    background-image: linear-gradient(rgba(255,255,255,0.01) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,0.01) 1px, transparent 1px);
+    background-size: 4px 4px;
 }
 
 .square.dark {
     background-color: var(--dark-square);
-    /* Subtle noise texture using CSS gradients */
-    background-image: linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
-                      linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
-    background-size: 3px 3px; /* Adjust size of noise pattern */
+    /* Subtle texture - reduced intensity */
+    background-image: linear-gradient(rgba(0,0,0,0.02) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(0,0,0,0.02) 1px, transparent 1px);
+    background-size: 4px 4px;
 }
 
 .square.selected {
     background-color: var(--selected-square);
-    box-shadow: inset 0 0 20px rgba(255, 217, 0, 0.3);
+    box-shadow: inset 0 0 15px rgba(255, 217, 0, 0.2);
     z-index: 1;
 }
 
 .square.possible-move::after {
     content: '';
     position: absolute;
-    width: 30%;
-    height: 30%;
+    width: 25%;
+    height: 25%;
     background-color: var(--possible-move-square);
     border-radius: 50%;
     pointer-events: none;
-    animation: pulse 1.5s infinite;
+    animation: pulse 2s infinite;
     display: var(--show-possible-moves);
 }
 
 @keyframes pulse {
-    0% { transform: scale(0.9); opacity: 0.7; }
-    50% { transform: scale(1.1); opacity: 1; }
-    100% { transform: scale(0.9); opacity: 0.7; }
+    0% { transform: scale(0.95); opacity: 0.6; }
+    50% { transform: scale(1.05); opacity: 0.8; }
+    100% { transform: scale(0.95); opacity: 0.6; }
 }
 
 .square.possible-move.light::after {
@@ -130,12 +130,12 @@
 /* Highlight for the king in check */
 .square.in-check {
     background-color: var(--check-square);
-    animation: check-pulse 1s ease infinite alternate;
+    animation: check-pulse 1.5s ease infinite alternate;
 }
 
 @keyframes check-pulse {
-    from { box-shadow: inset 0 0 5px rgba(255, 0, 0, 0.5); }
-    to { box-shadow: inset 0 0 20px rgba(255, 0, 0, 0.8); }
+    from { box-shadow: inset 0 0 5px rgba(255, 0, 0, 0.3); }
+    to { box-shadow: inset 0 0 15px rgba(255, 0, 0, 0.5); }
 }
 
 /* Last move indication - using corner markers */
@@ -145,9 +145,9 @@
 .square.last-move-to::after {
     content: '';
     position: absolute;
-    width: 15%;
-    height: 15%;
-    background-color: rgba(70, 130, 180, 0.7); /* Steel Blue */
+    width: 12%;
+    height: 12%;
+    background-color: rgba(70, 130, 180, 0.5); /* Steel Blue - more transparent */
     z-index: 1;
     display: var(--show-last-move); /* Control visibility */
 }

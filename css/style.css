@@ -1,16 +1,16 @@
 :root {
-    --board-size: min(90vw, 600px); /* Responsive board size */
+    --board-size: min(90vw, 580px); /* Slightly reduce default board size */
     --light-square: #f0d9b5;
     --dark-square: #b58863;
-    --selected-square: rgba(255, 217, 0, 0.6);
-    --possible-move-square: rgba(20, 150, 20, 0.4);
-    --check-square: rgba(220, 20, 20, 0.6);
-    --info-panel-width: 300px;
-    --main-bg: #2c2c2c;
-    --panel-bg: #3a3a3a;
-    --text-color: #f0f0f0;
-    --accent-color: #5f9ea0;
-    --border-radius: 8px;
+    --selected-square: rgba(255, 255, 0, 0.3);
+    --possible-move-square: rgba(20, 150, 20, 0.3);
+    --check-square: rgba(220, 20, 20, 0.4);
+    --info-panel-width: 320px;
+    --main-bg: #1a1a1a;
+    --panel-bg: #282828;
+    --text-color: #e0e0e0;
+    --accent-color: #4c8c8e;
+    --border-radius: 6px;
     --show-coords: none; /* 'block' to show coordinates, 'none' to hide */
     --show-possible-moves: block; /* Default to show */
     --show-last-move: block; /* Default to show */
@@ -20,7 +20,7 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     display: flex;
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
     min-height: 100vh;
     margin: 0;
     padding: 20px;
@@ -32,14 +32,21 @@ body {
 .game-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 20px;
+    gap: 24px;
     justify-content: center;
     max-width: 1200px;
 }
 
+.board-container {
+    background-color: #222;
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
 .chess-board {
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-    border-radius: var(--border-radius);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
     overflow: hidden;
 }
 
@@ -48,9 +55,9 @@ body {
     background-color: var(--panel-bg);
     padding: 20px;
     border-radius: var(--border-radius);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
     height: fit-content;
-    max-height: calc(var(--board-size) - 40px);
+    max-height: calc(var(--board-size) + 24px);
     display: flex;
     flex-direction: column;
 }
@@ -58,11 +65,12 @@ body {
 .game-info h2 {
     margin-top: 0;
     text-align: center;
-    border-bottom: 2px solid var(--accent-color);
-    padding-bottom: 15px;
+    border-bottom: 1px solid var(--accent-color);
+    padding-bottom: 10px;
     color: var(--accent-color);
-    font-size: 1.8rem;
-    font-weight: 600;
+    font-size: 1.6rem;
+    font-weight: 500;
+    letter-spacing: 1px;
 }
 
 .move-history {
@@ -71,9 +79,9 @@ body {
     margin: 15px 0;
     height: calc(var(--board-size) - 220px);
     overflow-y: auto;
-    border: 1px solid #555;
+    border: 1px solid #444;
     border-radius: var(--border-radius);
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: rgba(0, 0, 0, 0.15);
     scrollbar-width: thin;
     scrollbar-color: var(--accent-color) #444;
 }
@@ -94,7 +102,7 @@ body {
 
 .move-history li {
     padding: 8px 10px;
-    border-bottom: 1px solid #555;
+    border-bottom: 1px solid #444;
     transition: background-color 0.2s ease;
     display: grid; /* Use grid for column layout */
     grid-template-columns: 30px 1fr 1fr; /* Turn # | White Move | Black Move */
@@ -125,7 +133,7 @@ body {
 
 /* Style the last move entry differently */
 .move-history li.last-move-entry {
-    background-color: rgba(95, 158, 160, 0.2);
+    background-color: rgba(76, 140, 142, 0.15);
     font-weight: bold;
 }
 
@@ -177,7 +185,7 @@ body {
     }
 
     .game-info {
-        width: var(--board-size);
+        width: calc(var(--board-size) + 24px);
         max-height: none;
     }
 
@@ -250,8 +258,17 @@ body.coords-visible {
 
 /* Settings Container */
 .settings-container {
-    background-color: rgba(0, 0, 0, 0.15);
-    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.1);
+    padding: 12px;
     border-radius: var(--border-radius);
     margin-bottom: 15px;
+}
+
+.game-title {
+    color: var(--accent-color);
+    font-size: 1.7rem;
+    font-weight: 500;
+    text-align: center;
+    margin: 0 0 15px 0;
+    letter-spacing: 1px;
 } 

@@ -1,24 +1,24 @@
 .piece {
-    font-size: calc(var(--board-size) / 9);
+    font-size: calc(var(--board-size) / 10);
     cursor: grab;
     user-select: none;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
     height: 80%;
     width: 80%;
     display: flex;
     justify-content: center;
     align-items: center;
-    transition: transform 0.2s ease;
+    transition: transform 0.15s ease;
     position: relative;
 }
 
 .piece:hover {
-    transform: scale(1.1);
+    transform: scale(1.05);
 }
 
 .piece:active {
     cursor: grabbing;
-    transform: scale(1.15);
+    transform: scale(1.1);
 }
 
 .piece.dragging {
@@ -32,7 +32,7 @@
 /* White Pieces */
 .piece.w::before { 
     color: #fff;
-    filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.6));
+    filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.5));
 }
 .piece.w.p::before { content: '\2659'; } 
 .piece.w.r::before { content: '\2656'; } 
@@ -43,9 +43,9 @@
 
 /* Black Pieces */
 .piece.b::before { 
-    color: #111; /* Slightly off-black */
-    text-shadow: 0px 0px 3px rgba(255, 255, 255, 0.7); /* Subtle white glow */
-    filter: drop-shadow(1px 1px 1px rgba(255,255,255,0.2)); /* Very faint light shadow */
+    color: #111;
+    text-shadow: 0px 0px 2px rgba(255, 255, 255, 0.5);
+    filter: drop-shadow(0.5px 0.5px 0.5px rgba(255,255,255,0.1));
 }
 .piece.b.p::before { content: '\265F'; } 
 .piece.b.r::before { content: '\265C'; } 
@@ -57,7 +57,7 @@
 /* Move animations */
 @keyframes move-piece {
     0% { transform: scale(1); }
-    50% { transform: scale(1.2); }
+    50% { transform: scale(1.12); }
     100% { transform: scale(1); }
 }
 
