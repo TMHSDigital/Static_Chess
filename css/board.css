@@ -1,0 +1,46 @@
+.chess-board {
+    width: var(--board-size);
+    height: var(--board-size);
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    border: 1px solid #000;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+.square {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative; /* For positioning highlights/markers */
+}
+
+.square.light {
+    background-color: var(--light-square);
+}
+
+.square.dark {
+    background-color: var(--dark-square);
+}
+
+.square.selected {
+    background-color: var(--selected-square);
+    /* Or use an outline/border */
+    /* outline: 3px solid yellow; */
+    /* outline-offset: -3px; */
+}
+
+.square.possible-move::after {
+    content: '';
+    position: absolute;
+    width: 30%;
+    height: 30%;
+    background-color: var(--possible-move-square);
+    border-radius: 50%;
+    pointer-events: none; /* Allows clicking through the marker */
+}
+
+/* Highlight for the king in check */
+.square.in-check {
+    background-color: var(--check-square);
+} 

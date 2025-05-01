@@ -1,0 +1,49 @@
+.piece {
+    font-size: calc(var(--board-size) / 10); /* Adjust size relative to board */
+    cursor: grab;
+    user-select: none; /* Prevent text selection */
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+.piece.dragging {
+    cursor: grabbing;
+    opacity: 0.7;
+}
+
+/* === Placeholder Unicode Pieces === */
+/* Replace these with background-image rules targeting your SVGs */
+
+/* White Pieces */
+.piece.w.p::before { content: '\2659'; } /* White Pawn */
+.piece.w.r::before { content: '\2656'; } /* White Rook */
+.piece.w.n::before { content: '\2658'; } /* White Knight */
+.piece.w.b::before { content: '\2657'; } /* White Bishop */
+.piece.w.q::before { content: '\2655'; } /* White Queen */
+.piece.w.k::before { content: '\2654'; } /* White King */
+
+/* Black Pieces */
+.piece.b.p::before { content: '\265F'; } /* Black Pawn */
+.piece.b.r::before { content: '\265C'; } /* Black Rook */
+.piece.b.n::before { content: '\265E'; } /* Black Knight */
+.piece.b.b::before { content: '\265D'; } /* Black Bishop */
+.piece.b.q::before { content: '\265B'; } /* Black Queen */
+.piece.b.k::before { content: '\265A'; } /* Black King */
+
+/* Example for SVG (assuming you have assets/wp.svg etc.) */
+/*
+.piece.w.p {
+    background-image: url('../assets/wp.svg');
+    background-size: contain;
+    background-repeat: no-repeat;
+    width: 80%;
+    height: 80%;
+}
+.piece.b.p {
+    background-image: url('../assets/bp.svg');
+    background-size: contain;
+    background-repeat: no-repeat;
+    width: 80%;
+    height: 80%;
+}
+ Add similar rules for other pieces 
+*/ 

@@ -1,0 +1,112 @@
+:root {
+    --board-size: min(90vw, 600px); /* Responsive board size */
+    --light-square: #f0d9b5;
+    --dark-square: #b58863;
+    --selected-square: rgba(255, 255, 0, 0.5);
+    --possible-move-square: rgba(0, 128, 0, 0.3);
+    --check-square: rgba(255, 0, 0, 0.5);
+    --info-panel-width: 250px;
+}
+
+body {
+    font-family: sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Align items to the top */
+    margin: 20px;
+    background-color: #333;
+    color: #fff;
+}
+
+.game-container {
+    display: flex;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    gap: 20px;
+    justify-content: center;
+}
+
+.game-info {
+    width: var(--info-panel-width);
+    background-color: #444;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    height: fit-content; /* Adjust height based on content */
+    max-height: calc(var(--board-size) + 2 * 1px); /* Match board height + borders */
+    display: flex;
+    flex-direction: column;
+}
+
+.game-info h2 {
+    margin-top: 0;
+    text-align: center;
+    border-bottom: 1px solid #555;
+    padding-bottom: 10px;
+}
+
+.move-history {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0;
+    height: calc(var(--board-size) - 150px); /* Adjust height dynamically */
+    overflow-y: auto;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background-color: #3a3a3a;
+}
+
+.move-history li {
+    padding: 5px 10px;
+    border-bottom: 1px solid #555;
+}
+
+.move-history li:last-child {
+    border-bottom: none;
+}
+
+.game-status {
+    margin-top: auto; /* Push status and button to the bottom */
+    padding: 10px;
+    font-weight: bold;
+    text-align: center;
+    background-color: #555;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+#reset-button {
+    padding: 10px;
+    font-size: 1em;
+    cursor: pointer;
+    background-color: #666;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+#reset-button:hover {
+    background-color: #777;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) { /* Adjust breakpoint as needed */
+    body {
+        align-items: center; /* Center items when stacking */
+        margin: 10px;
+    }
+
+    .game-container {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .game-info {
+        width: var(--board-size); /* Make info panel same width as board */
+        max-height: none; /* Remove max-height */
+    }
+
+    .move-history {
+        height: 150px; /* Fixed height for move history on smaller screens */
+    }
+} 
