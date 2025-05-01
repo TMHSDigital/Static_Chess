@@ -13,6 +13,8 @@
     will-change: transform; /* Optimize for animations */
     max-height: 100%; /* Ensure pieces don't overflow */
     overflow: visible;
+    /* Use fonts known to render chess symbols well */
+    font-family: "DejaVu Sans", "Arial Unicode MS", "Segoe UI Symbol", sans-serif;
 }
 
 .piece:hover {
@@ -39,15 +41,15 @@
 }
 
 /* Ensure specific white piece styles override any general rules */
-.chess-board .piece.w.p::before { content: '\2659'; color: #fff; } 
-.chess-board .piece.w.r::before { content: '\2656'; color: #fff; } 
-.chess-board .piece.w.n::before { content: '\2658'; color: #fff; } 
+.chess-board .piece.w.p::before { content: '\2659'; color: #fff; } /* ♙ White Pawn */
+.chess-board .piece.w.r::before { content: '\2656'; color: #fff; } /* ♖ White Rook */
+.chess-board .piece.w.n::before { content: '\2658'; color: #fff; } /* ♘ White Knight */
 .chess-board .piece.w.b::before { 
-    content: '\2657';
+    content: '\2657'; /* ♗ White Bishop */
     color: #fff !important; /* Force white color */
 } 
-.chess-board .piece.w.q::before { content: '\2655'; color: #fff; } 
-.chess-board .piece.w.k::before { content: '\2654'; color: #fff; }
+.chess-board .piece.w.q::before { content: '\2655'; color: #fff; } /* ♕ White Queen */
+.chess-board .piece.w.k::before { content: '\2654'; color: #fff; } /* ♔ White King */
 
 /* Black Pieces */
 .piece.b::before { 
@@ -55,12 +57,43 @@
     text-shadow: 0px 0px 2px rgba(255, 255, 255, 0.5);
     filter: drop-shadow(0.5px 0.5px 0.5px rgba(255,255,255,0.1));
 }
-.piece.b.p::before { content: '\265F'; } 
-.piece.b.r::before { content: '\265C'; } 
-.piece.b.n::before { content: '\265E'; } 
-.piece.b.b::before { content: '\265D'; } 
-.piece.b.q::before { content: '\265B'; } 
-.piece.b.k::before { content: '\265A'; }
+
+/* Black piece content with improved specificity */
+.chess-board .piece.b.p::before { 
+    content: '\265F';  /* ♟ Black Pawn */
+    color: #111; 
+} 
+.chess-board .piece.b.r::before { 
+    content: '\265C';  /* ♜ Black Rook */
+    color: #111; 
+} 
+.chess-board .piece.b.n::before { 
+    content: '\265E';  /* ♞ Black Knight */
+    color: #111; 
+} 
+.chess-board .piece.b.b::before { 
+    content: '\265D';  /* ♝ Black Bishop */
+    color: #111 !important; 
+} 
+.chess-board .piece.b.q::before { 
+    content: '\265B';  /* ♛ Black Queen */
+    color: #111; 
+} 
+.chess-board .piece.b.k::before { 
+    content: '\265A';  /* ♚ Black King */
+    color: #111; 
+}
+
+/* Alternative approach: Use white unicode chars for black pieces */
+/* Uncomment this section and comment out the above black pieces section if the black pieces don't render correctly */
+/*
+.chess-board .piece.b.p::before { content: '\2659'; color: #111; }
+.chess-board .piece.b.r::before { content: '\2656'; color: #111; }
+.chess-board .piece.b.n::before { content: '\2658'; color: #111; }
+.chess-board .piece.b.b::before { content: '\2657'; color: #111 !important; }
+.chess-board .piece.b.q::before { content: '\2655'; color: #111; }
+.chess-board .piece.b.k::before { content: '\2654'; color: #111; }
+*/
 
 /* Move animations */
 @keyframes move-piece {
