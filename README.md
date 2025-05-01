@@ -85,6 +85,7 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 <br>
 
 - **Elegant Board Design:** Professional-looking chess board with subtle texturing
+- **SVG Chess Pieces:** High-quality vector graphics for consistent piece rendering across all browsers
 - **Responsive Layout:** Adapts to different screen sizes while maintaining playability
 - **Visual Clarity:** Clean, uncluttered interface that focuses on the gameplay
 - **Sophisticated Colors:** Carefully selected color palette for optimal contrast and reduced eye strain
@@ -155,7 +156,13 @@ Static_Chess/
 │   ├── board.js         # Board rendering and interaction
 │   ├── game.js          # Core game logic
 │   └── main.js          # Application entry point
-└── assets/              # For piece images (SVG)
+└── assets/              # SVG files for chess pieces
+    ├── wp.svg, bp.svg   # White and black pawns
+    ├── wr.svg, br.svg   # White and black rooks
+    ├── wn.svg, bn.svg   # White and black knights
+    ├── wb.svg, bb.svg   # White and black bishops
+    ├── wq.svg, bq.svg   # White and black queens
+    └── wk.svg, bk.svg   # White and black kings
 ```
 
 The project follows a clear separation of concerns:
@@ -168,6 +175,7 @@ The project follows a clear separation of concerns:
   - `board.js`: DOM manipulation for the board interface
   - `game.js`: Core chess logic including special moves, check detection, etc.
   - `main.js`: Bootstraps the application
+- **SVG assets:** Vector graphics for all chess pieces, ensuring consistent rendering across browsers
 
 </details>
 
@@ -194,7 +202,6 @@ Since this is a purely static website, it can be easily deployed on any static h
 <summary><b>Planned Features</b></summary>
 <br>
 
-- **SVG Piece Graphics:** Replace Unicode characters with custom SVG images
 - **Drag and Drop:** Allow moving pieces by dragging
 - **AI Opponent:** Implement basic chess AI using minimax algorithm
 - **Promotion Choice:** UI for selecting which piece to promote a pawn to
