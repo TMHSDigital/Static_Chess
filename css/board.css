@@ -78,6 +78,11 @@
     min-width: 0;
 }
 
+.square:focus {
+    outline: 2px solid var(--accent-color);
+    outline-offset: -2px;
+}
+
 .square:hover {
     filter: brightness(1.08);
 }

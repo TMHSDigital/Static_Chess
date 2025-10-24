@@ -50,7 +50,7 @@
 
 ## Overview
 
-Static Chess is a fully functional chess game playable in a web browser. It is built using pure vanilla JavaScript, HTML, and CSS, with no external frameworks or libraries. The game features standard chess rules, move validation, check/checkmate detection, move history, and game state persistence using `localStorage`.
+Static Chess is a fully functional chess game playable in a web browser. It is built using pure vanilla JavaScript, HTML, and CSS, with no external frameworks or libraries. The game features standard chess rules, move validation, check/checkmate detection, move history in SAN with basic disambiguation, undo, accessibility improvements, and game state persistence using `localStorage`.
 
 It is designed to be simple, lightweight, and easily deployable on static hosting platforms like GitHub Pages.
 
@@ -73,12 +73,13 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
   - Shows possible legal moves for the selected piece
   - Highlights the king when in check
   - Highlights the last move made
-- **Move History:** Displays moves in standard algebraic notation (SAN)
+- **Move History:** Displays moves in standard algebraic notation (SAN) with basic disambiguation
+- **Undo Move:** Revert the last move with one click
 - **Game Persistence:** Automatically saves game state to `localStorage`
 - **Responsive Design:** Adapts layout for both desktop and mobile devices
 - **Coordinate Toggle:** Option to display board coordinates
 - **Professional UI:** Clean, minimalist design with subtle animations and visual cues
-- **Customizable Settings:** Toggle visibility of coordinates, move indicators, and highlights
+- **Customizable Settings:** Toggle visibility of coordinates, move indicators, last-move highlight, and sound effects
 
 </details>
 
@@ -93,6 +94,9 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 - **Sophisticated Colors:** Carefully selected color palette for optimal contrast and reduced eye strain
 - **Subtle Move Indicators:** Non-intrusive indicators for possible moves and last move played
 - **Animated Pieces:** Smooth animations enhance the playing experience
+- **Keyboard Navigation:** Navigate the board with arrow keys; Enter/Space to select/move
+- **Accessibility:** ARIA roles on board and polite live-region updates for status
+- **Sound Effects:** Optional audio feedback for moves, captures, check, castling, and promotion (toggle in settings)
 - **Settings Panel:** Customizable display options with toggle switches
 - **Mobile-Friendly Design:** Works well on touchscreens with appropriate sizing
 
@@ -123,6 +127,15 @@ The game features an elegant, professional-looking interface with a dark theme a
 
 2. **Open `index.html`:** Simply open the file in your web browser.
 
+Optional (for contributors):
+
+- Install dev tooling for linting/testing:
+  ```bash
+  npm install
+  npm test
+  npm run lint
+  ```
+
 That's it! No build process or dependencies are required.
 
 ---
@@ -137,7 +150,11 @@ That's it! No build process or dependencies are required.
 6. If a move results in check, the opponent's king will be highlighted in red
 7. Game ends with checkmate or stalemate
 8. Click "New Game" to reset the board
-9. Toggle "Show coordinates" to display board coordinates
+9. Toggle settings:
+   - Show coordinates
+   - Show possible moves
+   - Highlight last move
+   - Sound effects
 10. Game state is saved automatically to localStorage
 
 ---
@@ -162,9 +179,9 @@ Static_Chess/
 │   ├── board.js         # Board rendering and interaction
 │   ├── game.js          # Core game logic
 │   ├── main.js          # Application entry point
-│   ├── drag.js          # Drag and drop functionality
-│   ├── ai.js            # AI opponent
-│   └── promotion.js     # Pawn promotion UI
+│   ├── drag.js          # Drag and drop functionality (integrated with click flow)
+│   ├── ai.js            # AI opponent (skeleton)
+│   └── promotion.js     # Pawn promotion UI (skeleton)
 ├── assets/              # SVG files for chess pieces
 │   ├── wp.svg, bp.svg   # White and black pawns
 │   ├── wr.svg, br.svg   # White and black rooks
@@ -186,10 +203,11 @@ The project follows a clear separation of concerns:
   - `config.js`: Feature flags and game settings
   - `utils.js`: Helper functions like coordinate conversions
   - `pieces.js`: Piece objects and basic movement rules
-  - `board.js`: DOM manipulation for the board interface
-  - `game.js`: Core chess logic including special moves, check detection, etc.
+  - `board.js`: DOM rendering, keyboard navigation, and diff-based updates
+  - `game.js`: Core chess logic including special moves, undo, SAN, check detection
   - `main.js`: Bootstraps the application
-  - Additional files for upcoming feature implementations
+  - `drag.js`: Drag and drop integrated via existing click handlers
+  - `ai.js`, `promotion.js`: Skeletons for upcoming features
 - **SVG assets:** Vector graphics for all chess pieces, ensuring consistent rendering across browsers
 - **Documentation:** Architecture guides and development roadmap
 
@@ -201,10 +219,11 @@ The project follows a clear separation of concerns:
 
 The project includes comprehensive documentation to help developers understand the architecture and implement new features:
 
-- **Architecture Documentation:** The `docs/ARCHITECTURE.md` file explains the component interactions, data flow, and state management approach.
-- **Development Roadmap:** The `docs/ROADMAP.md` file outlines planned features, priorities, and implementation timeline.
-- **Code Comments:** All files include thorough JSDoc comments explaining functionality and usage.
-- **Feature Implementation Guides:** The architecture document includes detailed guides for implementing each planned feature.
+- **Architecture Documentation:** `docs/ARCHITECTURE.md` explains components, data flow, and state.
+- **Development Roadmap:** `docs/ROADMAP.md` outlines features, priorities, and timeline.
+- **Release Process:** `docs/RELEASE.md` describes tagging, versioning, and triage.
+- **Changelog:** `CHANGELOG.md` tracks notable changes.
+- **Code Comments:** Files include JSDoc comments explaining functionality and usage.
 
 To contribute to the project or implement new features, please review these documentation files first.
 
@@ -223,6 +242,8 @@ Since this is a purely static website, it can be easily deployed on any static h
 5. Set folder to `/ (root)`
 6. Your site will be available at `https://tmhsdigital.github.io/Static_Chess/`
 
+Optional (CI-driven Pages): add a `pages.yml` workflow or keep manual Pages settings. CI (`.github/workflows/ci.yml`) runs lint and tests on PRs and pushes.
+
 ---
 
 ## Future Enhancements
@@ -233,7 +254,7 @@ See the [Development Roadmap](docs/ROADMAP.md) for a detailed plan of upcoming f
 <summary><b>Planned Features</b></summary>
 <br>
 
-- **Drag and Drop:** Allow moving pieces by dragging
+- **Drag and Drop:** Completed integration with click-based flow
 - **AI Opponent:** Implement basic chess AI using minimax algorithm
 - **Promotion Choice:** UI for selecting which piece to promote a pawn to
 - **Game Timer:** Optional chess clock functionality

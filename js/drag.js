@@ -144,11 +144,11 @@ function handleDragEnd(event) {
         
         debugLog('Dropped at square', row, col);
         
-        // Call into game.js to try to make the move
-        // handleSquareClickCallback(dragState.startSquare.row, dragState.startSquare.col);
-        // handleSquareClickCallback(row, col);
-        
-        // TODO: Implement when integrating with game logic
+        // Call into game.js to try to make the move via existing click flow
+        if (typeof window.handleBoardClick === 'function') {
+            window.handleBoardClick(dragState.startSquare.row, dragState.startSquare.col);
+            window.handleBoardClick(row, col);
+        }
     }
     
     // Reset drag state

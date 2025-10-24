@@ -12,10 +12,12 @@ let kingPositions = { // Keep track of king positions for check detection
 };
 let currentStatus = "White's turn";
 let enPassantTarget = null; // Stores coords {row, col} of square vulnerable to en passant, or null
+let positionHistory = []; // For undo and repetition detection
 
 const moveHistoryElement = document.getElementById('move-history');
 const gameStatusElement = document.getElementById('game-status');
 const resetButton = document.getElementById('reset-button');
+const undoButton = document.getElementById('undo-button');
 
 /**
  * Initializes the game state, either from scratch or localStorage.
@@ -38,6 +40,12 @@ function initializeGame() {
     // Add event listener for reset button
     resetButton.removeEventListener('click', resetGame);
     resetButton.addEventListener('click', resetGame);
+
+    // Add event listener for undo button
+    if (undoButton) {
+        undoButton.removeEventListener('click', undoLastMove);
+        undoButton.addEventListener('click', undoLastMove);
+    }
 
     console.log("Game initialized.");
 }
@@ -72,6 +80,7 @@ function resetGame() {
     };
     currentStatus = "White's turn";
     enPassantTarget = null;
+    positionHistory = [];
     clearSelectedSquare();
     clearPossibleMoves();
     localStorage.removeItem('chessGameState'); // Clear saved state
@@ -182,6 +191,18 @@ function makeMove(startRow, startCol, endRow, endCol) {
         }
     }
 
+    // --- Save snapshot for undo ---
+    const preMoveSnapshot = {
+        boardState: deepClone(boardState),
+        currentPlayer,
+        moveHistory: deepClone(moveHistory),
+        isGameOver,
+        kingPositions: deepClone(kingPositions),
+        currentStatus,
+        enPassantTarget: enPassantTarget ? { ...enPassantTarget } : null
+    };
+    positionHistory.push(preMoveSnapshot);
+
     // --- Update Board State --- 
     boardState[endRow][endCol] = pieceToMove;
     boardState[startRow][startCol] = null;
@@ -203,7 +224,7 @@ function makeMove(startRow, startCol, endRow, endCol) {
 
     // --- Post-Move Updates --- 
     switchPlayer();
-    move.notation = generateNotation(move); // Generate notation after player switch
+    move.notation = generateNotationWithDisambiguation(move, preMoveSnapshot.boardState); // Generate notation using pre-move state
     moveHistory.push(move);
 
     // Check for check, checkmate, stalemate
@@ -232,7 +253,44 @@ function makeMove(startRow, startCol, endRow, endCol) {
     updateStatusDisplay();
     updateMoveHistoryDisplay();
     updateBoardVisuals(boardState, opponentKingInCheck);
+    // Sounds
+    try {
+        if (move.isCastling) {
+            playSound('castle');
+        } else if (move.promotion) {
+            playSound('promote');
+        } else if (move.captured) {
+            playSound('capture');
+        } else if (move.isCheck || opponentKingInCheck) {
+            playSound('check');
+        } else {
+            playSound('move');
+        }
+    } catch (_) { /* ignore sound errors */ }
     saveGameState(); // Save state after successful move
+}
+
+/**
+ * Undo the last move and restore previous game state
+ */
+function undoLastMove() {
+    if (positionHistory.length === 0 || isGameOver && moveHistory.length === 0) return;
+    const snapshot = positionHistory.pop();
+    boardState = snapshot.boardState;
+    currentPlayer = snapshot.currentPlayer;
+    moveHistory = snapshot.moveHistory;
+    isGameOver = snapshot.isGameOver;
+    kingPositions = snapshot.kingPositions;
+    currentStatus = snapshot.currentStatus;
+    enPassantTarget = snapshot.enPassantTarget;
+
+    clearSelectedSquare();
+    clearPossibleMoves();
+    renderPieces(boardState);
+    updateStatusDisplay();
+    updateMoveHistoryDisplay();
+    updateBoardVisuals(boardState, findKingInCheck(currentPlayer));
+    saveGameState();
 }
 
 /**
@@ -348,7 +406,7 @@ function generateLegalMovesForPiece(startRow, startCol) {
         // --- Simulation --- 
         // Temporarily make the move on a deep copy of the board
         // to see if the player's own king would be in check.
-        const tempBoard = JSON.parse(JSON.stringify(boardState)); // Deep copy needed
+        const tempBoard = boardState.map(row => row.map(cell => cell ? { ...cell } : null));
         const tempPiece = tempBoard[startRow][startCol];
         const tempCaptured = tempBoard[move.row][move.col];
         let tempEnPassantCapturedPawn = null;
@@ -381,16 +439,14 @@ function generateLegalMovesForPiece(startRow, startCol) {
         tempBoard[startRow][startCol] = null;
 
         // Temporarily update king position if king moved
-        let originalKingPos = { ...kingPositions[playerColor] }; // shallow copy ok
+        const originalKingPos = { ...kingPositions[playerColor] };
+        const simulatedKingPositions = { ...kingPositions, [playerColor]: originalKingPos };
         if (tempPiece && tempPiece.type === KING) {
-            kingPositions[playerColor] = { row: move.row, col: move.col };
+            simulatedKingPositions[playerColor] = { row: move.row, col: move.col };
         }
 
         // Check if the king is now in check after the simulated move
-        const kingInCheck = isKingInCheck(playerColor, tempBoard);
-
-        // Restore king position (board state is not restored as it's a temporary copy)
-        kingPositions[playerColor] = originalKingPos;
+        const kingInCheck = isKingInCheckWithPositions(playerColor, tempBoard, simulatedKingPositions);
 
         // If the king is NOT in check after this move, it's a legal move.
         return !kingInCheck;
@@ -499,6 +555,15 @@ function findKingInCheck(playerColor) {
  */
 function isKingInCheck(playerColor, currentBoardState) {
     const kingPos = kingPositions[playerColor];
+    const opponentColor = playerColor === WHITE ? BLACK : WHITE;
+    return isSquareAttacked(kingPos.row, kingPos.col, opponentColor, currentBoardState);
+}
+
+/**
+ * Variant of isKingInCheck that accepts provided king positions (for simulations)
+ */
+function isKingInCheckWithPositions(playerColor, currentBoardState, kPos) {
+    const kingPos = kPos[playerColor];
     const opponentColor = playerColor === WHITE ? BLACK : WHITE;
     return isSquareAttacked(kingPos.row, kingPos.col, opponentColor, currentBoardState);
 }
@@ -766,6 +831,72 @@ function generateNotation(move) {
         notation += ' e.p.'; // Optional indicator
     }
 
+    return notation;
+}
+
+/**
+ * Generate SAN with basic disambiguation using pre-move board state
+ */
+function generateNotationWithDisambiguation(move, boardBefore) {
+    const piece = move.piece;
+    const toAlg = coordsToAlgebraic(move.to.row, move.to.col);
+    if (move.isCastling) {
+        return move.to.col > move.from.col ? 'O-O' : 'O-O-O';
+    }
+
+    let disambiguation = '';
+    if (piece.type !== PAWN) {
+        // Check for same-type pieces that could also move to the destination
+        for (let r = 0; r < 8; r++) {
+            for (let c = 0; c < 8; c++) {
+                if (r === move.from.row && c === move.from.col) continue;
+                const other = boardBefore[r][c];
+                if (other && other.type === piece.type && other.color === piece.color) {
+                    const targetSquare = boardBefore[move.to.row][move.to.col];
+                    const isCapture = !!targetSquare && targetSquare.color !== piece.color;
+                    if (isPseudoLegalMove(other, r, c, move.to.row, move.to.col, isCapture)) {
+                        if ([ROOK, BISHOP, QUEEN].includes(other.type)) {
+                            // Respect obstructions on pre-move board
+                            const blocked = (function() {
+                                const rowStep = Math.sign(move.to.row - r);
+                                const colStep = Math.sign(move.to.col - c);
+                                let rr = r + rowStep, cc = c + colStep;
+                                while (rr !== move.to.row || cc !== move.to.col) {
+                                    if (boardBefore[rr][cc] !== null) return true;
+                                    rr += rowStep; cc += colStep;
+                                }
+                                return false;
+                            })();
+                            if (blocked) continue;
+                        }
+                        // Need disambiguation
+                        const needFile = move.from.col !== c;
+                        const needRank = move.from.row !== r;
+                        if (needFile && !needRank) disambiguation = coordsToAlgebraic(move.from.row, move.from.col)[0];
+                        else if (!needFile && needRank) disambiguation = coordsToAlgebraic(move.from.row, move.from.col)[1];
+                        else disambiguation = coordsToAlgebraic(move.from.row, move.from.col);
+                    }
+                }
+            }
+        }
+    }
+
+    let notation = '';
+    if (piece.type !== PAWN) {
+        notation += piece.type.toUpperCase() + disambiguation;
+    }
+    if (move.captured) {
+        if (piece.type === PAWN) {
+            notation += coordsToAlgebraic(move.from.row, move.from.col)[0];
+        }
+        notation += 'x';
+    }
+    notation += toAlg;
+    if (move.promotion) notation += '=' + move.promotion.toUpperCase();
+    const nextPlayer = currentPlayer;
+    if (isCheckmate(nextPlayer)) notation += '#';
+    else if (isKingInCheck(nextPlayer, boardState)) notation += '+';
+    if (move.isEnPassant) notation += ' e.p.';
     return notation;
 }
 

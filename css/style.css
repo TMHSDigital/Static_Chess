@@ -160,6 +160,37 @@ body {
     letter-spacing: 0.5px;
 }
 
+#undo-button {
+    padding: 12px;
+    font-size: 1.1em;
+    cursor: pointer;
+    background-color: transparent;
+    color: var(--text-color);
+    border: 1px solid #555;
+    border-radius: var(--border-radius);
+    transition: all 0.3s ease;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-right: 8px;
+}
+
+#undo-button:hover {
+    background-color: rgba(255,255,255,0.06);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+#undo-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.buttons-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
 #reset-button {
     padding: 12px;
     font-size: 1.1em;

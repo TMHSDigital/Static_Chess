@@ -5,12 +5,14 @@
 const boardElement = document.getElementById('chess-board');
 let selectedSquare = null; // { row: number, col: number } | null
 let possibleMoves = []; // Array<{ row: number, col: number }>
+let renderedState = null; // Cache of last rendered board signatures
 
 /**
  * Creates the initial chessboard squares in the DOM.
  */
 function createBoard() {
     boardElement.innerHTML = ''; // Clear existing board
+    renderedState = null; // Reset render cache
     for (let row = 0; row < 8; row++) {
         for (let col = 0; col < 8; col++) {
             const square = document.createElement('div');
@@ -18,9 +20,15 @@ function createBoard() {
             square.classList.add((row + col) % 2 === 0 ? 'light' : 'dark');
             square.dataset.row = row;
             square.dataset.col = col;
+            square.setAttribute('role', 'gridcell');
+            square.setAttribute('tabindex', '0');
             boardElement.appendChild(square);
         }
     }
+
+    // Keyboard navigation for accessibility
+    boardElement.removeEventListener('keydown', handleBoardKeydown);
+    boardElement.addEventListener('keydown', handleBoardKeydown);
 }
 
 /**
@@ -29,59 +37,101 @@ function createBoard() {
  * @param {Object|null} movedPiece - Optional. The coordinates of a piece that just moved, for animation.
  */
 function renderPieces(boardState, movedPiece = null) {
-    // Clear existing pieces first
-    document.querySelectorAll('.piece').forEach(p => p.remove());
+    const sig = (p) => (p ? `${p.color}${p.type}` : null);
 
-    // Generate a cache-busting token
-    const cacheBuster = Date.now();
-    console.log("Rendering pieces with cache buster:", cacheBuster);
+    // First-time render: build all
+    if (!renderedState) {
+        renderedState = Array.from({ length: 8 }, () => Array(8).fill(null));
+    }
 
     for (let row = 0; row < 8; row++) {
         for (let col = 0; col < 8; col++) {
             const piece = boardState[row][col];
-            if (piece) {
-                const squareElement = getSquareElement(row, col);
-                if (squareElement) {
-                    const pieceElement = document.createElement('div');
-                    pieceElement.classList.add('piece');
-                    
-                    // Add piece color and type as classes for potential styling
-                    pieceElement.classList.add(piece.color, piece.type);
-                    
-                    // Use absolute path with cache busting
-                    const svgPath = `assets/${piece.color}${piece.type}.svg?v=${cacheBuster}`;
-                    console.log(`Setting background for ${piece.color}${piece.type} at [${row},${col}] to: ${svgPath}`);
-                    
-                    pieceElement.style.backgroundImage = `url('${svgPath}')`;
-                    pieceElement.style.backgroundSize = 'contain';
-                    pieceElement.style.backgroundRepeat = 'no-repeat';
-                    pieceElement.style.backgroundPosition = 'center';
-                    
-                    // Force image preload to debug loading issues
-                    const img = new Image();
-                    img.onload = () => console.log(`✓ Successfully loaded: ${svgPath}`);
-                    img.onerror = () => console.error(`✗ Failed to load: ${svgPath}`);
-                    img.src = svgPath;
-                    
-                    // Add animation class if this is the piece that just moved
-                    if (movedPiece && movedPiece.row === row && movedPiece.col === col) {
-                        pieceElement.classList.add('moved');
-                        
-                        // Remove the animation class after animation completes
-                        setTimeout(() => {
-                            pieceElement.classList.remove('moved');
-                        }, 300); // Match with animation duration
-                    }
-                    
-                    // Add data attributes for easier identification if needed
-                    pieceElement.dataset.piece = `${piece.color}${piece.type}`;
-                    pieceElement.dataset.color = piece.color;
-                    pieceElement.dataset.type = piece.type;
-                    
-                    squareElement.appendChild(pieceElement);
-                }
+            const newSig = sig(piece);
+            const oldSig = renderedState[row][col];
+            const squareElement = getSquareElement(row, col);
+
+            if (squareElement) {
+                const alg = coordsToAlgebraic(row, col);
+                const label = piece ? `${piece.color === 'w' ? 'white' : 'black'} ${piece.type} on ${alg}` : `${alg}`;
+                squareElement.setAttribute('aria-label', label);
             }
+
+            if (newSig === oldSig) continue; // no change
+
+            // Remove existing piece child
+            if (squareElement) {
+                const existing = squareElement.querySelector('.piece');
+                if (existing) existing.remove();
+            }
+
+            if (piece && squareElement) {
+                const pieceElement = document.createElement('div');
+                pieceElement.classList.add('piece');
+                pieceElement.classList.add(piece.color, piece.type);
+                const svgPath = `assets/${piece.color}${piece.type}.svg`;
+                pieceElement.style.backgroundImage = `url('${svgPath}')`;
+                pieceElement.style.backgroundSize = 'contain';
+                pieceElement.style.backgroundRepeat = 'no-repeat';
+                pieceElement.style.backgroundPosition = 'center';
+
+                if (movedPiece && movedPiece.row === row && movedPiece.col === col) {
+                    pieceElement.classList.add('moved');
+                    setTimeout(() => pieceElement.classList.remove('moved'), 300);
+                }
+
+                pieceElement.dataset.piece = `${piece.color}${piece.type}`;
+                pieceElement.dataset.color = piece.color;
+                pieceElement.dataset.type = piece.type;
+                squareElement.appendChild(pieceElement);
+            }
+
+            renderedState[row][col] = newSig;
         }
+    }
+}
+
+/**
+ * Handle keyboard navigation and activation on the board
+ * Arrow keys move focus; Enter/Space activates (simulates click)
+ * @param {KeyboardEvent} event
+ */
+function handleBoardKeydown(event) {
+    const active = document.activeElement;
+    if (!active || !active.classList.contains('square')) return;
+
+    const row = parseInt(active.dataset.row, 10);
+    const col = parseInt(active.dataset.col, 10);
+
+    const focusSquare = (r, c) => {
+        const el = getSquareElement(Math.max(0, Math.min(7, r)), Math.max(0, Math.min(7, c)));
+        if (el) el.focus();
+    };
+
+    switch (event.key) {
+        case 'ArrowUp':
+            event.preventDefault();
+            focusSquare(row - 1, col);
+            break;
+        case 'ArrowDown':
+            event.preventDefault();
+            focusSquare(row + 1, col);
+            break;
+        case 'ArrowLeft':
+            event.preventDefault();
+            focusSquare(row, col - 1);
+            break;
+        case 'ArrowRight':
+            event.preventDefault();
+            focusSquare(row, col + 1);
+            break;
+        case 'Enter':
+        case ' ': // Space
+            event.preventDefault();
+            active.click();
+            break;
+        default:
+            break;
     }
 }
 

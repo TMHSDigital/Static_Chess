@@ -24,6 +24,7 @@ const CONFIG = {
         SHOW_POSSIBLE_MOVES: true,
         SHOW_LAST_MOVE: true,
         AI_DIFFICULTY: 'easy', // For future AI opponent
+        ENABLE_SOUNDS: false,
     },
     
     // Animation durations (ms)

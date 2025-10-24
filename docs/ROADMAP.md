@@ -10,10 +10,14 @@ The current version includes:
 - ✅ Check/checkmate detection
 - ✅ Stalemate detection
 - ✅ Visual feedback (highlights, move indicators)
-- ✅ Move history in basic algebraic notation
+- ✅ Move history in algebraic notation with basic disambiguation
 - ✅ Game persistence using localStorage
 - ✅ Responsive design for different devices
 - ✅ SVG piece representation for consistent rendering
+- ✅ Undo move
+- ✅ Keyboard navigation and ARIA enhancements
+- ✅ Diff-based rendering performance improvements
+- ✅ Sound effects toggle and event wiring
 
 ## Priority Queue
 
@@ -28,16 +32,16 @@ Features are prioritized as follows:
 
 | Feature | Complexity | Dependencies | Description | Status |
 |---------|------------|--------------|-------------|--------|
-| **Drag and Drop** | Medium | None | Allow moving pieces by dragging instead of just clicking | Skeleton implementation ready |
+| **Drag and Drop** | Medium | None | Allow moving pieces by dragging instead of just clicking | Integrated via click flow |
 | **Promotion UI** | Medium | None | Display a UI for selecting which piece to promote a pawn to | Skeleton implementation ready |
-| **Undo Move** | Medium | None | Add ability to take back the last move | Planned |
-| **Full SAN** | Medium | None | Complete algebraic notation with disambiguation | Utils function started |
+| **Undo Move** | Medium | None | Add ability to take back the last move | Completed |
+| **Full SAN** | Medium | None | Algebraic notation with disambiguation | Implemented (basic) |
 
 ### Tier 2: Improved User Experience
 
 | Feature | Complexity | Dependencies | Description | Status |
 |---------|------------|--------------|-------------|--------|
-| **Sound Effects** | Low | None | Add audio feedback for moves and events | Utils function ready |
+| **Sound Effects** | Low | None | Add audio feedback for moves and events | Toggle + wiring ready |
 | **Advanced Draw Detection** | Medium | None | Implement threefold repetition and fifty-move rule | Planned |
 | **Game Timer** | Medium | None | Optional chess clock functionality | Planned |
 | **Theme Customization** | Medium | None | Allow customization of board colors and styles | Planned |
@@ -58,14 +62,14 @@ This is a rough guideline for feature implementation:
 ### Phase 1: Core Experience Improvements (1-2 months)
 
 - [x] **SVG Piece Images**
-- [ ] **Drag and Drop** *(skeleton implementation available)*
+- [x] **Drag and Drop** *(integrated via click flow)*
 - [ ] **Promotion UI** *(skeleton implementation available)*
-- [ ] **Undo Move**
+- [x] **Undo Move**
 
 ### Phase 2: Usability Enhancements (2-3 months)
 
-- [ ] **Sound Effects** *(utility function available)*
-- [ ] **Full SAN Implementation** *(base function available)*
+- [x] **Sound Effects** *(toggle and event wiring ready; add assets)*
+- [x] **SAN Disambiguation (basic)**
 - [ ] **Advanced Draw Detection**
 - [ ] **Game Timer**
 

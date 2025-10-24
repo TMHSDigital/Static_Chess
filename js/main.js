@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const coordsToggle = document.getElementById('coords-toggle');
     const possibleMovesToggle = document.getElementById('possible-moves-toggle');
     const lastMoveToggle = document.getElementById('last-move-toggle');
+    const soundToggle = document.getElementById('sound-toggle');
     const body = document.body;
     const rootStyle = document.documentElement.style;
 
@@ -18,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const showCoords = localStorage.getItem('showCoords') === 'true';
     const showPossibleMoves = localStorage.getItem('showPossibleMoves') !== 'false'; // Default true
     const showLastMove = localStorage.getItem('showLastMove') !== 'false'; // Default true
+    const enableSounds = localStorage.getItem('enableSounds') === 'true';
 
     // Apply Coordinate setting
     if (coordsToggle) {
@@ -57,6 +59,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const displayValue = this.checked ? 'block' : 'none';
             rootStyle.setProperty('--show-last-move', displayValue);
             localStorage.setItem('showLastMove', this.checked.toString());
+        });
+    }
+
+    // Apply Sound setting
+    if (soundToggle) {
+        soundToggle.checked = enableSounds;
+        CONFIG.FEATURES.SOUND_EFFECTS = enableSounds;
+        soundToggle.addEventListener('change', function() {
+            CONFIG.FEATURES.SOUND_EFFECTS = this.checked;
+            localStorage.setItem('enableSounds', this.checked.toString());
         });
     }
 

@@ -20,7 +20,7 @@ Static_Chess/
 │   ├── board.js         # Board rendering and interaction
 │   ├── game.js          # Core game logic
 │   ├── main.js          # Application entry point
-│   ├── drag.js          # Skeleton for drag and drop functionality
+│   ├── drag.js          # Drag and drop functionality (integrated via click flow)
 │   ├── ai.js            # Skeleton for AI opponent
 │   └── promotion.js     # Skeleton for pawn promotion UI
 ├── assets/              # SVG files for chess pieces
@@ -48,8 +48,9 @@ Static_Chess/
 
 3. **board.js**: UI representation of the chess board
    - Renders the board and pieces
-   - Handles interactions (clicks, drags)
-   - Updates visual state (highlighting, animations)
+   - Handles interactions (clicks, keyboard navigation, drags)
+   - Diff-based rendering updates only changed squares
+   - Updates visual state (highlighting, animations, ARIA labels)
 
 4. **pieces.js**: Chess piece definitions
    - Defines piece types and their basic movement patterns
@@ -63,7 +64,7 @@ Static_Chess/
 6. **config.js**: Centralized configuration
    - Feature flags for enabling/disabling features
    - Game constants and settings
-   - Default user preferences
+   - Default user preferences (including sound effects toggle)
 
 ## Data Flow
 
@@ -99,7 +100,7 @@ These skeleton files include commented code with clear TODOs and integration poi
 
 > **Skeleton Implementation Available: `js/drag.js`**
 
-To implement drag and drop for pieces:
+To implement drag and drop for pieces (integrated with click-based flow):
 
 1. Update `config.js` to enable the DRAG_AND_DROP feature flag
 2. Add the `drag.js` script to `index.html`:
@@ -107,10 +108,7 @@ To implement drag and drop for pieces:
    <script src="js/drag.js"></script>
    ```
 3. Call `initDragAndDrop()` in `main.js` after initializing the game
-4. Complete the TODOs in `drag.js` to integrate with game logic:
-   - Update `handleDragStart` to check if the piece can be moved
-   - Update `handleDragEnd` to call into game.js for move validation
-   - Implement visual feedback for possible moves during drag
+4. `drag.js` calls `handleBoardClick` twice (source, destination) to reuse existing validation and UI updates
 
 The skeleton already includes:
 - Event listeners for mouse and touch events
@@ -191,25 +189,19 @@ To implement the chess clock:
 
 ### 5. Sound Effects
 
-To implement sound effects:
+Sound effects are feature-flagged and user-toggleable:
 
-1. Create an `assets/sounds/` directory with sound files
-2. Update `utils.js` to use the existing `playSound()` function
-3. Trigger sounds for key events:
-   - Piece movement
-   - Captures
-   - Check/checkmate
-   - Game end
-4. Update `config.js` to enable the SOUND_EFFECTS feature flag
+1. Settings toggle updates `CONFIG.FEATURES.SOUND_EFFECTS` and persists preference
+2. `game.js` triggers `playSound()` for move, capture, check, castle, promotion
+3. Add actual audio files under `assets/sounds/` to enable playback
 
 ### 6. Undo Move
 
-To implement undo functionality:
+Undo is implemented using a pre-move snapshot stack:
 
-1. Track detailed move history in `game.js` including captured pieces
-2. Implement `undoLastMove()` function in `game.js`
-3. Add undo button to UI
-4. Update `config.js` to enable the UNDO_MOVE feature flag
+1. Before each move, `game.js` pushes a deep snapshot to `positionHistory`
+2. `undoLastMove()` restores the previous snapshot and rerenders
+3. `index.html` includes an Undo button
 
 ### 7. Multiple Saved Games
 
@@ -231,14 +223,13 @@ To implement advanced draw detection:
 2. Add draw detection to the move validation logic
 3. Update UI to show draw conditions
 
-### 9. Full SAN Implementation
+### 9. SAN Generation
 
-To implement complete Standard Algebraic Notation:
+SAN generation with basic disambiguation is implemented:
 
-1. Enhance the existing `formatSAN()` function in `utils.js`
-2. Add disambiguation (which piece moved when multiple can)
-3. Add support for all special moves notation
-4. Update move history display
+1. `generateNotationWithDisambiguation()` in `game.js` uses the pre-move board to resolve conflicts
+2. Includes capture markers, checks, mates, promotions, and en passant indicator
+3. Future work: handle all edge cases for full SAN parity
 
 ## Coding Standards
 
@@ -269,7 +260,10 @@ To implement complete Standard Algebraic Notation:
 
 ## Testing Approach
 
-- Manual testing for core gameplay
-- Use debugLog() for debugging
-- Test across different browsers
-- Test responsive layout on different devices 
+Automated tests with Jest + jsdom:
+- Unit: utilities (coordinate conversions), pieces (setup), selected game logic paths
+- Integration: move flow updates status and history
+- Optional: Playwright E2E for browser-level scenarios
+
+Manual testing:
+- Cross-browser checks, responsive layout, accessibility (keyboard/ARIA)
