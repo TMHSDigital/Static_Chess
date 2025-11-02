@@ -260,6 +260,10 @@ if (typeof module !== 'undefined' && module.exports) {
         setSelectedSquare,
         clearSelectedSquare,
         setPossibleMoves,
-        clearPossibleMoves
+        clearPossibleMoves,
+        // Export state variables with getters for test access
+        get selectedSquare() { return selectedSquare; },
+        get possibleMoves() { return possibleMoves; },
+        get renderedState() { return renderedState; }
     };
 } 

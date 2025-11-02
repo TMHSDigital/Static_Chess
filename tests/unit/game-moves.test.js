@@ -46,6 +46,16 @@ describe('game core', () => {
     global.setPossibleMoves = board.setPossibleMoves;
     global.clearPossibleMoves = board.clearPossibleMoves;
     
+    // Set up board state globals that game.js expects
+    Object.defineProperty(global, 'selectedSquare', {
+      get: () => board.selectedSquare,
+      configurable: true
+    });
+    Object.defineProperty(global, 'possibleMoves', {
+      get: () => board.possibleMoves,
+      configurable: true
+    });
+    
     const game = require('../../js/game');
     initializeGame = game.initializeGame;
     handleBoardClick = game.handleBoardClick;

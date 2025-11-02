@@ -101,7 +101,7 @@ function handleBoardClick(row, col) {
 
     const clickedPiece = boardState[row][col];
 
-    if (selectedSquare) {
+    if (selectedSquare && Array.isArray(possibleMoves)) {
         // Attempting to make a move
         const move = {
             from: selectedSquare,
