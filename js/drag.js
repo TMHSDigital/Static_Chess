@@ -256,15 +256,13 @@ function handleDragEnd(event) {
             debugLog('Required functions not available for drop');
         }
     } else if (wasDrag && !targetSquare) {
-            // Dropped outside board - ensure no selection
-            if (typeof window.clearSelectedSquare === 'function') {
-                window.clearSelectedSquare();
-            }
-            if (typeof window.clearPossibleMoves === 'function') {
-                window.clearPossibleMoves();
-            }
+        // Dropped outside board - ensure no selection
+        if (typeof window.clearSelectedSquare === 'function') {
+            window.clearSelectedSquare();
         }
-        
+        if (typeof window.clearPossibleMoves === 'function') {
+            window.clearPossibleMoves();
+        }
         // Set flag to prevent click event
         dragJustEnded = true;
         setTimeout(() => { dragJustEnded = false; }, 100);
