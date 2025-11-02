@@ -2,6 +2,7 @@
   "name": "static_chess",
   "private": true,
   "version": "0.0.0",
+  "type": "module",
   "description": "Dev tooling for Static Chess (lint/test only)",
   "scripts": {
     "lint": "eslint . --ext .js",
