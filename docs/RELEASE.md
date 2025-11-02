@@ -43,7 +43,14 @@ Semantic Versioning (MAJOR.MINOR.PATCH):
 
 ## Release Notes
 
-For each release, create a `RELEASE_NOTES_vX.Y.Z.md` file in the root directory. The workflow will automatically use this file for the GitHub Release description. If the file doesn't exist, a default release note will be generated referencing the CHANGELOG.
+For each release, create a `RELEASE_NOTES_vX.Y.Z.md` file in the `releases/` directory. The workflow will automatically use this file for the GitHub Release description. If the file doesn't exist, a default release note will be generated referencing the CHANGELOG.
+
+Release-related files are organized in the `releases/` directory:
+- `README.md` - Documentation for the releases directory structure
+- `RELEASE_NOTES_vX.Y.Z.md` - Release notes used by GitHub Actions workflow
+- `RELEASE_GUIDE_vX.Y.Z.md` - Step-by-step release guide (optional, for reference)
+
+See `releases/README.md` for more details on the organization.
 
 Example structure:
 ```markdown

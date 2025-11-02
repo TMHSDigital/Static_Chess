@@ -30,6 +30,8 @@ Static_Chess/
 │   ├── wb.svg, bb.svg   # Bishops
 │   ├── wq.svg, bq.svg   # Queens
 │   └── wk.svg, bk.svg   # Kings
+├── releases/            # Release files (notes and guides)
+│   └── RELEASE_NOTES_vX.Y.Z.md  # Release notes for each version
 ├── .github/             # GitHub configuration
 │   ├── workflows/       # CI/CD workflows (ci.yml, release.yml)
 │   └── [templates]      # Issue/PR templates, CODEOWNERS, etc.

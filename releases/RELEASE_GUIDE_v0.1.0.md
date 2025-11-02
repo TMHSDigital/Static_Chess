@@ -38,7 +38,7 @@ git push origin v0.1.0
 
 The GitHub Actions workflow (`.github/workflows/release.yml`) will automatically:
 - Detect the pushed tag (any tag starting with `v`)
-- Read `RELEASE_NOTES_v0.1.0.md` if it exists
+- Read `releases/RELEASE_NOTES_v0.1.0.md` if it exists (or root for backwards compatibility)
 - Create a GitHub Release with the tag name and release notes
 - Publish it automatically
 

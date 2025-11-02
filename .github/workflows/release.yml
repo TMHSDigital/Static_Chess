@@ -24,7 +24,10 @@ jobs:
         shell: bash
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
-          if [ -f "RELEASE_NOTES_${TAG}.md" ]; then
+          # Check in releases/ directory first, then root for backwards compatibility
+          if [ -f "releases/RELEASE_NOTES_${TAG}.md" ]; then
+            NOTES=$(cat "releases/RELEASE_NOTES_${TAG}.md")
+          elif [ -f "RELEASE_NOTES_${TAG}.md" ]; then
             NOTES=$(cat "RELEASE_NOTES_${TAG}.md")
           else
             NOTES="# Release ${TAG}\n\nSee [CHANGELOG.md](CHANGELOG.md) for details."

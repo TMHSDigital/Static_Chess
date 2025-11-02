@@ -203,6 +203,10 @@ Static_Chess/
 ├── tests/               # Test files (Jest + jsdom)
 │   ├── unit/            # Unit tests for utilities, pieces, game logic
 │   └── integration/     # Integration tests for game flow
+├── releases/            # Release files
+│   ├── README.md        # Release directory documentation
+│   ├── RELEASE_NOTES_v0.1.0.md  # Release notes for v0.1.0
+│   └── RELEASE_GUIDE_v0.1.0.md  # Release guide for v0.1.0
 ├── docs/                # Documentation
 │   ├── ARCHITECTURE.md  # Architecture and design documentation
 │   ├── ROADMAP.md       # Development roadmap
