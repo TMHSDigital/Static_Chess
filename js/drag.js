@@ -93,6 +93,27 @@ function handleDragStart(event) {
     const row = parseInt(squareElement.dataset.row, 10);
     const col = parseInt(squareElement.dataset.col, 10);
     
+    // Check if this piece belongs to the current player
+    if (typeof window.boardState !== 'undefined' && typeof window.currentPlayer !== 'undefined') {
+        const piece = window.boardState[row][col];
+        if (!piece || piece.color !== window.currentPlayer) {
+            return; // Can't drag opponent's pieces
+        }
+    }
+    
+    // Select the piece and show possible moves before starting drag
+    if (typeof window.setSelectedSquare === 'function' && 
+        typeof window.generateLegalMovesForPiece === 'function' &&
+        typeof window.setPossibleMoves === 'function' &&
+        typeof window.updateBoardVisuals === 'function' &&
+        typeof window.findKingInCheck === 'function' &&
+        typeof window.currentPlayer !== 'undefined') {
+        window.setSelectedSquare(row, col);
+        const moves = window.generateLegalMovesForPiece(row, col);
+        window.setPossibleMoves(moves);
+        window.updateBoardVisuals(window.boardState, window.findKingInCheck(window.currentPlayer));
+    }
+    
     // Get start position
     const clientX = event.type === 'touchstart' ? event.touches[0].clientX : event.clientX;
     const clientY = event.type === 'touchstart' ? event.touches[0].clientY : event.clientY;

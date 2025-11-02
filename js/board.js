@@ -253,6 +253,9 @@ function clearPossibleMoves() {
 if (typeof window !== 'undefined') {
     window.clearSelectedSquare = clearSelectedSquare;
     window.clearPossibleMoves = clearPossibleMoves;
+    window.setSelectedSquare = setSelectedSquare;
+    window.setPossibleMoves = setPossibleMoves;
+    window.updateBoardVisuals = updateBoardVisuals;
 }
 
 // Export for Node/Jest tests (CommonJS)

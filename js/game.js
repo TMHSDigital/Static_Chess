@@ -905,9 +905,18 @@ function generateNotationWithDisambiguation(move, boardBefore) {
     return notation;
 }
 
-// Expose handleBoardClick globally for drag.js and other modules
+// Expose handleBoardClick and related functions globally for drag.js and other modules
 if (typeof window !== 'undefined') {
     window.handleBoardClick = handleBoardClick;
+    window.generateLegalMovesForPiece = generateLegalMovesForPiece;
+    window.findKingInCheck = findKingInCheck;
+    // Expose state getters
+    Object.defineProperty(window, 'boardState', {
+        get: function() { return boardState; }
+    });
+    Object.defineProperty(window, 'currentPlayer', {
+        get: function() { return currentPlayer; }
+    });
 }
 
 // Export for Node/Jest tests (CommonJS)
