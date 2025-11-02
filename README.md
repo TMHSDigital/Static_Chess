@@ -116,8 +116,8 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 The game features an elegant, professional-looking interface with a dark theme and subtle visual cues:
 
 <p align="center">
-  <img src="ui-without-settings.png" alt="UI Without Settings Panel" width="45%" style="margin-right: 2%;">
-  <img src="ui-with-settings.png" alt="UI With Settings Panel" width="45%">
+  <img src="assets/screenshots/ui-without-settings.png" alt="UI Without Settings Panel" width="45%" style="margin-right: 2%;">
+  <img src="assets/screenshots/ui-with-settings.png" alt="UI With Settings Panel" width="45%">
 </p>
 
 <p align="center"><em>Game interface without settings panel (left) and with settings panel (right)</em></p>
@@ -189,16 +189,34 @@ Static_Chess/
 │   ├── drag.js          # Drag and drop functionality (integrated with click flow)
 │   ├── ai.js            # AI opponent (skeleton)
 │   └── promotion.js     # Pawn promotion UI (skeleton)
-├── assets/              # SVG files for chess pieces
-│   ├── wp.svg, bp.svg   # White and black pawns
-│   ├── wr.svg, br.svg   # White and black rooks
-│   ├── wn.svg, bn.svg   # White and black knights
-│   ├── wb.svg, bb.svg   # White and black bishops
-│   ├── wq.svg, bq.svg   # White and black queens
-│   └── wk.svg, bk.svg   # White and black kings
+├── assets/              # Static assets
+│   ├── screenshots/     # UI screenshots for documentation
+│   │   ├── ui-with-settings.png
+│   │   └── ui-without-settings.png
+│   └── [piece SVGs]     # SVG files for chess pieces
+│       ├── wp.svg, bp.svg   # White and black pawns
+│       ├── wr.svg, br.svg   # White and black rooks
+│       ├── wn.svg, bn.svg   # White and black knights
+│       ├── wb.svg, bb.svg   # White and black bishops
+│       ├── wq.svg, bq.svg   # White and black queens
+│       └── wk.svg, bk.svg   # White and black kings
+├── tests/               # Test files (Jest + jsdom)
+│   ├── unit/            # Unit tests for utilities, pieces, game logic
+│   └── integration/     # Integration tests for game flow
 ├── docs/                # Documentation
 │   ├── ARCHITECTURE.md  # Architecture and design documentation
-│   └── ROADMAP.md       # Development roadmap
+│   ├── ROADMAP.md       # Development roadmap
+│   └── RELEASE.md       # Release process documentation
+├── .github/             # GitHub configuration
+│   ├── workflows/       # CI/CD workflows
+│   ├── ISSUE_TEMPLATE/  # Issue templates
+│   └── CODEOWNERS       # Code ownership rules
+├── package.json         # Dev dependencies and scripts (lint/test only)
+├── eslint.config.js     # ESLint configuration
+├── .prettierrc          # Prettier configuration
+├── .editorconfig        # Editor configuration
+├── .gitignore           # Git ignore rules
+├── CHANGELOG.md         # Project changelog
 └── LICENSE              # Apache 2.0 License file
 ```
 
@@ -216,7 +234,9 @@ The project follows a clear separation of concerns:
   - `drag.js`: Drag and drop integrated via existing click handlers
   - `ai.js`, `promotion.js`: Skeletons for upcoming features
 - **SVG assets:** Vector graphics for all chess pieces, ensuring consistent rendering across browsers
-- **Documentation:** Architecture guides and development roadmap
+- **Tests:** Jest unit and integration tests with jsdom for browser simulation
+- **Documentation:** Architecture guides, development roadmap, and release process
+- **Dev tooling:** ESLint, Prettier, EditorConfig for code quality (dev-only, no runtime dependencies)
 
 </details>
 
