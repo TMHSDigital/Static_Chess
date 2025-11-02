@@ -1,4 +1,5 @@
 // ESLint v9 flat config
+// Structured to avoid redeclare errors by only adding globals to files that USE them, not DECLARE them
 import js from '@eslint/js';
 import globals from 'globals';
 
@@ -7,17 +8,72 @@ export default [
   {
     languageOptions: {
       ecmaVersion: 'latest',
-      sourceType: 'script', // Vanilla JS files are scripts
+      sourceType: 'script',
       globals: {
         ...globals.browser,
-        ...globals.node,
-        // JSDOM/Jest globals (tests)
+        ...globals.node
+      }
+    },
+    rules: {
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      'no-console': 'off'
+    }
+  },
+  // Test files
+  {
+    files: ['tests/**/*.js'],
+    languageOptions: {
+      globals: {
+        ...globals.jest,
         describe: 'readonly',
         test: 'readonly',
         expect: 'readonly',
-        beforeEach: 'readonly',
-        // Cross-file dependencies (used but not declared in some files)
-        // These are declared in their respective files but used elsewhere
+        beforeEach: 'readonly'
+      }
+    }
+  },
+  // config.js - declares CONFIG, uses nothing
+  {
+    files: ['js/config.js'],
+    languageOptions: {
+      globals: {}
+    }
+  },
+  // utils.js - declares utilities, uses CONFIG
+  {
+    files: ['js/utils.js'],
+    languageOptions: {
+      globals: {
+        CONFIG: 'readonly'
+      }
+    }
+  },
+  // pieces.js - declares constants/Piece/getInitialPieces, uses isWithinBounds
+  {
+    files: ['js/pieces.js'],
+    languageOptions: {
+      globals: {
+        isWithinBounds: 'readonly'
+      }
+    }
+  },
+  // board.js - declares selectedSquare, possibleMoves, boardElement, and board functions
+  // Uses: coordsToAlgebraic, moveHistory (from game.js)
+  {
+    files: ['js/board.js'],
+    languageOptions: {
+      globals: {
+        coordsToAlgebraic: 'readonly',
+        moveHistory: 'readonly'
+      }
+    }
+  },
+  // game.js - declares boardState, currentPlayer, moveHistory, and game functions
+  // Uses: everything from other files, but doesn't redeclare them
+  {
+    files: ['js/game.js'],
+    languageOptions: {
+      globals: {
         CONFIG: 'readonly',
         debugLog: 'readonly',
         PAWN: 'readonly',
@@ -31,9 +87,7 @@ export default [
         isWithinBounds: 'readonly',
         isPseudoLegalMove: 'readonly',
         coordsToAlgebraic: 'readonly',
-        algebraicToCoords: 'readonly',
         deepClone: 'readonly',
-        getOppositeColor: 'readonly',
         playSound: 'readonly',
         Piece: 'readonly',
         getInitialPieces: 'readonly',
@@ -46,41 +100,54 @@ export default [
         updateBoardVisuals: 'readonly',
         createBoard: 'readonly',
         boardElement: 'readonly',
+        selectedSquare: 'writable',
+        possibleMoves: 'writable'
+      }
+    }
+  },
+  // main.js - uses CONFIG, debugLog, initializeGame, initDragAndDrop, initPromotionUI, ChessAI
+  {
+    files: ['js/main.js'],
+    languageOptions: {
+      globals: {
+        CONFIG: 'readonly',
+        debugLog: 'readonly',
         initializeGame: 'readonly',
-        handleBoardClick: 'readonly',
-        makeMove: 'readonly',
-        resetGame: 'readonly',
-        generateLegalMovesForPiece: 'readonly',
-        generateAllLegalMoves: 'readonly',
-        undoLastMove: 'readonly',
-        findKingInCheck: 'readonly',
-        isKingInCheck: 'readonly',
         initDragAndDrop: 'readonly',
         initPromotionUI: 'readonly',
         ChessAI: 'readonly'
       }
-    },
-    rules: {
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-      'no-console': 'off',
-      'no-redeclare': 'off' // Allow redeclaring globals since we use global scope intentionally
     }
   },
+  // drag.js - uses CONFIG, debugLog, handleBoardClick
   {
-    files: ['js/**/*.js'],
+    files: ['js/drag.js'],
     languageOptions: {
       globals: {
-        // State variables that are writable
-        selectedSquare: 'writable',
-        possibleMoves: 'writable',
-        boardState: 'writable',
-        currentPlayer: 'writable',
-        moveHistory: 'writable',
-        isGameOver: 'writable',
-        kingPositions: 'writable',
-        currentStatus: 'writable',
-        enPassantTarget: 'writable',
-        positionHistory: 'writable'
+        CONFIG: 'readonly',
+        debugLog: 'readonly',
+        handleBoardClick: 'readonly'
+      }
+    }
+  },
+  // promotion.js - uses CONFIG, debugLog
+  {
+    files: ['js/promotion.js'],
+    languageOptions: {
+      globals: {
+        CONFIG: 'readonly',
+        debugLog: 'readonly'
+      }
+    }
+  },
+  // ai.js - uses CONFIG, debugLog, deepClone
+  {
+    files: ['js/ai.js'],
+    languageOptions: {
+      globals: {
+        CONFIG: 'readonly',
+        debugLog: 'readonly',
+        deepClone: 'readonly'
       }
     }
   },
