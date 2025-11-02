@@ -51,10 +51,49 @@ describe('game core', () => {
     handleBoardClick = game.handleBoardClick;
     generateLegalMovesForPiece = game.generateLegalMovesForPiece;
     
+    // Set up game state globals that board.js functions expect
+    // Use getters to always reference current state
+    Object.defineProperty(global, 'moveHistory', {
+      get: () => game.moveHistory,
+      configurable: true
+    });
+    Object.defineProperty(global, 'boardState', {
+      get: () => game.boardState,
+      configurable: true
+    });
+    Object.defineProperty(global, 'currentPlayer', {
+      get: () => game.currentPlayer,
+      configurable: true
+    });
+    Object.defineProperty(global, 'isGameOver', {
+      get: () => game.isGameOver,
+      configurable: true
+    });
+    Object.defineProperty(global, 'kingPositions', {
+      get: () => game.kingPositions,
+      configurable: true
+    });
+    Object.defineProperty(global, 'currentStatus', {
+      get: () => game.currentStatus,
+      configurable: true
+    });
+    Object.defineProperty(global, 'enPassantTarget', {
+      get: () => game.enPassantTarget,
+      configurable: true
+    });
+    Object.defineProperty(global, 'positionHistory', {
+      get: () => game.positionHistory,
+      configurable: true
+    });
+    
     // Also attach to window for code that expects window.*
     window.initializeGame = initializeGame;
     window.handleBoardClick = handleBoardClick;
     window.generateLegalMovesForPiece = generateLegalMovesForPiece;
+    Object.defineProperty(window, 'moveHistory', {
+      get: () => game.moveHistory,
+      configurable: true
+    });
     
     initializeGame();
   });

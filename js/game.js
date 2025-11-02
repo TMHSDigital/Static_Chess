@@ -88,7 +88,7 @@ function resetGame() {
     renderPieces(boardState);
     updateStatusDisplay();
     updateMoveHistoryDisplay();
-    updateBoardVisuals(boardState);
+    updateBoardVisuals(boardState, findKingInCheck(currentPlayer));
 }
 
 /**
@@ -916,6 +916,15 @@ if (typeof module !== 'undefined' && module.exports) {
         isStalemate,
         canCastle,
         generateNotation,
-        generateNotationWithDisambiguation
+        generateNotationWithDisambiguation,
+        // Export state variables for test access
+        get boardState() { return boardState; },
+        get currentPlayer() { return currentPlayer; },
+        get moveHistory() { return moveHistory; },
+        get isGameOver() { return isGameOver; },
+        get kingPositions() { return kingPositions; },
+        get currentStatus() { return currentStatus; },
+        get enPassantTarget() { return enPassantTarget; },
+        get positionHistory() { return positionHistory; }
     };
 } 
