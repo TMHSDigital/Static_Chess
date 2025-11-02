@@ -80,6 +80,7 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
   - Highlights the king when in check
   - Highlights the last move made
 - **Move History:** Displays moves in standard algebraic notation (SAN) with basic disambiguation
+- **Drag and Drop:** Move pieces by dragging them to valid squares (works alongside click-based movement)
 - **Undo Move:** Revert the last move with one click
 - **Game Persistence:** Automatically saves game state to `localStorage`
 - **Responsive Design:** Adapts layout for both desktop and mobile devices
@@ -150,8 +151,8 @@ That's it! No build process or dependencies are required.
 
 1. Open `index.html` in your browser
 2. The game starts with White's turn
-3. Click on a piece to select it and see possible moves
-4. Click on a highlighted square to move the selected piece
+3. Click on a piece to select it and see possible moves, or drag the piece to move it
+4. Click on a highlighted square to move the selected piece (or drop if dragging)
 5. The board updates, move is added to the Move History, and turn switches
 6. If a move results in check, the opponent's king will be highlighted in red
 7. Game ends with checkmate or stalemate
@@ -260,15 +261,13 @@ See the [Development Roadmap](docs/ROADMAP.md) for a detailed plan of upcoming f
 <summary><b>Planned Features</b></summary>
 <br>
 
-- **Drag and Drop:** Completed integration with click-based flow
 - **AI Opponent:** Implement basic chess AI using minimax algorithm
 - **Promotion Choice:** UI for selecting which piece to promote a pawn to
 - **Game Timer:** Optional chess clock functionality
-- **Sound Effects:** Audio feedback for moves and events
-- **Undo Move:** Ability to take back the last move
+- **Sound Effects:** Audio feedback for moves and events (toggle and wiring ready; add audio files)
 - **Multiple Saved Games:** Save and load multiple games
 - **Advanced Draw Detection:** Implement threefold repetition and fifty-move rule
-- **Full SAN Implementation:** Complete algebraic notation with disambiguation
+- **Full SAN Implementation:** Complete algebraic notation with full disambiguation
 
 </details>
 

@@ -32,7 +32,7 @@ Features are prioritized as follows:
 
 | Feature | Complexity | Dependencies | Description | Status |
 |---------|------------|--------------|-------------|--------|
-| **Drag and Drop** | Medium | None | Allow moving pieces by dragging instead of just clicking | Integrated via click flow |
+| **Drag and Drop** | Medium | None | Allow moving pieces by dragging instead of just clicking | ✅ Completed |
 | **Promotion UI** | Medium | None | Display a UI for selecting which piece to promote a pawn to | Skeleton implementation ready |
 | **Undo Move** | Medium | None | Add ability to take back the last move | Completed |
 | **Full SAN** | Medium | None | Algebraic notation with disambiguation | Implemented (basic) |
@@ -62,7 +62,7 @@ This is a rough guideline for feature implementation:
 ### Phase 1: Core Experience Improvements (1-2 months)
 
 - [x] **SVG Piece Images**
-- [x] **Drag and Drop** *(integrated via click flow)*
+- [x] **Drag and Drop** *(fully implemented)*
 - [ ] **Promotion UI** *(skeleton implementation available)*
 - [x] **Undo Move**
 

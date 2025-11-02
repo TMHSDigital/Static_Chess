@@ -88,32 +88,33 @@ The game state is primarily managed in `game.js` and consists of:
 
 Several planned features already have skeleton implementations that provide a foundation for full implementation:
 
-- **drag.js**: Basic structure for drag and drop functionality
+- **drag.js**: ✅ Fully implemented - drag and drop functionality integrated with click-based flow
 - **ai.js**: Framework for implementing the AI opponent
 - **promotion.js**: UI components for pawn promotion
 
-These skeleton files include commented code with clear TODOs and integration points, so they're ready to be expanded upon when implementing the features.
+The drag and drop feature is complete and enabled. Other skeleton files include commented code with clear TODOs and integration points, so they're ready to be expanded upon when implementing the features.
 
 ## Implementing Future Features
 
 ### 1. Drag and Drop
 
-> **Skeleton Implementation Available: `js/drag.js`**
+> **✅ Fully Implemented: `js/drag.js`**
 
-To implement drag and drop for pieces (integrated with click-based flow):
+Drag and drop is fully implemented and enabled. It works by:
 
-1. Update `config.js` to enable the DRAG_AND_DROP feature flag
-2. Add the `drag.js` script to `index.html`:
-   ```html
-   <script src="js/drag.js"></script>
-   ```
-3. Call `initDragAndDrop()` in `main.js` after initializing the game
-4. `drag.js` calls `handleBoardClick` twice (source, destination) to reuse existing validation and UI updates
+1. Feature flag `DRAG_AND_DROP` is enabled in `config.js`
+2. The `drag.js` script is included in `index.html`
+3. `initDragAndDrop()` is called in `main.js` after game initialization
+4. On drag start, the piece is selected and possible moves are shown
+5. On drop, `makeMove()` is called directly if the drop square is valid
+6. Integration with click handlers prevents conflicts
 
-The skeleton already includes:
+The implementation includes:
 - Event listeners for mouse and touch events
-- Drag state management
-- Basic visual feedback during dragging
+- Drag state management with movement detection
+- Visual feedback (piece follows cursor with opacity change)
+- Drop validation using `elementsFromPoint()` to find target square
+- Proper cleanup and event prevention to avoid click conflicts
 
 ### 2. AI Opponent
 

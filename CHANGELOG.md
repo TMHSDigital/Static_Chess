@@ -3,6 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- Drag and drop functionality (fully integrated with click-based flow)
 - Sound effects toggle and event wiring
 - ARIA roles and keyboard navigation
 - Undo move functionality
