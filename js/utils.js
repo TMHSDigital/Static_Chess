@@ -103,7 +103,9 @@ function saveToLocalStorage(key, data) {
  * @param {string} key - The key to retrieve.
  * @param {any} defaultValue - Default value if key doesn't exist or error occurs.
  * @returns {any} The retrieved data or defaultValue.
+ * @exports loadFromLocalStorage
  */
+// eslint-disable-next-line no-unused-vars
 function loadFromLocalStorage(key, defaultValue = null) {
     try {
         const serialized = localStorage.getItem(key);
@@ -124,7 +126,9 @@ function loadFromLocalStorage(key, defaultValue = null) {
  * @param {boolean} isCheck - Whether the move results in check.
  * @param {boolean} isCheckmate - Whether the move results in checkmate.
  * @returns {string} The move in SAN format.
+ * @exports formatSAN
  */
+// eslint-disable-next-line no-unused-vars
 function formatSAN(move, isCheck = false, isCheckmate = false) {
     if (!move) return '';
     
@@ -172,6 +176,7 @@ function formatSAN(move, isCheck = false, isCheckmate = false) {
  * Creates a sound effect for a chess move.
  * Will be used when sound effects feature is enabled.
  * @param {string} soundType - Type of sound ('move', 'capture', 'check', etc.)
+ * @exports playSound
  */
 function playSound(soundType) {
     if (!CONFIG.FEATURES.SOUND_EFFECTS) return;
@@ -195,7 +200,9 @@ function playSound(soundType) {
  * Get the opposite color.
  * @param {string} color - 'w' for white or 'b' for black.
  * @returns {string} The opposite color ('w' or 'b').
+ * @exports getOppositeColor
  */
+// eslint-disable-next-line no-unused-vars
 function getOppositeColor(color) {
     return color === WHITE ? BLACK : WHITE;
 }
@@ -203,6 +210,7 @@ function getOppositeColor(color) {
 /**
  * Debug logging function that only logs when debug mode is enabled.
  * @param {...any} args - Arguments to log.
+ * @exports debugLog
  */
 function debugLog(...args) {
     if (CONFIG.DEBUG) {

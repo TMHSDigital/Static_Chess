@@ -39,12 +39,14 @@ export default [
       globals: {}
     }
   },
-  // utils.js - declares utilities, uses CONFIG
+  // utils.js - declares utilities, uses CONFIG, WHITE, BLACK
   {
     files: ['js/utils.js'],
     languageOptions: {
       globals: {
-        CONFIG: 'readonly'
+        CONFIG: 'readonly',
+        WHITE: 'readonly',
+        BLACK: 'readonly'
       }
     }
   },
