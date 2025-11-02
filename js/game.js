@@ -910,7 +910,8 @@ if (typeof window !== 'undefined') {
     window.handleBoardClick = handleBoardClick;
     window.generateLegalMovesForPiece = generateLegalMovesForPiece;
     window.findKingInCheck = findKingInCheck;
-    // Expose state getters
+    window.makeMove = makeMove;
+    // Expose state getters (selectedSquare and possibleMoves are in board.js)
     Object.defineProperty(window, 'boardState', {
         get: function() { return boardState; }
     });

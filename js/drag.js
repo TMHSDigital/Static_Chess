@@ -186,39 +186,76 @@ function handleDragMove(event) {
 function handleDragEnd(event) {
     if (!CONFIG.FEATURES.DRAG_AND_DROP || !dragState.isDragging) return;
     
-    // Get drop position
-    const clientX = event.type === 'touchend' ? (event.changedTouches[0]?.clientX || dragState.currentPos.x) : event.clientX;
-    const clientY = event.type === 'touchend' ? (event.changedTouches[0]?.clientY || dragState.currentPos.y) : event.clientY;
+    // Get drop position (use currentPos if event coordinates aren't available)
+    const clientX = event.type === 'touchend' 
+        ? (event.changedTouches[0]?.clientX || dragState.currentPos.x) 
+        : (event.clientX || dragState.currentPos.x);
+    const clientY = event.type === 'touchend' 
+        ? (event.changedTouches[0]?.clientY || dragState.currentPos.y) 
+        : (event.clientY || dragState.currentPos.y);
     
-    // Reset position and remove dragging class
-    dragState.element.style.left = '';
-    dragState.element.style.top = '';
-    dragState.element.style.width = '';
-    dragState.element.style.height = '';
-    dragState.element.classList.remove('dragging');
+    // Store drag state before resetting
+    const wasDrag = dragState.hasMoved;
+    const startSquare = dragState.startSquare;
+    const dragElement = dragState.element;
     
-    // Only process drop if mouse actually moved (was a drag, not just a click)
-    if (dragState.hasMoved) {
-        // Find the square element under the drop position
+    // Temporarily hide the dragged piece to find the square underneath
+    const originalDisplay = dragElement.style.display;
+    dragElement.style.display = 'none';
+    
+    // Find the square element under the drop position
+    let targetSquare = null;
+    if (wasDrag) {
         const elementsAtPoint = document.elementsFromPoint(clientX, clientY);
+        // Find the first square element (the piece is hidden so it won't interfere)
+        targetSquare = elementsAtPoint.find(el => el.classList.contains('square'));
+    }
+    
+    // Restore display and reset styles
+    dragElement.style.display = originalDisplay;
+    dragElement.style.left = '';
+    dragElement.style.top = '';
+    dragElement.style.width = '';
+    dragElement.style.height = '';
+    dragElement.classList.remove('dragging');
+    
+    // Process drop if it was a drag (not just a click)
+    if (wasDrag && targetSquare) {
+        const endRow = parseInt(targetSquare.dataset.row, 10);
+        const endCol = parseInt(targetSquare.dataset.col, 10);
         
-        // Find the first square element in the elements at point
-        const targetSquare = elementsAtPoint.find(el => el.classList.contains('square'));
+        debugLog('Dropped at square', endRow, endCol);
         
-        if (targetSquare) {
-            const endRow = parseInt(targetSquare.dataset.row, 10);
-            const endCol = parseInt(targetSquare.dataset.col, 10);
+        // Check if the drop square is a valid move (piece is already selected from drag start)
+        if (typeof window.selectedSquare !== 'undefined' && 
+            typeof window.possibleMoves !== 'undefined' &&
+            typeof window.makeMove === 'function') {
             
-            debugLog('Dropped at square', endRow, endCol);
+            // Verify the piece is still selected and this is a valid move
+            const isPossible = window.possibleMoves.some(pm => pm.row === endRow && pm.col === endCol);
             
-            // Select the piece first, then make the move
-            if (typeof window.handleBoardClick === 'function') {
-                // Select the starting square
-                window.handleBoardClick(dragState.startSquare.row, dragState.startSquare.col);
-                // Make the move to the destination
-                window.handleBoardClick(endRow, endCol);
+            if (isPossible && window.selectedSquare && 
+                window.selectedSquare.row === startSquare.row &&
+                window.selectedSquare.col === startSquare.col) {
+                // Make the move directly
+                window.makeMove(
+                    startSquare.row, 
+                    startSquare.col, 
+                    endRow, 
+                    endCol
+                );
+            } else {
+                debugLog('Invalid drop: not a possible move or selection changed', {
+                    isPossible,
+                    selectedSquare: window.selectedSquare,
+                    startSquare: startSquare,
+                    possibleMoves: window.possibleMoves
+                });
             }
         } else {
+            debugLog('Required functions not available for drop');
+        }
+    } else if (wasDrag && !targetSquare) {
             // Dropped outside board - ensure no selection
             if (typeof window.clearSelectedSquare === 'function') {
                 window.clearSelectedSquare();

@@ -249,13 +249,20 @@ function clearPossibleMoves() {
     possibleMoves = [];
 }
 
-// Expose board functions globally for drag.js and other modules
+// Expose board functions and state globally for drag.js and other modules
 if (typeof window !== 'undefined') {
     window.clearSelectedSquare = clearSelectedSquare;
     window.clearPossibleMoves = clearPossibleMoves;
     window.setSelectedSquare = setSelectedSquare;
     window.setPossibleMoves = setPossibleMoves;
     window.updateBoardVisuals = updateBoardVisuals;
+    // Expose state getters
+    Object.defineProperty(window, 'selectedSquare', {
+        get: function() { return selectedSquare; }
+    });
+    Object.defineProperty(window, 'possibleMoves', {
+        get: function() { return possibleMoves; }
+    });
 }
 
 // Export for Node/Jest tests (CommonJS)
