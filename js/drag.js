@@ -115,6 +115,9 @@ function handleDragStart(event) {
     
     // Add dragging class for styling and set initial position
     pieceElement.classList.add('dragging');
+    // Store original size to maintain during drag (fixed positioning can lose relative sizing)
+    pieceElement.style.width = `${rect.width}px`;
+    pieceElement.style.height = `${rect.height}px`;
     pieceElement.style.left = `${rect.left}px`;
     pieceElement.style.top = `${rect.top}px`;
     
@@ -169,6 +172,8 @@ function handleDragEnd(event) {
     // Reset position and remove dragging class
     dragState.element.style.left = '';
     dragState.element.style.top = '';
+    dragState.element.style.width = '';
+    dragState.element.style.height = '';
     dragState.element.classList.remove('dragging');
     
     // Only process drop if mouse actually moved (was a drag, not just a click)

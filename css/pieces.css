@@ -14,6 +14,16 @@
     color: transparent !important;
 }
 
+/* Disable transitions during drag for smooth movement */
+.piece.dragging {
+    cursor: grabbing;
+    opacity: 0.8;
+    z-index: 100;
+    pointer-events: none;
+    position: fixed;
+    transition: none !important; /* Disable transitions for smooth dragging */
+}
+
 /* Explicitly disable any ::before or ::after pseudo-elements */
 .piece::before,
 .piece::after {
@@ -31,13 +41,7 @@
     transform: scale(1.1);
 }
 
-.piece.dragging {
-    cursor: grabbing;
-    opacity: 0.8;
-    z-index: 100;
-    pointer-events: none;
-    position: fixed;
-}
+/* Note: .piece.dragging is defined above to disable transitions */
 
 /* Move animations */
 @keyframes move-piece {
