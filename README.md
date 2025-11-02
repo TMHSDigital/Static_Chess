@@ -23,6 +23,12 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/TMHSDigital/Static_Chess/actions"><img src="https://img.shields.io/github/actions/workflow/status/TMHSDigital/Static_Chess/ci.yml?branch=main&label=CI&style=for-the-badge" alt="CI Status"></a>
+  <a href="https://github.com/TMHSDigital/Static_Chess"><img src="https://img.shields.io/github/last-commit/TMHSDigital/Static_Chess?style=for-the-badge" alt="Last Commit"></a>
+  <a href="https://github.com/TMHSDigital/Static_Chess/issues"><img src="https://img.shields.io/github/issues/TMHSDigital/Static_Chess?style=for-the-badge" alt="Issues"></a>
+</p>
+
+<p align="center">
   A lightweight chess game built with pure vanilla web technologies - no frameworks, no libraries, just clean code.
 </p>
 
