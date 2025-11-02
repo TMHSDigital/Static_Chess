@@ -10,7 +10,8 @@ let dragState = {
     element: null,
     startPos: { x: 0, y: 0 },
     startSquare: { row: 0, col: 0 },
-    currentPos: { x: 0, y: 0 }
+    currentPos: { x: 0, y: 0 },
+    offset: { x: 0, y: 0 }
 };
 
 /**
@@ -61,28 +62,36 @@ function handleDragStart(event) {
     const row = parseInt(squareElement.dataset.row, 10);
     const col = parseInt(squareElement.dataset.col, 10);
     
-    // Check if it's a valid piece to move (correct color for current turn)
-    // This validation will be handled by the game logic
+    // Select the piece first (this highlights possible moves)
+    if (typeof window.handleBoardClick === 'function') {
+        window.handleBoardClick(row, col);
+    }
+    
+    // Get start position
+    const clientX = event.type === 'touchstart' ? event.touches[0].clientX : event.clientX;
+    const clientY = event.type === 'touchstart' ? event.touches[0].clientY : event.clientY;
+    
+    // Get bounding rect for initial positioning (before adding dragging class)
+    const rect = target.getBoundingClientRect();
+    const offsetX = clientX - rect.left - rect.width / 2;
+    const offsetY = clientY - rect.top - rect.height / 2;
     
     // Set up drag state
     dragState.isDragging = true;
     dragState.piece = target;
     dragState.element = target;
     dragState.startSquare = { row, col };
-    
-    // Get start position
-    const clientX = event.type === 'touchstart' ? event.touches[0].clientX : event.clientX;
-    const clientY = event.type === 'touchstart' ? event.touches[0].clientY : event.clientY;
-    
     dragState.startPos = { x: clientX, y: clientY };
     dragState.currentPos = { x: clientX, y: clientY };
+    dragState.offset = { x: offsetX, y: offsetY };
     
-    // Add dragging class for styling
+    // Add dragging class for styling and set initial position
     target.classList.add('dragging');
+    target.style.left = `${rect.left}px`;
+    target.style.top = `${rect.top}px`;
     
-    // Highlight possible moves for this piece
-    // Call into game.js to get valid moves
-    // TODO: Implement this when integrating with game logic
+    // Prevent click event from firing (we're handling via drag)
+    event.stopPropagation();
     
     debugLog('Started dragging piece at', row, col);
 }
@@ -105,12 +114,9 @@ function handleDragMove(event) {
     
     dragState.currentPos = { x: clientX, y: clientY };
     
-    // Calculate the difference from start position
-    const deltaX = dragState.currentPos.x - dragState.startPos.x;
-    const deltaY = dragState.currentPos.y - dragState.startPos.y;
-    
-    // Update the position of the dragged element
-    dragState.element.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+    // Update the position of the dragged element (using fixed positioning with stored offset)
+    dragState.element.style.left = `${clientX - dragState.offset.x}px`;
+    dragState.element.style.top = `${clientY - dragState.offset.y}px`;
 }
 
 /**
@@ -120,20 +126,17 @@ function handleDragMove(event) {
 function handleDragEnd(event) {
     if (!CONFIG.FEATURES.DRAG_AND_DROP || !dragState.isDragging) return;
     
-    // Reset transform
-    dragState.element.style.transform = '';
+    // Get drop position
+    const clientX = event.type === 'touchend' ? (event.changedTouches[0]?.clientX || dragState.currentPos.x) : event.clientX;
+    const clientY = event.type === 'touchend' ? (event.changedTouches[0]?.clientY || dragState.currentPos.y) : event.clientY;
     
-    // Remove dragging class
+    // Reset position and remove dragging class
+    dragState.element.style.left = '';
+    dragState.element.style.top = '';
     dragState.element.classList.remove('dragging');
     
-    // Find the square element under the current position
-    // This needs a more robust implementation based on board coordinates
-    
-    // For now, we'll use a simple example of finding the element at the position
-    const elementsAtPoint = document.elementsFromPoint(
-        dragState.currentPos.x, 
-        dragState.currentPos.y
-    );
+    // Find the square element under the drop position
+    const elementsAtPoint = document.elementsFromPoint(clientX, clientY);
     
     // Find the first square element in the elements at point
     const targetSquare = elementsAtPoint.find(el => el.classList.contains('square'));
@@ -144,12 +147,22 @@ function handleDragEnd(event) {
         
         debugLog('Dropped at square', row, col);
         
-        // Call into game.js to try to make the move via existing click flow
+        // Make the move (piece is already selected from drag start)
         if (typeof window.handleBoardClick === 'function') {
-            window.handleBoardClick(dragState.startSquare.row, dragState.startSquare.col);
             window.handleBoardClick(row, col);
         }
+    } else {
+        // Dropped outside board - cancel selection
+        if (typeof window.clearSelectedSquare === 'function') {
+            window.clearSelectedSquare();
+        }
+        if (typeof window.clearPossibleMoves === 'function') {
+            window.clearPossibleMoves();
+        }
     }
+    
+    // Prevent click event from firing (we handled it via drag)
+    event.stopPropagation();
     
     // Reset drag state
     dragState.isDragging = false;

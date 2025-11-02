@@ -900,6 +900,11 @@ function generateNotationWithDisambiguation(move, boardBefore) {
     return notation;
 }
 
+// Expose handleBoardClick globally for drag.js and other modules
+if (typeof window !== 'undefined') {
+    window.handleBoardClick = handleBoardClick;
+}
+
 // Export for Node/Jest tests (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {

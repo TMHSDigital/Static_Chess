@@ -249,6 +249,12 @@ function clearPossibleMoves() {
     possibleMoves = [];
 }
 
+// Expose board functions globally for drag.js and other modules
+if (typeof window !== 'undefined') {
+    window.clearSelectedSquare = clearSelectedSquare;
+    window.clearPossibleMoves = clearPossibleMoves;
+}
+
 // Export for Node/Jest tests (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {

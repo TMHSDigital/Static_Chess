@@ -9,7 +9,7 @@ const CONFIG = {
     
     // Feature flags (for future enhancements)
     FEATURES: {
-        DRAG_AND_DROP: false,
+        DRAG_AND_DROP: true,
         AI_OPPONENT: false,
         PROMOTION_UI: false,
         GAME_TIMER: false,
