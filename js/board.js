@@ -247,4 +247,19 @@ function setPossibleMoves(moves) {
  */
 function clearPossibleMoves() {
     possibleMoves = [];
+}
+
+// Export for Node/Jest tests (CommonJS)
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        boardElement,
+        createBoard,
+        renderPieces,
+        getSquareElement,
+        updateBoardVisuals,
+        setSelectedSquare,
+        clearSelectedSquare,
+        setPossibleMoves,
+        clearPossibleMoves
+    };
 } 

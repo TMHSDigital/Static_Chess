@@ -126,4 +126,21 @@ function getInitialPieces() {
     console.log("Last row (white pieces):", board[7].map(p => p ? p.type : 'null'));
 
     return board;
+}
+
+// Export for Node/Jest tests (CommonJS)
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        PAWN,
+        ROOK,
+        KNIGHT,
+        BISHOP,
+        QUEEN,
+        KING,
+        WHITE,
+        BLACK,
+        Piece,
+        isPseudoLegalMove,
+        getInitialPieces
+    };
 } 

@@ -1,28 +1,26 @@
 const { JSDOM } = require('jsdom');
-const fs = require('fs');
-const path = require('path');
-
-function loadScripts(window) {
-  ['js/utils.js', 'js/pieces.js'].forEach((p) => {
-    const script = window.document.createElement('script');
-    script.textContent = fs.readFileSync(path.resolve(p), 'utf-8');
-    window.document.body.appendChild(script);
-  });
-}
 
 describe('pieces', () => {
-  let window;
+  let getInitialPieces;
 
   beforeEach(() => {
-    const dom = new JSDOM(`<!DOCTYPE html><body></body>`);
-    window = dom.window;
-    global.window = window;
-    global.document = window.document;
-    loadScripts(window);
+    const dom = new JSDOM(`<!DOCTYPE html><body></body>`, { url: 'http://localhost' });
+    global.window = dom.window;
+    global.document = dom.window.document;
+    
+    // Set up CONFIG and utils globals before requiring pieces
+    const config = require('../../js/config');
+    global.CONFIG = config.CONFIG;
+    const utils = require('../../js/utils');
+    global.isWithinBounds = utils.isWithinBounds;
+    
+    // Require pieces module
+    const pieces = require('../../js/pieces');
+    getInitialPieces = pieces.getInitialPieces;
   });
 
   test('initial pieces count', () => {
-    const board = window.getInitialPieces();
+    const board = getInitialPieces();
     let count = 0;
     for (let r = 0; r < 8; r++) {
       for (let c = 0; c < 8; c++) {

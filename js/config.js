@@ -54,4 +54,9 @@ const CONFIG = {
     
     // Debug mode
     DEBUG: false,
-}; 
+};
+
+// Export for Node/Jest tests (CommonJS)
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { CONFIG };
+} 

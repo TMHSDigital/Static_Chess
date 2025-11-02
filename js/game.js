@@ -898,4 +898,24 @@ function generateNotationWithDisambiguation(move, boardBefore) {
     else if (isKingInCheck(nextPlayer, boardState)) notation += '+';
     if (move.isEnPassant) notation += ' e.p.';
     return notation;
+}
+
+// Export for Node/Jest tests (CommonJS)
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        initializeGame,
+        handleBoardClick,
+        makeMove,
+        resetGame,
+        generateLegalMovesForPiece,
+        generateAllLegalMoves,
+        undoLastMove,
+        findKingInCheck,
+        isKingInCheck,
+        isCheckmate,
+        isStalemate,
+        canCastle,
+        generateNotation,
+        generateNotationWithDisambiguation
+    };
 } 

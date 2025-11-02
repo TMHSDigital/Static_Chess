@@ -220,4 +220,20 @@ function debugLog(...args) {
 
 // Add more utility functions as needed, e.g.,
 // - Deep cloning objects/arrays
-// - Formatting move history entries 
+// - Formatting move history entries
+
+// Export for Node/Jest tests (CommonJS)
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        algebraicToCoords,
+        coordsToAlgebraic,
+        isWithinBounds,
+        deepClone,
+        saveToLocalStorage,
+        loadFromLocalStorage,
+        formatSAN,
+        playSound,
+        getOppositeColor,
+        debugLog
+    };
+} 
