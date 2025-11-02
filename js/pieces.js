@@ -48,7 +48,7 @@ function isPseudoLegalMove(piece, startRow, startCol, endRow, endCol, isCapture)
     const absColDiff = Math.abs(colDiff);
 
     switch (piece.type) {
-        case PAWN:
+        case PAWN: {
             const direction = piece.color === WHITE ? -1 : 1;
 
             if (isCapture) {
@@ -63,6 +63,7 @@ function isPseudoLegalMove(piece, startRow, startCol, endRow, endCol, isCapture)
                 }
             }
             return false;
+        }
 
         case ROOK:
             // Move horizontally or vertically

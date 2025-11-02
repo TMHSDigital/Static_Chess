@@ -157,7 +157,8 @@ export default [
       'coverage/**',
       'playwright-report/**',
       'test-results/**',
-      '.playwright/**'
+      '.playwright/**',
+      'eslint.config.js' // ESLint config file itself uses ES modules
     ]
   }
 ];
