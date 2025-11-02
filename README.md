@@ -208,7 +208,7 @@ Static_Chess/
 │   ├── ROADMAP.md       # Development roadmap
 │   └── RELEASE.md       # Release process documentation
 ├── .github/             # GitHub configuration
-│   ├── workflows/       # CI/CD workflows
+│   ├── workflows/       # CI/CD workflows (ci.yml, release.yml)
 │   ├── ISSUE_TEMPLATE/  # Issue templates
 │   └── CODEOWNERS       # Code ownership rules
 ├── package.json         # Dev dependencies and scripts (lint/test only)
@@ -248,7 +248,7 @@ The project includes comprehensive documentation to help developers understand t
 
 - **Architecture Documentation:** `docs/ARCHITECTURE.md` explains components, data flow, and state.
 - **Development Roadmap:** `docs/ROADMAP.md` outlines features, priorities, and timeline.
-- **Release Process:** `docs/RELEASE.md` describes tagging, versioning, and triage.
+- **Release Process:** `docs/RELEASE.md` describes the automated release workflow via GitHub Actions.
 - **Changelog:** `CHANGELOG.md` tracks notable changes.
 - **Code Comments:** Files include JSDoc comments explaining functionality and usage.
 
@@ -269,7 +269,11 @@ Since this is a purely static website, it can be easily deployed on any static h
 5. Set folder to `/ (root)`
 6. Your site will be available at `https://tmhsdigital.github.io/Static_Chess/`
 
-Optional (CI-driven Pages): add a `pages.yml` workflow or keep manual Pages settings. CI (`.github/workflows/ci.yml`) runs lint and tests on PRs and pushes.
+**CI/CD Workflows:**
+- `.github/workflows/ci.yml`: Runs lint and tests on PRs and pushes
+- `.github/workflows/release.yml`: Automatically creates GitHub Releases when tags are pushed
+
+Optional: Add a `pages.yml` workflow for CI-driven Pages deployment, or keep manual Pages settings.
 
 ---
 

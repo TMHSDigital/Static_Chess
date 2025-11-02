@@ -30,9 +30,13 @@ Static_Chess/
 │   ├── wb.svg, bb.svg   # Bishops
 │   ├── wq.svg, bq.svg   # Queens
 │   └── wk.svg, bk.svg   # Kings
+├── .github/             # GitHub configuration
+│   ├── workflows/       # CI/CD workflows (ci.yml, release.yml)
+│   └── [templates]      # Issue/PR templates, CODEOWNERS, etc.
 └── docs/                # Documentation
     ├── ARCHITECTURE.md  # This document
-    └── ROADMAP.md       # Development roadmap
+    ├── ROADMAP.md       # Development roadmap
+    └── RELEASE.md       # Release process documentation
 ```
 
 ## Component Interaction Flow
