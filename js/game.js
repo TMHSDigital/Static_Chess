@@ -55,6 +55,11 @@ function initializeGame() {
  * @param {Event} event - The click event
  */
 function handleBoardClickEvent(event) {
+    // Ignore clicks that happen right after a drag operation
+    if (typeof window.dragJustEnded !== 'undefined' && window.dragJustEnded) {
+        return;
+    }
+    
     const target = event.target;
     const squareElement = target.closest('.square');
     
