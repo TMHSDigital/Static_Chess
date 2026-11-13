@@ -65,6 +65,7 @@ export default [
     files: ['js/board.js'],
     languageOptions: {
       globals: {
+        CONFIG: 'readonly',
         coordsToAlgebraic: 'readonly',
         moveHistory: 'readonly'
       }

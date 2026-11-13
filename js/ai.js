@@ -48,12 +48,13 @@ const AI_CONFIG = {
 class ChessAI {
     /**
      * Create a new AI instance.
-     * @param {string} difficulty - The AI difficulty level ('EASY', 'MEDIUM', 'HARD').
+     * @param {string} difficulty - The AI difficulty level: 'easy', 'medium' or 'hard' (any letter case).
      */
     constructor(difficulty = 'MEDIUM') {
-        this.difficulty = difficulty;
-        this.depth = AI_CONFIG.DEPTH[difficulty];
-        this.thinkingTime = AI_CONFIG.THINKING_TIME[difficulty];
+        const level = String(difficulty).toUpperCase();
+        this.difficulty = level in AI_CONFIG.DEPTH ? level : 'MEDIUM';
+        this.depth = AI_CONFIG.DEPTH[this.difficulty];
+        this.thinkingTime = AI_CONFIG.THINKING_TIME[this.difficulty];
     }
     
     /**

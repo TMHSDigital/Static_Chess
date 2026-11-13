@@ -44,10 +44,14 @@ function initializeGame() {
     // Add event listener for undo button
     if (undoButton) {
         undoButton.removeEventListener('click', undoLastMove);
-        undoButton.addEventListener('click', undoLastMove);
+        if (CONFIG.FEATURES.UNDO_MOVE) {
+            undoButton.addEventListener('click', undoLastMove);
+        } else {
+            undoButton.hidden = true;
+        }
     }
 
-    console.log("Game initialized.");
+    debugLog("Game initialized.");
 }
 
 /**
@@ -74,7 +78,7 @@ function handleBoardClickEvent(event) {
  * Resets the game to the initial state.
  */
 function resetGame() {
-    console.log("Resetting game...");
+    debugLog("Resetting game...");
     boardState = getInitialPieces();
     currentPlayer = WHITE;
     moveHistory = [];
@@ -185,7 +189,7 @@ function makeMove(startRow, startCol, endRow, endCol) {
     // Pawn Double Move (Set En Passant Target)
     if (pieceToMove.type === PAWN && Math.abs(endRow - startRow) === 2) {
         enPassantTarget = { row: (startRow + endRow) / 2, col: startCol };
-        console.log("En passant target set:", enPassantTarget);
+        debugLog("En passant target set:", enPassantTarget);
     }
 
     // En Passant Capture
@@ -198,7 +202,7 @@ function makeMove(startRow, startCol, endRow, endCol) {
         move.captured = boardState[capturedPawnRow][capturedPawnCol]; // Record captured pawn
         boardState[capturedPawnRow][capturedPawnCol] = null; // Remove captured pawn
         move.isEnPassant = true;
-        console.log("En passant capture executed.");
+        debugLog("En passant capture executed.");
     }
 
     // Castling
@@ -211,7 +215,7 @@ function makeMove(startRow, startCol, endRow, endCol) {
             boardState[startRow][rookEndCol] = rook;
             boardState[startRow][rookStartCol] = null;
             rook.hasMoved = true;
-            console.log("Castling executed.");
+            debugLog("Castling executed.");
         }
     }
 
@@ -231,7 +235,7 @@ function makeMove(startRow, startCol, endRow, endCol) {
         boardState[endRow][endCol] = new Piece(promotedPieceType, pieceToMove.color);
         boardState[endRow][endCol].hasMoved = true; // Promoted piece counts as moved
         move.promotion = promotedPieceType;
-        console.log("Pawn promoted to Queen.");
+        debugLog("Pawn promoted to Queen.");
     }
 
     // --- Post-Move Updates --- 
@@ -243,18 +247,18 @@ function makeMove(startRow, startCol, endRow, endCol) {
     const opponentKingInCheck = findKingInCheck(currentPlayer);
     if (opponentKingInCheck) {
         move.isCheck = true;
-        console.log(currentPlayer, "king is in check.");
+        debugLog(currentPlayer, "king is in check.");
         if (isCheckmate(currentPlayer)) {
             move.isCheckmate = true;
             isGameOver = true;
             currentStatus = `Checkmate! ${currentPlayer === WHITE ? 'Black' : 'White'} wins.`;
-            console.log("Checkmate!");
+            debugLog("Checkmate!");
         }
     } else if (isStalemate(currentPlayer)) {
         move.isStalemate = true;
         isGameOver = true;
         currentStatus = "Stalemate! Game is a draw.";
-        console.log("Stalemate!");
+        debugLog("Stalemate!");
     }
 
     // --- Update UI --- 
@@ -631,7 +635,7 @@ function canCastle(playerColor, side) {
 
 // --- Persistence --- 
 
-const SAVED_GAME_KEY = 'chessGameState';
+const SAVED_GAME_KEY = CONFIG.STORAGE_KEYS.GAME_STATE;
 const SAVED_GAME_VERSION = 1;
 
 /**

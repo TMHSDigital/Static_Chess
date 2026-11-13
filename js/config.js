@@ -4,35 +4,31 @@
  */
 
 const CONFIG = {
-    // Game settings
-    BOARD_SIZE: 8,
-    
-    // Feature flags (for future enhancements)
+    // Feature flags. Every flag here is read by the code.
     FEATURES: {
-        DRAG_AND_DROP: true,
-        AI_OPPONENT: false,
-        PROMOTION_UI: false,
-        GAME_TIMER: false,
-        SOUND_EFFECTS: false,
-        UNDO_MOVE: false,
-        ADVANCED_DRAW_DETECTION: false,
+        DRAG_AND_DROP: true,   // Move pieces by dragging (drag.js)
+        UNDO_MOVE: true,       // Show and enable the Undo button
+        SOUND_EFFECTS: false,  // Runtime state: set from the "Sound effects" toggle at startup
+        // The next two only take effect once their script is added to index.html
+        // and wired into game.js; see docs/ARCHITECTURE.md.
+        AI_OPPONENT: false,    // ai.js (skeleton)
+        PROMOTION_UI: false,   // promotion.js (skeleton)
     },
-    
-    // Default settings (user configurable)
+
+    // Defaults for the settings panel, used until the player changes a toggle
     DEFAULT_SETTINGS: {
         SHOW_COORDINATES: false,
         SHOW_POSSIBLE_MOVES: true,
         SHOW_LAST_MOVE: true,
-        AI_DIFFICULTY: 'easy', // For future AI opponent
         ENABLE_SOUNDS: false,
+        AI_DIFFICULTY: 'easy', // For the future AI opponent
     },
-    
+
     // Animation durations (ms)
     ANIMATIONS: {
         PIECE_MOVE: 300,
-        HIGHLIGHT_PULSE: 2000,
     },
-    
+
     // Sound effects: each sound is a short run of synthesized tones
     // (frequency in Hz, duration in seconds, optional oscillator wave shape)
     SOUND_VOLUME: 0.15,
@@ -45,18 +41,21 @@ const CONFIG = {
         GAME_END: [{ frequency: 523, duration: 0.14 }, { frequency: 392, duration: 0.14 }, { frequency: 262, duration: 0.3 }],
     },
 
-    // Local storage keys
+    // localStorage keys. Changing a value here orphans what players have
+    // already saved under the old key, so migrate before renaming.
     STORAGE_KEYS: {
-        GAME_STATE: 'staticChess.gameState',
-        SETTINGS: 'staticChess.settings',
-        SAVED_GAMES: 'staticChess.savedGames',
+        GAME_STATE: 'chessGameState',
+        SHOW_COORDINATES: 'showCoords',
+        SHOW_POSSIBLE_MOVES: 'showPossibleMoves',
+        SHOW_LAST_MOVE: 'showLastMove',
+        ENABLE_SOUNDS: 'enableSounds',
     },
-    
-    // Debug mode
+
+    // Debug mode: when true, debugLog() prints to the console
     DEBUG: false,
 };
 
 // Export for Node/Jest tests (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { CONFIG };
-} 
+}

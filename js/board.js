@@ -77,7 +77,7 @@ function renderPieces(boardState, movedPiece = null) {
 
                 if (movedPiece && movedPiece.row === row && movedPiece.col === col) {
                     pieceElement.classList.add('moved');
-                    setTimeout(() => pieceElement.classList.remove('moved'), 300);
+                    setTimeout(() => pieceElement.classList.remove('moved'), CONFIG.ANIMATIONS.PIECE_MOVE);
                 }
 
                 pieceElement.dataset.piece = `${piece.color}${piece.type}`;

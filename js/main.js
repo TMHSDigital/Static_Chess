@@ -5,8 +5,6 @@
 
 // Ensure the DOM is fully loaded before initializing the game
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("DOM fully loaded and parsed.");
-
     // --- Initialize Toggles --- 
     const coordsToggle = document.getElementById('coords-toggle');
     const possibleMovesToggle = document.getElementById('possible-moves-toggle');
@@ -32,10 +30,16 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Load saved settings or set defaults
-    const showCoords = readSetting('showCoords') === 'true';
-    const showPossibleMoves = readSetting('showPossibleMoves') !== 'false'; // Default true
-    const showLastMove = readSetting('showLastMove') !== 'false'; // Default true
-    const enableSounds = readSetting('enableSounds') === 'true';
+    const KEYS = CONFIG.STORAGE_KEYS;
+    const DEFAULTS = CONFIG.DEFAULT_SETTINGS;
+    const readFlag = (key, fallback) => {
+        const saved = readSetting(key);
+        return saved === null ? fallback : saved === 'true';
+    };
+    const showCoords = readFlag(KEYS.SHOW_COORDINATES, DEFAULTS.SHOW_COORDINATES);
+    const showPossibleMoves = readFlag(KEYS.SHOW_POSSIBLE_MOVES, DEFAULTS.SHOW_POSSIBLE_MOVES);
+    const showLastMove = readFlag(KEYS.SHOW_LAST_MOVE, DEFAULTS.SHOW_LAST_MOVE);
+    const enableSounds = readFlag(KEYS.ENABLE_SOUNDS, DEFAULTS.ENABLE_SOUNDS);
 
     // Apply Coordinate setting
     if (coordsToggle) {
@@ -46,10 +50,10 @@ document.addEventListener('DOMContentLoaded', () => {
         coordsToggle.addEventListener('change', function() {
             if (this.checked) {
                 body.classList.add('coords-visible');
-                writeSetting('showCoords', 'true');
+                writeSetting(KEYS.SHOW_COORDINATES, 'true');
             } else {
                 body.classList.remove('coords-visible');
-                writeSetting('showCoords', 'false');
+                writeSetting(KEYS.SHOW_COORDINATES, 'false');
             }
         });
     }
@@ -62,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
         possibleMovesToggle.addEventListener('change', function() {
             const displayValue = this.checked ? 'block' : 'none';
             rootStyle.setProperty('--show-possible-moves', displayValue);
-            writeSetting('showPossibleMoves', this.checked.toString());
+            writeSetting(KEYS.SHOW_POSSIBLE_MOVES, this.checked.toString());
         });
     }
 
@@ -74,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         lastMoveToggle.addEventListener('change', function() {
             const displayValue = this.checked ? 'block' : 'none';
             rootStyle.setProperty('--show-last-move', displayValue);
-            writeSetting('showLastMove', this.checked.toString());
+            writeSetting(KEYS.SHOW_LAST_MOVE, this.checked.toString());
         });
     }
 
@@ -84,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
         CONFIG.FEATURES.SOUND_EFFECTS = enableSounds;
         soundToggle.addEventListener('change', function() {
             CONFIG.FEATURES.SOUND_EFFECTS = this.checked;
-            writeSetting('enableSounds', this.checked.toString());
+            writeSetting(KEYS.ENABLE_SOUNDS, this.checked.toString());
         });
     }
 
@@ -97,14 +101,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /**
  * Initialize optional feature modules based on feature flags.
- * This function initializes the skeleton implementations when their
- * corresponding feature flags are enabled in config.js.
+ * Drag and drop is the only one that ships today. The promotion UI and the AI
+ * opponent start here too once their scripts are added to index.html.
  */
 function initializeFeatureModules() {
-    // Enable debug logging for initialization
-    const originalDebug = CONFIG.DEBUG;
-    CONFIG.DEBUG = true;
-    
     debugLog('Initializing optional feature modules...');
     
     // Initialize drag and drop if enabled
@@ -124,7 +124,4 @@ function initializeFeatureModules() {
         debugLog('Initializing AI opponent');
         // AI is initialized when needed in game.js
     }
-    
-    // Restore original debug setting
-    CONFIG.DEBUG = originalDebug;
 } 
