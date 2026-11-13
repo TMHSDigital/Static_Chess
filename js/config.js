@@ -33,18 +33,18 @@ const CONFIG = {
         HIGHLIGHT_PULSE: 2000,
     },
     
-    // Assets
-    ASSETS: {
-        SOUNDS: {
-            MOVE: 'assets/sounds/move.mp3',
-            CAPTURE: 'assets/sounds/capture.mp3',
-            CHECK: 'assets/sounds/check.mp3',
-            CASTLE: 'assets/sounds/castle.mp3',
-            PROMOTE: 'assets/sounds/promote.mp3',
-            GAME_END: 'assets/sounds/game-end.mp3',
-        }
+    // Sound effects: each sound is a short run of synthesized tones
+    // (frequency in Hz, duration in seconds, optional oscillator wave shape)
+    SOUND_VOLUME: 0.15,
+    SOUNDS: {
+        MOVE: [{ frequency: 440, duration: 0.07 }],
+        CAPTURE: [{ frequency: 220, duration: 0.1, wave: 'triangle' }],
+        CHECK: [{ frequency: 660, duration: 0.08 }, { frequency: 880, duration: 0.12 }],
+        CASTLE: [{ frequency: 392, duration: 0.07 }, { frequency: 523, duration: 0.09 }],
+        PROMOTE: [{ frequency: 523, duration: 0.08 }, { frequency: 659, duration: 0.08 }, { frequency: 784, duration: 0.14 }],
+        GAME_END: [{ frequency: 523, duration: 0.14 }, { frequency: 392, duration: 0.14 }, { frequency: 262, duration: 0.3 }],
     },
-    
+
     // Local storage keys
     STORAGE_KEYS: {
         GAME_STATE: 'staticChess.gameState',

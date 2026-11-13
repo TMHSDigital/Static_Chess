@@ -12,7 +12,7 @@ let kingPositions = { // Keep track of king positions for check detection
 };
 let currentStatus = "White's turn";
 let enPassantTarget = null; // Stores coords {row, col} of square vulnerable to en passant, or null
-let positionHistory = []; // For undo and repetition detection
+let positionHistory = []; // Undo stack: one pre-move snapshot per move played
 
 const moveHistoryElement = document.getElementById('move-history');
 const gameStatusElement = document.getElementById('game-status');
@@ -267,7 +267,9 @@ function makeMove(startRow, startCol, endRow, endCol) {
     updateBoardVisuals(boardState, opponentKingInCheck);
     // Sounds
     try {
-        if (move.isCastling) {
+        if (isGameOver) {
+            playSound('game_end');
+        } else if (move.isCastling) {
             playSound('castle');
         } else if (move.promotion) {
             playSound('promote');
@@ -424,7 +426,6 @@ function generateLegalMovesForPiece(startRow, startCol) {
         const tempBoard = boardState.map(row => row.map(cell => cell ? { ...cell } : null));
         const tempPiece = tempBoard[startRow][startCol];
         const tempCaptured = tempBoard[move.row][move.col];
-        let tempEnPassantCapturedPawn = null;
 
         // Simulate en passant capture removal
         const isSimulatedEnPassant = tempPiece && tempPiece.type === PAWN && enPassantTarget &&
@@ -433,7 +434,6 @@ function generateLegalMovesForPiece(startRow, startCol) {
         if (isSimulatedEnPassant) {
             const capturedPawnRow = startRow;
             const capturedPawnCol = move.col;
-            tempEnPassantCapturedPawn = tempBoard[capturedPawnRow][capturedPawnCol];
             tempBoard[capturedPawnRow][capturedPawnCol] = null;
         }
 
@@ -461,7 +461,7 @@ function generateLegalMovesForPiece(startRow, startCol) {
         }
 
         // Check if the king is now in check after the simulated move
-        const kingInCheck = isKingInCheckWithPositions(playerColor, tempBoard, simulatedKingPositions);
+        const kingInCheck = isKingInCheck(playerColor, tempBoard, simulatedKingPositions);
 
         // If the king is NOT in check after this move, it's a legal move.
         return !kingInCheck;
@@ -477,9 +477,10 @@ function generateLegalMovesForPiece(startRow, startCol) {
  * @param {number} startCol
  * @param {number} endRow
  * @param {number} endCol
+ * @param {Array<Array<Piece|null>>} [board] - Board to check; defaults to the live board.
  * @returns {boolean} True if the path is obstructed.
  */
-function isPathObstructed(startRow, startCol, endRow, endCol) {
+function isPathObstructed(startRow, startCol, endRow, endCol, board = boardState) {
     const rowStep = Math.sign(endRow - startRow);
     const colStep = Math.sign(endCol - startCol);
     let currentRow = startRow + rowStep;
@@ -487,7 +488,7 @@ function isPathObstructed(startRow, startCol, endRow, endCol) {
 
     while (currentRow !== endRow || currentCol !== endCol) {
         if (!isWithinBounds(currentRow, currentCol)) break; // Should not happen for valid moves
-        if (boardState[currentRow][currentCol] !== null) {
+        if (board[currentRow][currentCol] !== null) {
             return true; // Path is blocked
         }
         currentRow += rowStep;
@@ -515,7 +516,7 @@ function isSquareAttacked(targetRow, targetCol, attackerColor, currentBoardState
                 if (isPseudoLegalMove(piece, r, c, targetRow, targetCol, isCaptureAttempt)) {
                     // Check for obstructions for sliding pieces
                     if ([ROOK, BISHOP, QUEEN].includes(piece.type)) {
-                        if (!isPathObstructedForAttack(r, c, targetRow, targetCol, currentBoardState)) {
+                        if (!isPathObstructed(r, c, targetRow, targetCol, currentBoardState)) {
                             return true;
                         }
                     } else {
@@ -528,27 +529,6 @@ function isSquareAttacked(targetRow, targetCol, attackerColor, currentBoardState
     }
     return false;
 }
-
-/**
- * Checks obstruction specifically for attack checks (path must be clear up to target).
- */
-function isPathObstructedForAttack(startRow, startCol, endRow, endCol, currentBoardState) {
-    const rowStep = Math.sign(endRow - startRow);
-    const colStep = Math.sign(endCol - startCol);
-    let currentRow = startRow + rowStep;
-    let currentCol = startCol + colStep;
-
-    while (currentRow !== endRow || currentCol !== endCol) {
-        if (!isWithinBounds(currentRow, currentCol)) break; 
-        if (currentBoardState[currentRow][currentCol] !== null) {
-            return true; // Path is blocked before reaching target
-        }
-        currentRow += rowStep;
-        currentCol += colStep;
-    }
-    return false;
-}
-
 
 /**
  * Finds the coordinates of the player's king if it's in check.
@@ -566,18 +546,10 @@ function findKingInCheck(playerColor) {
  * Checks if the specified player's king is currently in check.
  * @param {string} playerColor - The color of the king to check.
  * @param {Array<Array<Piece|null>>} currentBoardState - The board state to check.
+ * @param {object} [kPos] - King positions to use; defaults to the live ones (pass others for simulations).
  * @returns {boolean}
  */
-function isKingInCheck(playerColor, currentBoardState) {
-    const kingPos = kingPositions[playerColor];
-    const opponentColor = playerColor === WHITE ? BLACK : WHITE;
-    return isSquareAttacked(kingPos.row, kingPos.col, opponentColor, currentBoardState);
-}
-
-/**
- * Variant of isKingInCheck that accepts provided king positions (for simulations)
- */
-function isKingInCheckWithPositions(playerColor, currentBoardState, kPos) {
+function isKingInCheck(playerColor, currentBoardState, kPos = kingPositions) {
     const kingPos = kPos[playerColor];
     const opponentColor = playerColor === WHITE ? BLACK : WHITE;
     return isSquareAttacked(kingPos.row, kingPos.col, opponentColor, currentBoardState);
@@ -875,54 +847,6 @@ function updateStatusDisplay() {
 }
 
 /**
- * Generates standard algebraic notation (SAN) for a move.
- * This is a simplified version. Full SAN is complex (e.g., disambiguation).
- * @param {object} move - The move object.
- * @returns {string}
- */
-function generateNotation(move) {
-    const piece = move.piece;
-    const toAlg = coordsToAlgebraic(move.to.row, move.to.col);
-    let notation = '';
-
-    if (move.isCastling) {
-        return move.to.col > move.from.col ? 'O-O' : 'O-O-O';
-    }
-
-    if (piece.type !== PAWN) {
-        notation += piece.type.toUpperCase();
-        // TODO: Add disambiguation if needed (e.g., Raxd1 vs Rdx1)
-    }
-
-    if (move.captured) {
-        if (piece.type === PAWN) {
-            notation += coordsToAlgebraic(move.from.row, move.from.col)[0]; // Add file for pawn capture
-        }
-        notation += 'x'; // Capture indicator
-    }
-
-    notation += toAlg;
-
-    if (move.promotion) {
-        notation += '=' + move.promotion.toUpperCase();
-    }
-
-    // Add check/checkmate indicator based on *next* player's state
-    const nextPlayer = currentPlayer; // Player has already been switched
-    if (isCheckmate(nextPlayer)) {
-         notation += '#';
-     } else if (isKingInCheck(nextPlayer, boardState)) {
-         notation += '+';
-     }
-     // Note: Stalemate doesn't usually have a symbol in SAN, status message handles it.
-    if (move.isEnPassant) {
-        notation += ' e.p.'; // Optional indicator
-    }
-
-    return notation;
-}
-
-/**
  * Generate SAN with basic disambiguation using pre-move board state
  */
 function generateNotationWithDisambiguation(move, boardBefore) {
@@ -946,17 +870,7 @@ function generateNotationWithDisambiguation(move, boardBefore) {
                     if (isPseudoLegalMove(other, r, c, move.to.row, move.to.col, isCapture)) {
                         if ([ROOK, BISHOP, QUEEN].includes(other.type)) {
                             // Respect obstructions on pre-move board
-                            const blocked = (function() {
-                                const rowStep = Math.sign(move.to.row - r);
-                                const colStep = Math.sign(move.to.col - c);
-                                let rr = r + rowStep, cc = c + colStep;
-                                while (rr !== move.to.row || cc !== move.to.col) {
-                                    if (boardBefore[rr][cc] !== null) return true;
-                                    rr += rowStep; cc += colStep;
-                                }
-                                return false;
-                            })();
-                            if (blocked) continue;
+                            if (isPathObstructed(r, c, move.to.row, move.to.col, boardBefore)) continue;
                         }
                         rivals.push({ row: r, col: c });
                     }
@@ -1022,7 +936,6 @@ if (typeof module !== 'undefined' && module.exports) {
         isCheckmate,
         isStalemate,
         canCastle,
-        generateNotation,
         generateNotationWithDisambiguation,
         // Export state variables for test access
         get boardState() { return boardState; },

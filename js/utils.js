@@ -119,92 +119,46 @@ function loadFromLocalStorage(key, defaultValue = null) {
     }
 }
 
-/**
- * Format a move in Standard Algebraic Notation (SAN).
- * This is a simplified version - future enhancements will make this more complete.
- * @param {object} move - The move object with from, to, piece, etc.
- * @param {boolean} isCheck - Whether the move results in check.
- * @param {boolean} isCheckmate - Whether the move results in checkmate.
- * @returns {string} The move in SAN format.
- * @exports formatSAN
- */
-// eslint-disable-next-line no-unused-vars
-function formatSAN(move, isCheck = false, isCheckmate = false) {
-    if (!move) return '';
-    
-    const piece = move.piece;
-    
-    // Special case for castling
-    if (move.isCastling) {
-        return move.isKingsideCastling ? 'O-O' : 'O-O-O';
-    }
-    
-    // Piece letter (uppercase) - omit for pawns
-    let notation = '';
-    if (piece.type !== 'p') {
-        notation += piece.type.toUpperCase();
-    }
-    
-    // Add 'x' for captures
-    if (move.isCapture) {
-        // If pawn, add file of origin
-        if (piece.type === 'p') {
-            notation += coordsToAlgebraic(move.from.row, move.from.col)[0];
-        }
-        notation += 'x';
-    }
-    
-    // Add destination square
-    notation += coordsToAlgebraic(move.to.row, move.to.col);
-    
-    // Add promotion piece
-    if (move.promotion) {
-        notation += '=' + move.promotion.toUpperCase();
-    }
-    
-    // Add check/checkmate symbol
-    if (isCheckmate) {
-        notation += '#';
-    } else if (isCheck) {
-        notation += '+';
-    }
-    
-    return notation;
-}
+let audioContext = null; // Created on first use; browsers require a user gesture first
 
 /**
- * Creates a sound effect for a chess move.
- * Will be used when sound effects feature is enabled.
- * @param {string} soundType - Type of sound ('move', 'capture', 'check', etc.)
+ * Plays a short synthesized sound for a game event. The tones are generated
+ * with the Web Audio API, so no audio files are needed.
+ * @param {string} soundType - 'move', 'capture', 'check', 'castle', 'promote' or 'game_end'.
  * @exports playSound
  */
 function playSound(soundType) {
     if (!CONFIG.FEATURES.SOUND_EFFECTS) return;
-    
-    const soundPath = CONFIG.ASSETS.SOUNDS[soundType.toUpperCase()];
-    if (!soundPath) return;
-    
+
+    const tones = CONFIG.SOUNDS[soundType.toUpperCase()];
+    if (!tones) return;
+
+    const AudioContextClass = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext);
+    if (!AudioContextClass) return; // No audio support (old browser, test environment)
+
     try {
-        const sound = new Audio(soundPath);
-        sound.volume = 0.5; // 50% volume
-        sound.play().catch(err => {
-            // Handle autoplay restrictions gracefully
-            console.log('Sound playback prevented:', err);
-        });
+        audioContext = audioContext || new AudioContextClass();
+        if (audioContext.state === 'suspended') {
+            audioContext.resume();
+        }
+        let startTime = audioContext.currentTime;
+        for (const tone of tones) {
+            const oscillator = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            oscillator.type = tone.wave || 'sine';
+            oscillator.frequency.value = tone.frequency;
+            // Quick fade-out so each tone ends without a click
+            gain.gain.setValueAtTime(CONFIG.SOUND_VOLUME, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + tone.duration);
+            oscillator.connect(gain);
+            gain.connect(audioContext.destination);
+            oscillator.start(startTime);
+            oscillator.stop(startTime + tone.duration);
+            startTime += tone.duration;
+        }
     } catch (err) {
         console.error('Error playing sound:', err);
     }
-}
-
-/**
- * Get the opposite color.
- * @param {string} color - 'w' for white or 'b' for black.
- * @returns {string} The opposite color ('w' or 'b').
- * @exports getOppositeColor
- */
-// eslint-disable-next-line no-unused-vars
-function getOppositeColor(color) {
-    return color === WHITE ? BLACK : WHITE;
 }
 
 /**
@@ -218,10 +172,6 @@ function debugLog(...args) {
     }
 }
 
-// Add more utility functions as needed, e.g.,
-// - Deep cloning objects/arrays
-// - Formatting move history entries
-
 // Export for Node/Jest tests (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -231,9 +181,7 @@ if (typeof module !== 'undefined' && module.exports) {
         deepClone,
         saveToLocalStorage,
         loadFromLocalStorage,
-        formatSAN,
         playSound,
-        getOppositeColor,
         debugLog
     };
 } 

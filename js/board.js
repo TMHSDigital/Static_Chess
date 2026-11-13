@@ -203,22 +203,6 @@ function updateBoardVisuals(boardState, kingInCheckCoords = null) {
 }
 
 /**
- * Handles click events on the board.
- * @param {Event} event
- * @param {Function} handleSquareClickCallback - Callback function from game.js to handle logic.
- */
-function delegateBoardClick(event, handleSquareClickCallback) {
-    const target = event.target;
-    const squareElement = target.closest('.square');
-
-    if (squareElement) {
-        const row = parseInt(squareElement.dataset.row, 10);
-        const col = parseInt(squareElement.dataset.col, 10);
-        handleSquareClickCallback(row, col);
-    }
-}
-
-/**
  * Selects a square visually and stores its coordinates.
  * @param {number} row
  * @param {number} col

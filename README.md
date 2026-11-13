@@ -103,7 +103,7 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 - **Animated Pieces:** Smooth animations enhance the playing experience
 - **Keyboard Navigation:** Navigate the board with arrow keys; Enter/Space to select/move
 - **Accessibility:** ARIA roles on board and polite live-region updates for status
-- **Sound Effects:** Optional audio feedback for moves, captures, check, castling, and promotion (toggle in settings)
+- **Sound Effects:** Optional synthesized tones for moves, captures, check, castling, promotion, and game end (toggle in settings)
 - **Settings Panel:** Customizable display options with toggle switches
 - **Mobile-Friendly Design:** Works well on touchscreens with appropriate sizing
 
@@ -292,7 +292,7 @@ See the [Development Roadmap](docs/ROADMAP.md) for a detailed plan of upcoming f
 - **AI Opponent:** Implement basic chess AI using minimax algorithm
 - **Promotion Choice:** UI for selecting which piece to promote a pawn to
 - **Game Timer:** Optional chess clock functionality
-- **Sound Effects:** Audio feedback for moves and events (toggle and wiring ready; add audio files)
+- **Sound Effects:** Recorded sounds as an alternative to the built-in synthesized tones
 - **Multiple Saved Games:** Save and load multiple games
 - **Advanced Draw Detection:** Implement threefold repetition and fifty-move rule
 - **Full SAN Implementation:** Complete algebraic notation with full disambiguation

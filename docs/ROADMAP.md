@@ -17,7 +17,7 @@ The current version includes:
 - ✅ Undo move
 - ✅ Keyboard navigation and ARIA enhancements
 - ✅ Diff-based rendering performance improvements
-- ✅ Sound effects toggle and event wiring
+- ✅ Sound effects (synthesized tones, toggle in settings)
 
 ## Priority Queue
 
@@ -41,7 +41,7 @@ Features are prioritized as follows:
 
 | Feature | Complexity | Dependencies | Description | Status |
 |---------|------------|--------------|-------------|--------|
-| **Sound Effects** | Low | None | Add audio feedback for moves and events | Toggle + wiring ready |
+| **Sound Effects** | Low | None | Add audio feedback for moves and events | Done (synthesized tones) |
 | **Advanced Draw Detection** | Medium | None | Implement threefold repetition and fifty-move rule | Planned |
 | **Game Timer** | Medium | None | Optional chess clock functionality | Planned |
 | **Theme Customization** | Medium | None | Allow customization of board colors and styles | Planned |
@@ -68,7 +68,7 @@ This is a rough guideline for feature implementation:
 
 ### Phase 2: Usability Enhancements (2-3 months)
 
-- [x] **Sound Effects** *(toggle and event wiring ready; add assets)*
+- [x] **Sound Effects** *(synthesized tones; no audio assets needed)*
 - [x] **SAN Disambiguation (basic)**
 - [ ] **Advanced Draw Detection**
 - [ ] **Game Timer**

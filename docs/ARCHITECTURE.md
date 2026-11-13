@@ -199,8 +199,8 @@ To implement the chess clock:
 Sound effects are feature-flagged and user-toggleable:
 
 1. Settings toggle updates `CONFIG.FEATURES.SOUND_EFFECTS` and persists preference
-2. `game.js` triggers `playSound()` for move, capture, check, castle, promotion
-3. Add actual audio files under `assets/sounds/` to enable playback
+2. `game.js` triggers `playSound()` for move, capture, check, castle, promotion and game end
+3. `playSound()` in `utils.js` synthesizes short tones with the Web Audio API from the definitions in `CONFIG.SOUNDS`, so no audio files are needed
 
 ### 6. Undo Move
 
