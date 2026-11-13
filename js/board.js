@@ -77,13 +77,18 @@ function handleBoardFocus(event) {
 function setBoardFlipped(flipped) {
     boardFlipped = !!flipped;
     boardElement.classList.toggle('flipped', boardFlipped);
-    const inOrder = (elements, key) => elements
-        .sort((a, b) => (boardFlipped ? -1 : 1) * (Number(a.dataset[key]) - Number(b.dataset[key])));
-    inOrder(Array.from(boardElement.querySelectorAll('.board-row')), 'row').forEach(rowElement => {
-        boardElement.appendChild(rowElement);
-        inOrder(Array.from(rowElement.querySelectorAll('.square')), 'col')
-            .forEach(square => rowElement.appendChild(square));
-    });
+    const inOrder = (elements, key) =>
+        elements.sort(
+            (a, b) => (boardFlipped ? -1 : 1) * (Number(a.dataset[key]) - Number(b.dataset[key]))
+        );
+    inOrder(Array.from(boardElement.querySelectorAll('.board-row')), 'row').forEach(
+        (rowElement) => {
+            boardElement.appendChild(rowElement);
+            inOrder(Array.from(rowElement.querySelectorAll('.square')), 'col').forEach((square) =>
+                rowElement.appendChild(square)
+            );
+        }
+    );
 }
 
 /**
@@ -108,7 +113,9 @@ function renderPieces(boardState, movedPiece = null) {
 
             if (squareElement) {
                 const alg = coordsToAlgebraic(row, col);
-                const label = piece ? `${piece.color === 'w' ? 'white' : 'black'} ${PIECE_NAMES[piece.type]} on ${alg}` : `${alg}`;
+                const label = piece
+                    ? `${piece.color === 'w' ? 'white' : 'black'} ${PIECE_NAMES[piece.type]} on ${alg}`
+                    : `${alg}`;
                 squareElement.dataset.label = label; // Plain label; updateBoardVisuals adds the state
                 squareElement.setAttribute('aria-label', label);
             }
@@ -133,7 +140,10 @@ function renderPieces(boardState, movedPiece = null) {
 
                 if (movedPiece && movedPiece.row === row && movedPiece.col === col) {
                     pieceElement.classList.add('moved');
-                    setTimeout(() => pieceElement.classList.remove('moved'), CONFIG.ANIMATIONS.PIECE_MOVE);
+                    setTimeout(
+                        () => pieceElement.classList.remove('moved'),
+                        CONFIG.ANIMATIONS.PIECE_MOVE
+                    );
                 }
 
                 pieceElement.dataset.piece = `${piece.color}${piece.type}`;
@@ -212,13 +222,24 @@ function getSquareElement(row, col) {
  */
 function updateBoardVisuals(boardState, kingInCheckCoords = null, lastMove = null) {
     // Clear previous visual states
-    document.querySelectorAll('.square.selected, .square.possible-move, .square.in-check, .square.last-move-from, .square.last-move-to').forEach(el => {
-        el.classList.remove('selected', 'possible-move', 'in-check', 'last-move-from', 'last-move-to');
-        el.removeAttribute('aria-selected');
-        if (el.dataset.label) el.setAttribute('aria-label', el.dataset.label);
-    });
+    document
+        .querySelectorAll(
+            '.square.selected, .square.possible-move, .square.in-check, .square.last-move-from, .square.last-move-to'
+        )
+        .forEach((el) => {
+            el.classList.remove(
+                'selected',
+                'possible-move',
+                'in-check',
+                'last-move-from',
+                'last-move-to'
+            );
+            el.removeAttribute('aria-selected');
+            if (el.dataset.label) el.setAttribute('aria-label', el.dataset.label);
+        });
     // The highlights are visual only, so say the same thing in the square's label
-    const describe = (el, state) => el.setAttribute('aria-label', `${el.getAttribute('aria-label') || ''}, ${state}`);
+    const describe = (el, state) =>
+        el.setAttribute('aria-label', `${el.getAttribute('aria-label') || ''}, ${state}`);
 
     // Highlight selected square
     if (selectedSquare) {
@@ -231,7 +252,7 @@ function updateBoardVisuals(boardState, kingInCheckCoords = null, lastMove = nul
     }
 
     // Highlight possible moves
-    possibleMoves.forEach(move => {
+    possibleMoves.forEach((move) => {
         const moveElement = getSquareElement(move.row, move.col);
         if (moveElement) {
             moveElement.classList.add('possible-move');
@@ -255,7 +276,7 @@ function updateBoardVisuals(boardState, kingInCheckCoords = null, lastMove = nul
         if (fromElement) {
             fromElement.classList.add('last-move-from');
         }
-        
+
         // To square
         const toElement = getSquareElement(lastMove.to.row, lastMove.to.col);
         if (toElement) {
@@ -325,8 +346,14 @@ if (typeof module !== 'undefined' && module.exports) {
         getPossibleMoves,
         setBoardFlipped,
         // Export state variables with getters for test access
-        get selectedSquare() { return selectedSquare; },
-        get possibleMoves() { return possibleMoves; },
-        get renderedState() { return renderedState; }
+        get selectedSquare() {
+            return selectedSquare;
+        },
+        get possibleMoves() {
+            return possibleMoves;
+        },
+        get renderedState() {
+            return renderedState;
+        },
     };
-} 
+}

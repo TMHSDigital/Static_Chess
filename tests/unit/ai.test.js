@@ -1,7 +1,9 @@
 const { loadGame } = require('../helpers/load-game');
 
 const alg = (g, move) =>
-  move && g.utils.coordsToAlgebraic(move.from.row, move.from.col) + g.utils.coordsToAlgebraic(move.to.row, move.to.col);
+  move &&
+  g.utils.coordsToAlgebraic(move.from.row, move.from.col) +
+    g.utils.coordsToAlgebraic(move.to.row, move.to.col);
 const first = () => 0; // A fixed "random" choice, so results do not vary between runs
 const statusText = (g) => g.window.document.getElementById('game-status').textContent;
 
@@ -14,13 +16,16 @@ afterEach(() => {
 });
 
 describe('choosing a move', () => {
-  test.each(['easy', 'medium', 'hard'])('%s plays a legal move from the start position', (level) => {
-    const g = loadGame();
-    const move = g.ai.chooseAIMove(g.game.livePosition(), 'w', level, first);
-    const legal = g.game.generateAllLegalMoves('w').map((m) => alg(g, m));
-    expect(legal).toContain(alg(g, move));
-    expect(move.promotion).toBe('q');
-  });
+  test.each(['easy', 'medium', 'hard'])(
+    '%s plays a legal move from the start position',
+    (level) => {
+      const g = loadGame();
+      const move = g.ai.chooseAIMove(g.game.livePosition(), 'w', level, first);
+      const legal = g.game.generateAllLegalMoves('w').map((m) => alg(g, m));
+      expect(legal).toContain(alg(g, move));
+      expect(move.promotion).toBe('q');
+    }
+  );
 
   test('an unknown level plays like easy instead of failing', () => {
     const g = loadGame();
@@ -78,7 +83,7 @@ describe('playing against the computer', () => {
     expect(g.game.isBoardLocked()).toBe(false);
   });
 
-  test('the board ignores the player while it is the computer\'s turn', () => {
+  test("the board ignores the player while it is the computer's turn", () => {
     const g = loadGame();
     g.game.setOpponent('easy', 'w');
     g.play('e2e4');
@@ -100,7 +105,7 @@ describe('playing against the computer', () => {
     expect(g.game.moveHistory).toHaveLength(1);
   });
 
-  test('undo takes back the reply as well, so it is the player\'s turn', () => {
+  test("undo takes back the reply as well, so it is the player's turn", () => {
     const g = loadGame();
     g.game.setOpponent('easy', 'w');
     g.play('e2e4');
@@ -156,7 +161,11 @@ describe('playing against the computer', () => {
   });
 
   test('with the feature off there is no computer opponent', () => {
-    const g = loadGame({ configure: (config) => { config.FEATURES.AI_OPPONENT = false; } });
+    const g = loadGame({
+      configure: (config) => {
+        config.FEATURES.AI_OPPONENT = false;
+      },
+    });
     g.game.setOpponent('hard', 'w');
     expect(g.game.computerColor()).toBeNull();
     g.play('e2e4');
@@ -196,7 +205,14 @@ describe('opponent settings', () => {
       element.value = value;
       element.dispatchEvent(new g.window.Event('change'));
     };
-    return { ...g, doc, opponent, side, choose, stored: (key) => g.window.localStorage.getItem(key) };
+    return {
+      ...g,
+      doc,
+      opponent,
+      side,
+      choose,
+      stored: (key) => g.window.localStorage.getItem(key),
+    };
   }
 
   test('two players by default, with the side selector hidden', () => {

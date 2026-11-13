@@ -76,7 +76,7 @@ function isInCheck(position, color) {
  * @returns {{position: object, move: object}} The new position and a record of the move.
  */
 function applyMove(position, from, to, promotionType = QUEEN) {
-    const board = position.board.map(row => row.slice());
+    const board = position.board.map((row) => row.slice());
     const piece = board[from.row][from.col];
     const move = {
         from: { row: from.row, col: from.col },
@@ -85,7 +85,7 @@ function applyMove(position, from, to, promotionType = QUEEN) {
         captured: board[to.row][to.col],
         isCastling: false,
         isEnPassant: false,
-        promotion: null
+        promotion: null,
     };
     const kingPositions = { ...position.kingPositions };
     const moved = (original) => {
@@ -102,8 +102,14 @@ function applyMove(position, from, to, promotionType = QUEEN) {
 
     // En passant: the captured pawn is beside the capturing pawn, not on the target square
     const target = position.enPassantTarget;
-    if (piece.type === PAWN && target && to.row === target.row && to.col === target.col &&
-        from.col !== to.col && !move.captured) {
+    if (
+        piece.type === PAWN &&
+        target &&
+        to.row === target.row &&
+        to.col === target.col &&
+        from.col !== to.col &&
+        !move.captured
+    ) {
         move.captured = board[from.row][to.col];
         board[from.row][to.col] = null;
         move.isEnPassant = true;
@@ -149,7 +155,13 @@ function canCastleIn(position, color, side) {
     const kingRow = color === WHITE ? 7 : 0;
     const kingCol = 4;
     const king = board[kingRow][kingCol];
-    if (!king || king.type !== KING || king.color !== color || king.hasMoved || isInCheck(position, color)) {
+    if (
+        !king ||
+        king.type !== KING ||
+        king.color !== color ||
+        king.hasMoved ||
+        isInCheck(position, color)
+    ) {
         return false;
     }
 
@@ -159,14 +171,14 @@ function canCastleIn(position, color, side) {
     }
 
     const between = side === 'kingside' ? [5, 6] : [1, 2, 3];
-    if (between.some(col => board[kingRow][col] !== null)) {
+    if (between.some((col) => board[kingRow][col] !== null)) {
         return false;
     }
 
     // The king's two steps must be safe. On the queenside the b-file square only
     // has to be empty; the king never crosses it, so it may be attacked.
     const crossed = side === 'kingside' ? [5, 6] : [3, 2];
-    return !crossed.some(col => isSquareAttacked(kingRow, col, opponentOf(color), board));
+    return !crossed.some((col) => isSquareAttacked(kingRow, col, opponentOf(color), board));
 }
 
 /**
@@ -199,8 +211,11 @@ function legalMovesFrom(position, startRow, startCol) {
                 if (isPathObstructed(startRow, startCol, endRow, endCol, board)) continue;
             }
             // A pawn's double move needs the square it passes over to be empty
-            if (piece.type === PAWN && Math.abs(endRow - startRow) === 2 &&
-                board[(startRow + endRow) / 2][startCol] !== null) {
+            if (
+                piece.type === PAWN &&
+                Math.abs(endRow - startRow) === 2 &&
+                board[(startRow + endRow) / 2][startCol] !== null
+            ) {
                 continue;
             }
             candidates.push({ row: endRow, col: endCol });
@@ -211,22 +226,28 @@ function legalMovesFrom(position, startRow, startCol) {
     if (piece.type === PAWN && enPassantTarget) {
         const direction = color === WHITE ? -1 : 1;
         const victim = board[startRow][enPassantTarget.col];
-        if (startRow === enPassantTarget.row - direction &&
+        if (
+            startRow === enPassantTarget.row - direction &&
             Math.abs(startCol - enPassantTarget.col) === 1 &&
-            victim && victim.type === PAWN && victim.color === opponent) {
+            victim &&
+            victim.type === PAWN &&
+            victim.color === opponent
+        ) {
             candidates.push({ row: enPassantTarget.row, col: enPassantTarget.col });
         }
     }
 
     // 3. Castling
     if (piece.type === KING && !piece.hasMoved) {
-        if (canCastleIn(position, color, 'kingside')) candidates.push({ row: startRow, col: startCol + 2 });
-        if (canCastleIn(position, color, 'queenside')) candidates.push({ row: startRow, col: startCol - 2 });
+        if (canCastleIn(position, color, 'kingside'))
+            candidates.push({ row: startRow, col: startCol + 2 });
+        if (canCastleIn(position, color, 'queenside'))
+            candidates.push({ row: startRow, col: startCol - 2 });
     }
 
     // 4. Drop the moves that would leave the mover's own king in check
     const from = { row: startRow, col: startCol };
-    return candidates.filter(to => !isInCheck(applyMove(position, from, to).position, color));
+    return candidates.filter((to) => !isInCheck(applyMove(position, from, to).position, color));
 }
 
 /**
@@ -266,7 +287,10 @@ function positionKey(board, player, epTarget) {
         const kingReady = !!king && king.type === KING && king.color === color && !king.hasMoved;
         for (const col of [7, 0]) {
             const rook = board[row][col];
-            key += kingReady && rook && rook.type === ROOK && rook.color === color && !rook.hasMoved ? '1' : '0';
+            key +=
+                kingReady && rook && rook.type === ROOK && rook.color === color && !rook.hasMoved
+                    ? '1'
+                    : '0';
         }
     }
     // The en passant square only matters if a pawn is placed to capture on it
@@ -295,7 +319,7 @@ function hasInsufficientMaterial(board) {
     }
     if (others.length === 0) return true;
     if (others.length === 1) return others[0].type === BISHOP || others[0].type === KNIGHT;
-    return others.every(p => p.type === BISHOP && p.shade === others[0].shade);
+    return others.every((p) => p.type === BISHOP && p.shade === others[0].shade);
 }
 
 // Export for Node/Jest tests (CommonJS)
@@ -311,6 +335,6 @@ if (typeof module !== 'undefined' && module.exports) {
         legalMovesFrom,
         allLegalMoves,
         positionKey,
-        hasInsufficientMaterial
+        hasInsufficientMaterial,
     };
 }

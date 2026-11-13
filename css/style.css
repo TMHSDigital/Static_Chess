@@ -1,5 +1,8 @@
 :root {
-    --board-size: min(80vh, 580px); /* Change to use viewport height instead of width for better scaling */
+    --board-size: min(
+        80vh,
+        580px
+    ); /* Change to use viewport height instead of width for better scaling */
     --light-square: #f0d9b5;
     --dark-square: #b58863;
     --selected-square: rgba(255, 255, 0, 0.3);
@@ -182,7 +185,7 @@ body {
 
 #undo-button:hover:not(:disabled),
 #pgn-button:hover:not(:disabled) {
-    background-color: rgba(255,255,255,0.06);
+    background-color: rgba(255, 255, 255, 0.06);
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
@@ -235,7 +238,7 @@ body {
     :root {
         --board-size: min(85vw, 85vh); /* Adjust for mobile */
     }
-    
+
     body {
         align-items: flex-start; /* Align to top on mobile */
         padding: 10px;
@@ -301,7 +304,7 @@ body {
 
 .slider:before {
     position: absolute;
-    content: "";
+    content: '';
     height: 18px;
     width: 18px;
     left: 3px;

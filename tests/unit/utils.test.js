@@ -13,7 +13,12 @@ describe('utils', () => {
     const config = require('../../js/config');
     global.CONFIG = config.CONFIG;
 
-    ({ algebraicToCoords, coordsToAlgebraic, isWithinBounds, deepClone } = require('../../js/utils'));
+    ({
+      algebraicToCoords,
+      coordsToAlgebraic,
+      isWithinBounds,
+      deepClone,
+    } = require('../../js/utils'));
 
     // Invalid input is reported with console.error; keep the test output clean
     jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -57,7 +62,10 @@ describe('utils', () => {
   });
 
   test('deepClone makes an independent copy of a nested board', () => {
-    const board = [[{ type: 'r', color: 'w', hasMoved: false }, null], [null, { type: 'k', color: 'b', hasMoved: true }]];
+    const board = [
+      [{ type: 'r', color: 'w', hasMoved: false }, null],
+      [null, { type: 'k', color: 'b', hasMoved: true }],
+    ];
     const copy = deepClone(board);
     expect(copy).toEqual(board);
     expect(copy).not.toBe(board);

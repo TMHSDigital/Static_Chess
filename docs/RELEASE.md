@@ -24,6 +24,7 @@ When you push a tag starting with `v` (e.g., `v0.1.0`, `v1.2.3`), the `.github/w
    - Run locally: `npm test && npm run lint`
 
 3. **Create and Push Tag**:
+
    ```bash
    git tag -a vX.Y.Z -m "Release vX.Y.Z - Description"
    git push origin vX.Y.Z
@@ -38,6 +39,7 @@ The release will be created automatically within minutes of pushing the tag.
 ## Versioning
 
 Semantic Versioning (MAJOR.MINOR.PATCH):
+
 - **MAJOR** (X.0.0): Breaking changes
 - **MINOR** (0.X.0): New features, backwards compatible
 - **PATCH** (0.0.X): Bug fixes
@@ -47,6 +49,7 @@ Semantic Versioning (MAJOR.MINOR.PATCH):
 For each release, create a `RELEASE_NOTES_vX.Y.Z.md` file in the `releases/` directory. The workflow will automatically use this file for the GitHub Release description. If the file doesn't exist, a default release note will be generated referencing the CHANGELOG.
 
 Release-related files are organized in the `releases/` directory:
+
 - `README.md` - Documentation for the releases directory structure
 - `RELEASE_NOTES_vX.Y.Z.md` - Release notes used by GitHub Actions workflow
 - `RELEASE_GUIDE_vX.Y.Z.md` - Step-by-step release guide (optional, for reference)
@@ -54,16 +57,19 @@ Release-related files are organized in the `releases/` directory:
 See `releases/README.md` for more details on the organization.
 
 Example structure:
+
 ```markdown
 # Release vX.Y.Z - Title
 
 **Release Date:** YYYY-MM-DD
 
 ## What's New
+
 - Feature 1
 - Feature 2
 
 ## Links
+
 - Play Now: https://tmhsdigital.github.io/Static_Chess/
 - Full Changelog: https://github.com/TMHSDigital/Static_Chess/blob/main/CHANGELOG.md
 ```

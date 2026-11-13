@@ -5,7 +5,7 @@
 
 // Ensure the DOM is fully loaded before initializing the game
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Initialize Toggles --- 
+    // --- Initialize Toggles ---
     const coordsToggle = document.getElementById('coords-toggle');
     const possibleMovesToggle = document.getElementById('possible-moves-toggle');
     const lastMoveToggle = document.getElementById('last-move-toggle');
@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (showCoords) {
             body.classList.add('coords-visible');
         }
-        coordsToggle.addEventListener('change', function() {
+        coordsToggle.addEventListener('change', function () {
             if (this.checked) {
                 body.classList.add('coords-visible');
                 writeSetting(KEYS.SHOW_COORDINATES, 'true');
@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
         possibleMovesToggle.checked = showPossibleMoves;
         rootStyle.setProperty('--show-possible-moves', showPossibleMoves ? 'block' : 'none');
 
-        possibleMovesToggle.addEventListener('change', function() {
+        possibleMovesToggle.addEventListener('change', function () {
             const displayValue = this.checked ? 'block' : 'none';
             rootStyle.setProperty('--show-possible-moves', displayValue);
             writeSetting(KEYS.SHOW_POSSIBLE_MOVES, this.checked.toString());
@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
         lastMoveToggle.checked = showLastMove;
         rootStyle.setProperty('--show-last-move', showLastMove ? 'block' : 'none');
 
-        lastMoveToggle.addEventListener('change', function() {
+        lastMoveToggle.addEventListener('change', function () {
             const displayValue = this.checked ? 'block' : 'none';
             rootStyle.setProperty('--show-last-move', displayValue);
             writeSetting(KEYS.SHOW_LAST_MOVE, this.checked.toString());
@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (soundToggle) {
         soundToggle.checked = enableSounds;
         CONFIG.FEATURES.SOUND_EFFECTS = enableSounds;
-        soundToggle.addEventListener('change', function() {
+        soundToggle.addEventListener('change', function () {
             CONFIG.FEATURES.SOUND_EFFECTS = this.checked;
             writeSetting(KEYS.ENABLE_SOUNDS, this.checked.toString());
         });
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const flipBoard = readFlag(KEYS.FLIP_BOARD, DEFAULTS.FLIP_BOARD);
         flipToggle.checked = flipBoard;
         setBoardFlipped(flipBoard);
-        flipToggle.addEventListener('change', function() {
+        flipToggle.addEventListener('change', function () {
             setBoardFlipped(this.checked);
             writeSetting(KEYS.FLIP_BOARD, this.checked.toString());
         });
@@ -114,10 +114,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (opponentSetting) opponentSetting.hidden = true;
             if (sideSetting) sideSetting.hidden = true;
         } else {
-            const levels = Array.from(opponentSelect.options).map(option => option.value);
+            const levels = Array.from(opponentSelect.options).map((option) => option.value);
             const savedOpponent = readSetting(KEYS.OPPONENT);
-            opponentSelect.value = levels.includes(savedOpponent) ? savedOpponent : DEFAULTS.OPPONENT;
-            sideSelect.value = (readSetting(KEYS.PLAYER_SIDE) || DEFAULTS.PLAYER_SIDE) === 'b' ? 'b' : 'w';
+            opponentSelect.value = levels.includes(savedOpponent)
+                ? savedOpponent
+                : DEFAULTS.OPPONENT;
+            sideSelect.value =
+                (readSetting(KEYS.PLAYER_SIDE) || DEFAULTS.PLAYER_SIDE) === 'b' ? 'b' : 'w';
 
             const applyOpponent = () => {
                 const againstComputer = opponentSelect.value !== 'human';
@@ -138,10 +141,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initialize Game ---
     initializeGame();
-    
+
     // --- Initialize Feature Modules ---
     initializeFeatureModules();
-}); 
+});
 
 /**
  * Initialize optional feature modules based on feature flags.
@@ -150,10 +153,10 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 function initializeFeatureModules() {
     debugLog('Initializing optional feature modules...');
-    
+
     // Initialize drag and drop if enabled
     if (CONFIG.FEATURES.DRAG_AND_DROP) {
         debugLog('Initializing drag and drop feature');
         initDragAndDrop();
     }
-} 
+}

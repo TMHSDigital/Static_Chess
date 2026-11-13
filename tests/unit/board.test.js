@@ -51,7 +51,9 @@ describe('flipping the board', () => {
     const names = squareNames(g);
     expect(names[0]).toBe('h1');
     expect(names[63]).toBe('a8');
-    expect(g.window.document.getElementById('chess-board').classList.contains('flipped')).toBe(true);
+    expect(g.window.document.getElementById('chess-board').classList.contains('flipped')).toBe(
+      true
+    );
     expect(g.board.getSquareElement(7, 4).querySelector('.piece.w.k')).not.toBeNull();
   });
 
@@ -74,7 +76,9 @@ describe('flipping the board', () => {
   test('arrow keys follow the screen: up from e2 goes to e3 normally and e1 when flipped', () => {
     const g = loadGame();
     const press = (key) =>
-      g.window.document.activeElement.dispatchEvent(new g.window.KeyboardEvent('keydown', { key, bubbles: true }));
+      g.window.document.activeElement.dispatchEvent(
+        new g.window.KeyboardEvent('keydown', { key, bubbles: true })
+      );
     const focused = () => {
       const el = g.window.document.activeElement;
       return g.utils.coordsToAlgebraic(Number(el.dataset.row), Number(el.dataset.col));

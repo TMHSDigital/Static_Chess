@@ -8,7 +8,7 @@ const PROMOTION_CHOICES = [
     { type: 'q', label: 'Queen' },
     { type: 'r', label: 'Rook' },
     { type: 'b', label: 'Bishop' },
-    { type: 'n', label: 'Knight' }
+    { type: 'n', label: 'Knight' },
 ];
 
 let promotionRequest = null; // { onChoose, onCancel, returnFocus } while the dialog is open
@@ -66,7 +66,8 @@ function handlePromotionKeydown(event) {
         closePromotionChooser(null);
         return;
     }
-    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key] ||
+    const step =
+        { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key] ||
         (event.key === 'Tab' ? (event.shiftKey ? -1 : 1) : 0);
     if (!step) return;
     event.preventDefault();

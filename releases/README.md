@@ -40,4 +40,3 @@ releases/
 ├── RELEASE_NOTES_v0.2.0.md     # Future release notes
 └── RELEASE_GUIDE_v0.2.0.md      # Future release guide
 ```
-

@@ -88,13 +88,13 @@ Static_Chess/
 
 ### Feature flags
 
-| Flag | Default | Effect |
-|---|---|---|
-| `DRAG_AND_DROP` | `true` | Enables dragging pieces (`drag.js`) |
-| `UNDO_MOVE` | `true` | Shows and enables the Undo button |
+| Flag            | Default | Effect                                                                                                                                                                           |
+| --------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DRAG_AND_DROP` | `true`  | Enables dragging pieces (`drag.js`)                                                                                                                                              |
+| `UNDO_MOVE`     | `true`  | Shows and enables the Undo button                                                                                                                                                |
 | `SOUND_EFFECTS` | `false` | Runtime state. It is overwritten at startup from the "Sound effects" toggle, so editing it in `config.js` has no lasting effect; change `DEFAULT_SETTINGS.ENABLE_SOUNDS` instead |
-| `AI_OPPONENT` | `true` | Offers the computer opponent in the settings. When `false`, the selectors are hidden and the game is always two-player |
-| `PROMOTION_UI` | `true` | Asks which piece a pawn promotes to. When `false`, pawns become queens without asking |
+| `AI_OPPONENT`   | `true`  | Offers the computer opponent in the settings. When `false`, the selectors are hidden and the game is always two-player                                                           |
+| `PROMOTION_UI`  | `true`  | Asks which piece a pawn promotes to. When `false`, pawns become queens without asking                                                                                            |
 
 ### Stored data
 
@@ -162,6 +162,7 @@ Drag and drop is fully implemented and enabled. It works by:
 6. A press that never moves is an ordinary click or tap and is handled by the click handler in `game.js`
 
 The implementation includes:
+
 - Event listeners for mouse and touch events
 - Drag state management with movement detection
 - Visual feedback (piece follows cursor with opacity change)
@@ -279,10 +280,12 @@ SAN generation with disambiguation is implemented:
 ## Testing Approach
 
 Automated tests with Jest + jsdom, all built on `tests/helpers/load-game.js`:
+
 - Unit: rules (castling, en passant, pins, check, mate, stalemate, promotion, notation), undo, persistence, mouse and touch input, utilities, piece setup
 - Integration: move flow updates status and history
 - Not covered yet: board rendering details and the settings toggles
 - Optional: Playwright E2E for browser-level scenarios
 
 Manual testing:
+
 - Cross-browser checks, responsive layout, accessibility (keyboard/ARIA)

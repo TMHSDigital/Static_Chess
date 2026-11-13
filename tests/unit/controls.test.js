@@ -56,7 +56,11 @@ describe('PGN export', () => {
   test('has the seven standard tags', () => {
     const g = loadGame();
     g.play('e2e4');
-    const tags = g.game.buildPGN().split('\n\n')[0].split('\n').map((line) => line.match(/^\[(\w+) "/)[1]);
+    const tags = g.game
+      .buildPGN()
+      .split('\n\n')[0]
+      .split('\n')
+      .map((line) => line.match(/^\[(\w+) "/)[1]);
     expect(tags).toEqual(['Event', 'Site', 'Date', 'Round', 'White', 'Black', 'Result']);
   });
 
@@ -104,7 +108,11 @@ describe('PGN export', () => {
 
 describe('Undo button', () => {
   test('is hidden when the feature flag is off', () => {
-    const g = loadGame({ configure: (config) => { config.FEATURES.UNDO_MOVE = false; } });
+    const g = loadGame({
+      configure: (config) => {
+        config.FEATURES.UNDO_MOVE = false;
+      },
+    });
     expect(g.window.document.getElementById('undo-button').hidden).toBe(true);
   });
 

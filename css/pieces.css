@@ -46,11 +46,17 @@
 
 /* Move animations */
 @keyframes move-piece {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.12); }
-    100% { transform: scale(1); }
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.12);
+    }
+    100% {
+        transform: scale(1);
+    }
 }
 
 .piece.moved {
     animation: move-piece 0.3s ease;
-} 
+}

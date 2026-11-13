@@ -5,7 +5,7 @@
     grid-template-columns: repeat(8, 1fr);
     grid-template-rows: repeat(8, 1fr);
     border: 1px solid #000;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
     position: relative;
     min-height: 0; /* Prevents overflow */
 }
@@ -40,32 +40,68 @@
     bottom: 2px;
     left: 2px;
 }
-.square[data-col="0"]::before { content: 'a'; }
-.square[data-col="1"]::before { content: 'b'; }
-.square[data-col="2"]::before { content: 'c'; }
-.square[data-col="3"]::before { content: 'd'; }
-.square[data-col="4"]::before { content: 'e'; }
-.square[data-col="5"]::before { content: 'f'; }
-.square[data-col="6"]::before { content: 'g'; }
-.square[data-col="7"]::before { content: 'h'; }
+.square[data-col='0']::before {
+    content: 'a';
+}
+.square[data-col='1']::before {
+    content: 'b';
+}
+.square[data-col='2']::before {
+    content: 'c';
+}
+.square[data-col='3']::before {
+    content: 'd';
+}
+.square[data-col='4']::before {
+    content: 'e';
+}
+.square[data-col='5']::before {
+    content: 'f';
+}
+.square[data-col='6']::before {
+    content: 'g';
+}
+.square[data-col='7']::before {
+    content: 'h';
+}
 
 /* Rank coordinates (1-8) - Positioned slightly inside */
 .square::after {
     top: 2px;
     right: 2px;
 }
-.square[data-row="7"]::after { content: '1'; }
-.square[data-row="6"]::after { content: '2'; }
-.square[data-row="5"]::after { content: '3'; }
-.square[data-row="4"]::after { content: '4'; }
-.square[data-row="3"]::after { content: '5'; }
-.square[data-row="2"]::after { content: '6'; }
-.square[data-row="1"]::after { content: '7'; }
-.square[data-row="0"]::after { content: '8'; }
+.square[data-row='7']::after {
+    content: '1';
+}
+.square[data-row='6']::after {
+    content: '2';
+}
+.square[data-row='5']::after {
+    content: '3';
+}
+.square[data-row='4']::after {
+    content: '4';
+}
+.square[data-row='3']::after {
+    content: '5';
+}
+.square[data-row='2']::after {
+    content: '6';
+}
+.square[data-row='1']::after {
+    content: '7';
+}
+.square[data-row='0']::after {
+    content: '8';
+}
 
 /* Hide file coordinate on a1 and rank coordinate on h8 for less clutter */
-.square[data-row="7"][data-col="0"]::before { display: none !important; }
-.square[data-row="0"][data-col="7"]::after { display: none !important; }
+.square[data-row='7'][data-col='0']::before {
+    display: none !important;
+}
+.square[data-row='0'][data-col='7']::after {
+    display: none !important;
+}
 
 .square {
     display: flex;
@@ -90,16 +126,18 @@
 .square.light {
     background-color: var(--light-square);
     /* Subtle texture - reduced intensity */
-    background-image: linear-gradient(rgba(255,255,255,0.01) 1px, transparent 1px),
-                      linear-gradient(90deg, rgba(255,255,255,0.01) 1px, transparent 1px);
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
     background-size: 4px 4px;
 }
 
 .square.dark {
     background-color: var(--dark-square);
     /* Subtle texture - reduced intensity */
-    background-image: linear-gradient(rgba(0,0,0,0.02) 1px, transparent 1px),
-                      linear-gradient(90deg, rgba(0,0,0,0.02) 1px, transparent 1px);
+    background-image:
+        linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
     background-size: 4px 4px;
 }
 
@@ -122,9 +160,18 @@
 }
 
 @keyframes pulse {
-    0% { transform: scale(0.95); opacity: 0.6; }
-    50% { transform: scale(1.05); opacity: 0.8; }
-    100% { transform: scale(0.95); opacity: 0.6; }
+    0% {
+        transform: scale(0.95);
+        opacity: 0.6;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(0.95);
+        opacity: 0.6;
+    }
 }
 
 .square.possible-move.light::after {
@@ -142,8 +189,12 @@
 }
 
 @keyframes check-pulse {
-    from { box-shadow: inset 0 0 5px rgba(255, 0, 0, 0.3); }
-    to { box-shadow: inset 0 0 15px rgba(255, 0, 0, 0.5); }
+    from {
+        box-shadow: inset 0 0 5px rgba(255, 0, 0, 0.3);
+    }
+    to {
+        box-shadow: inset 0 0 15px rgba(255, 0, 0, 0.5);
+    }
 }
 
 /* Last move indication - using corner markers */
@@ -186,4 +237,4 @@
     bottom: 0;
     left: 0;
     border-top-right-radius: 5px;
-} 
+}

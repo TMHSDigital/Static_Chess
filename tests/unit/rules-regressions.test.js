@@ -133,7 +133,15 @@ describe('selecting by click', () => {
 describe('mouse and touch input with drag and drop enabled', () => {
   const pieceAt = (g, row, col) => g.board.getSquareElement(row, col).querySelector('.piece');
   const mouse = (g, type, target, x = 0, y = 0) =>
-    target.dispatchEvent(new g.window.MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX: x, clientY: y }));
+    target.dispatchEvent(
+      new g.window.MouseEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+        clientX: x,
+        clientY: y,
+      })
+    );
   const clickOn = (g, target) => {
     mouse(g, 'mousedown', target);
     mouse(g, 'mouseup', target);
@@ -207,7 +215,7 @@ describe('mouse and touch input with drag and drop enabled', () => {
     expect(g.at('b8').type).toBe('n');
   });
 
-  test('pieces cannot be picked up while it is the computer\'s turn', () => {
+  test("pieces cannot be picked up while it is the computer's turn", () => {
     const g = loadGame({ drag: true });
     g.game.setOpponent('easy', 'b'); // The computer plays White and is to move
     mouse(g, 'mousedown', pieceAt(g, 6, 4), 100, 100);

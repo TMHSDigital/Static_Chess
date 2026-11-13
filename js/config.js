@@ -6,11 +6,11 @@
 const CONFIG = {
     // Feature flags. Every flag here is read by the code.
     FEATURES: {
-        DRAG_AND_DROP: true,   // Move pieces by dragging (drag.js)
-        UNDO_MOVE: true,       // Show and enable the Undo button
-        SOUND_EFFECTS: false,  // Runtime state: set from the "Sound effects" toggle at startup
-        AI_OPPONENT: true,     // Offer a computer opponent in the settings (ai.js)
-        PROMOTION_UI: true,    // Ask which piece a pawn promotes to (off: always a queen)
+        DRAG_AND_DROP: true, // Move pieces by dragging (drag.js)
+        UNDO_MOVE: true, // Show and enable the Undo button
+        SOUND_EFFECTS: false, // Runtime state: set from the "Sound effects" toggle at startup
+        AI_OPPONENT: true, // Offer a computer opponent in the settings (ai.js)
+        PROMOTION_UI: true, // Ask which piece a pawn promotes to (off: always a queen)
     },
 
     // Defaults for the settings panel, used until the player changes a toggle
@@ -19,9 +19,9 @@ const CONFIG = {
         SHOW_POSSIBLE_MOVES: true,
         SHOW_LAST_MOVE: true,
         ENABLE_SOUNDS: false,
-        FLIP_BOARD: false,     // true shows the board from Black's side
-        OPPONENT: 'human',     // 'human' for two players, or 'easy', 'medium', 'hard' for the computer
-        PLAYER_SIDE: 'w',      // The side the person plays against the computer: 'w' or 'b'
+        FLIP_BOARD: false, // true shows the board from Black's side
+        OPPONENT: 'human', // 'human' for two players, or 'easy', 'medium', 'hard' for the computer
+        PLAYER_SIDE: 'w', // The side the person plays against the computer: 'w' or 'b'
     },
 
     // Shortest time between the player's move and the computer's reply (ms)
@@ -41,10 +41,24 @@ const CONFIG = {
     SOUNDS: {
         MOVE: [{ frequency: 440, duration: 0.07 }],
         CAPTURE: [{ frequency: 220, duration: 0.1, wave: 'triangle' }],
-        CHECK: [{ frequency: 660, duration: 0.08 }, { frequency: 880, duration: 0.12 }],
-        CASTLE: [{ frequency: 392, duration: 0.07 }, { frequency: 523, duration: 0.09 }],
-        PROMOTE: [{ frequency: 523, duration: 0.08 }, { frequency: 659, duration: 0.08 }, { frequency: 784, duration: 0.14 }],
-        GAME_END: [{ frequency: 523, duration: 0.14 }, { frequency: 392, duration: 0.14 }, { frequency: 262, duration: 0.3 }],
+        CHECK: [
+            { frequency: 660, duration: 0.08 },
+            { frequency: 880, duration: 0.12 },
+        ],
+        CASTLE: [
+            { frequency: 392, duration: 0.07 },
+            { frequency: 523, duration: 0.09 },
+        ],
+        PROMOTE: [
+            { frequency: 523, duration: 0.08 },
+            { frequency: 659, duration: 0.08 },
+            { frequency: 784, duration: 0.14 },
+        ],
+        GAME_END: [
+            { frequency: 523, duration: 0.14 },
+            { frequency: 392, duration: 0.14 },
+            { frequency: 262, duration: 0.3 },
+        ],
     },
 
     // localStorage keys. Changing a value here orphans what players have

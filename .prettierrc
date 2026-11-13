@@ -1,6 +1,11 @@
 {
   "singleQuote": true,
   "trailingComma": "es5",
-  "printWidth": 100
+  "printWidth": 100,
+  "overrides": [
+    {
+      "files": ["*.yml", "*.yaml", "*.json", "*.md", "*.mjs", ".prettierrc", "tests/**"],
+      "options": { "tabWidth": 2 }
+    }
+  ]
 }
-

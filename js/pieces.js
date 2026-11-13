@@ -21,7 +21,7 @@ const PIECE_NAMES = {
     [KNIGHT]: 'knight',
     [BISHOP]: 'bishop',
     [QUEEN]: 'queen',
-    [KING]: 'king'
+    [KING]: 'king',
 };
 
 /**
@@ -69,7 +69,10 @@ function isPseudoLegalMove(piece, startRow, startCol, endRow, endCol, isCapture)
                 if (rowDiff === direction && colDiff === 0) return true;
                 // Move forward two squares from starting position
                 if (!piece.hasMoved && rowDiff === 2 * direction && colDiff === 0) {
-                    return (piece.color === WHITE && startRow === 6) || (piece.color === BLACK && startRow === 1);
+                    return (
+                        (piece.color === WHITE && startRow === 6) ||
+                        (piece.color === BLACK && startRow === 1)
+                    );
                 }
             }
             return false;
@@ -89,7 +92,11 @@ function isPseudoLegalMove(piece, startRow, startCol, endRow, endCol, isCapture)
 
         case QUEEN:
             // Move like a rook or bishop
-            return (absRowDiff > 0 && absColDiff === 0) || (absRowDiff === 0 && absColDiff > 0) || (absRowDiff === absColDiff);
+            return (
+                (absRowDiff > 0 && absColDiff === 0) ||
+                (absRowDiff === 0 && absColDiff > 0) ||
+                absRowDiff === absColDiff
+            );
 
         case KING:
             // Move one square in any direction.
@@ -98,7 +105,7 @@ function isPseudoLegalMove(piece, startRow, startCol, endRow, endCol, isCapture)
             return absRowDiff <= 1 && absColDiff <= 1;
 
         default:
-            console.error("Unknown piece type:", piece.type);
+            console.error('Unknown piece type:', piece.type);
             return false;
     }
 }
@@ -111,7 +118,9 @@ function isPseudoLegalMove(piece, startRow, startCol, endRow, endCol, isCapture)
  * @returns {Array<Array<Piece|null>>} A 2D array representing the board state.
  */
 function getInitialPieces() {
-    const board = Array(8).fill(null).map(() => Array(8).fill(null));
+    const board = Array(8)
+        .fill(null)
+        .map(() => Array(8).fill(null));
 
     // Place pawns
     for (let col = 0; col < 8; col++) {
@@ -143,6 +152,6 @@ if (typeof module !== 'undefined' && module.exports) {
         PIECE_NAMES,
         Piece,
         isPseudoLegalMove,
-        getInitialPieces
+        getInitialPieces,
     };
-} 
+}

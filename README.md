@@ -129,6 +129,7 @@ The game features an elegant, professional-looking interface with a dark theme a
 ## Setup and Installation
 
 1. **Clone the repository:**
+
    ```bash
    git clone https://github.com/TMHSDigital/Static_Chess.git
    cd Static_Chess
@@ -164,11 +165,11 @@ That's it! No build process or dependencies are required.
 11. Keyboard: Tab to the board, move between squares with the arrow keys, and press Enter or Space to select a piece or move it
 12. To play against the computer, pick a level under "Opponent" and a side under "Play as" (use "Flip board" to sit behind the black pieces). Undo then takes back your move and the computer's reply
 13. Toggle settings:
-   - Show coordinates
-   - Show possible moves
-   - Highlight last move
-   - Sound effects
-   - Flip board (play from Black's side)
+    - Show coordinates
+    - Show possible moves
+    - Highlight last move
+    - Sound effects
+    - Flip board (play from Black's side)
 14. The game and its undo history are saved automatically to localStorage, so a refresh picks up where you left off
 
 ---
@@ -285,6 +286,7 @@ Since this is a purely static website, it can be easily deployed on any static h
 6. Your site will be available at `https://tmhsdigital.github.io/Static_Chess/`
 
 **CI/CD Workflows:**
+
 - `.github/workflows/ci.yml`: Runs lint and tests on PRs and pushes
 - `.github/workflows/release.yml`: Automatically creates GitHub Releases when tags are pushed
 

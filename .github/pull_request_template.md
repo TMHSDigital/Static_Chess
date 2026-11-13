@@ -10,5 +10,3 @@ Describe the change and its purpose.
 - [ ] Accessibility checked (labels, focus, keyboard)
 
 ## Screenshots/Notes
-
-

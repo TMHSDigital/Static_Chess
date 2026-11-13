@@ -7,6 +7,7 @@ labels: bug
 ### Describe the bug
 
 ### Steps to reproduce
+
 1.
 2.
 3.
@@ -16,7 +17,6 @@ labels: bug
 ### Screenshots or console logs
 
 ### Environment
+
 - Browser and version:
 - OS:
-
-

@@ -9,7 +9,7 @@
  */
 function algebraicToCoords(algebraic) {
     if (typeof algebraic !== 'string' || algebraic.length !== 2) {
-        console.error("Invalid algebraic notation:", algebraic);
+        console.error('Invalid algebraic notation:', algebraic);
         return null;
     }
     const file = algebraic[0].toLowerCase();
@@ -19,7 +19,7 @@ function algebraicToCoords(algebraic) {
     const row = 8 - parseInt(rank, 10);
 
     if (col < 0 || col > 7 || isNaN(row) || row < 0 || row > 7) {
-        console.error("Invalid algebraic notation coordinates:", algebraic);
+        console.error('Invalid algebraic notation coordinates:', algebraic);
         return null;
     }
 
@@ -34,7 +34,7 @@ function algebraicToCoords(algebraic) {
  */
 function coordsToAlgebraic(row, col) {
     if (row < 0 || row > 7 || col < 0 || col > 7) {
-        console.error("Invalid coordinates:", { row, col });
+        console.error('Invalid coordinates:', { row, col });
         return null;
     }
     const file = String.fromCharCode('a'.charCodeAt(0) + col);
@@ -61,23 +61,23 @@ function deepClone(source) {
     if (source === null || typeof source !== 'object') {
         return source;
     }
-    
+
     // Handle Date
     if (source instanceof Date) {
         return new Date(source.getTime());
     }
-    
+
     // Handle Array
     if (Array.isArray(source)) {
-        return source.map(item => deepClone(item));
+        return source.map((item) => deepClone(item));
     }
-    
+
     // Handle Object
     const clone = {};
-    Object.keys(source).forEach(key => {
+    Object.keys(source).forEach((key) => {
         clone[key] = deepClone(source[key]);
     });
-    
+
     return clone;
 }
 
@@ -132,7 +132,8 @@ function playSound(soundType) {
     const tones = CONFIG.SOUNDS[soundType.toUpperCase()];
     if (!tones) return;
 
-    const AudioContextClass = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext);
+    const AudioContextClass =
+        typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext);
     if (!AudioContextClass) return; // No audio support (old browser, test environment)
 
     try {
@@ -181,6 +182,6 @@ if (typeof module !== 'undefined' && module.exports) {
         saveToLocalStorage,
         loadFromLocalStorage,
         playSound,
-        debugLog
+        debugLog,
     };
-} 
+}

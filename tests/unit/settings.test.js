@@ -1,6 +1,12 @@
 const { loadGame } = require('../helpers/load-game');
 
-const TOGGLES = ['coords-toggle', 'possible-moves-toggle', 'last-move-toggle', 'sound-toggle', 'flip-toggle'];
+const TOGGLES = [
+  'coords-toggle',
+  'possible-moves-toggle',
+  'last-move-toggle',
+  'sound-toggle',
+  'flip-toggle',
+];
 
 /**
  * Starts the app the way the page does: the game modules are loaded, the

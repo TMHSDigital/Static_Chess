@@ -5,7 +5,8 @@ const click = (ctx, square) => {
   const { row, col } = ctx.utils.algebraicToCoords(square);
   ctx.game.handleBoardClick(row, col);
 };
-const choice = (ctx, piece) => ctx.window.document.querySelector(`.promotion-choice[data-piece="${piece}"]`);
+const choice = (ctx, piece) =>
+  ctx.window.document.querySelector(`.promotion-choice[data-piece="${piece}"]`);
 const dialog = (ctx) => ctx.window.document.getElementById('promotion-dialog');
 
 describe('insufficient material', () => {
@@ -192,10 +193,18 @@ describe('promotion choice', () => {
     click(ctx, 'b8');
     const buttons = Array.from(ctx.window.document.querySelectorAll('.promotion-choice'));
     expect(buttons.map((b) => b.tagName)).toEqual(['BUTTON', 'BUTTON', 'BUTTON', 'BUTTON']);
-    expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual(['Queen', 'Rook', 'Bishop', 'Knight']);
+    expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual([
+      'Queen',
+      'Rook',
+      'Bishop',
+      'Knight',
+    ]);
     expect(ctx.window.document.activeElement).toBe(buttons[0]);
 
-    const key = (name) => buttons[0].dispatchEvent(new ctx.window.KeyboardEvent('keydown', { key: name, bubbles: true }));
+    const key = (name) =>
+      buttons[0].dispatchEvent(
+        new ctx.window.KeyboardEvent('keydown', { key: name, bubbles: true })
+      );
     key('ArrowRight');
     expect(ctx.window.document.activeElement).toBe(buttons[1]);
   });
@@ -204,7 +213,9 @@ describe('promotion choice', () => {
     const ctx = ready();
     click(ctx, 'b7');
     click(ctx, 'b8');
-    dialog(ctx).dispatchEvent(new ctx.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    dialog(ctx).dispatchEvent(
+      new ctx.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+    );
     expect(dialog(ctx).hidden).toBe(true);
     expect(ctx.game.moveHistory).toHaveLength(0);
     expect(ctx.at('b7').type).toBe('p');
@@ -239,7 +250,11 @@ describe('promotion choice', () => {
   });
 
   test('with the feature off the pawn becomes a queen at once', () => {
-    const ctx = ready({ configure: (config) => { config.FEATURES.PROMOTION_UI = false; } });
+    const ctx = ready({
+      configure: (config) => {
+        config.FEATURES.PROMOTION_UI = false;
+      },
+    });
     click(ctx, 'b7');
     click(ctx, 'b8');
     expect(ctx.at('b8').type).toBe('q');

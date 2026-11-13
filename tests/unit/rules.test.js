@@ -30,7 +30,10 @@ function fromFen(g, fen) {
     expect(board[row][rookCol].type).toBe(ROOK);
   }
   const enPassantTarget = ep === '-' ? null : g.utils.algebraicToCoords(ep);
-  return { position: { board, kingPositions, enPassantTarget }, color: turn === 'w' ? WHITE : BLACK };
+  return {
+    position: { board, kingPositions, enPassantTarget },
+    color: turn === 'w' ? WHITE : BLACK,
+  };
 }
 
 /** Counts the move sequences of a given length, the standard move-generator check. */
@@ -38,9 +41,13 @@ function perft(g, position, color, depth) {
   const { allLegalMoves, applyMove, opponentOf, PROMOTION_TYPES } = g.rules;
   let nodes = 0;
   for (const { from, to } of allLegalMoves(position, color)) {
-    const promotes = position.board[from.row][from.col].type === 'p' && (to.row === 0 || to.row === 7);
+    const promotes =
+      position.board[from.row][from.col].type === 'p' && (to.row === 0 || to.row === 7);
     for (const type of promotes ? PROMOTION_TYPES : [undefined]) {
-      nodes += depth === 1 ? 1 : perft(g, applyMove(position, from, to, type).position, opponentOf(color), depth - 1);
+      nodes +=
+        depth === 1
+          ? 1
+          : perft(g, applyMove(position, from, to, type).position, opponentOf(color), depth - 1);
     }
   }
   return nodes;
@@ -49,7 +56,11 @@ function perft(g, position, color, depth) {
 describe('move generation matches the published perft counts', () => {
   const cases = [
     ['the start position', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -', [20, 400, 8902]],
-    ['castling, pins and en passant (Kiwipete)', 'r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -', [48, 2039]],
+    [
+      'castling, pins and en passant (Kiwipete)',
+      'r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -',
+      [48, 2039],
+    ],
     ['an endgame with en passant pins', '8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -', [14, 191, 2812]],
     ['promotions', 'rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ -', [44, 1486]],
   ];
@@ -67,7 +78,11 @@ describe('applyMove', () => {
     const g = loadGame();
     const { position } = fromFen(g, 'r3k2r/8/8/8/8/8/8/R3K2R w KQkq -');
     const before = JSON.stringify(position);
-    const { position: next, move } = g.rules.applyMove(position, { row: 7, col: 4 }, { row: 7, col: 6 });
+    const { position: next, move } = g.rules.applyMove(
+      position,
+      { row: 7, col: 4 },
+      { row: 7, col: 6 }
+    );
 
     expect(JSON.stringify(position)).toBe(before);
     expect(move.isCastling).toBe(true);
@@ -85,7 +100,11 @@ describe('applyMove', () => {
     const pushed = g.rules.applyMove(position, { row: 6, col: 4 }, { row: 4, col: 4 }).position;
     expect(pushed.enPassantTarget).toEqual({ row: 5, col: 4 });
 
-    const { position: after, move } = g.rules.applyMove(pushed, { row: 4, col: 5 }, { row: 5, col: 4 });
+    const { position: after, move } = g.rules.applyMove(
+      pushed,
+      { row: 4, col: 5 },
+      { row: 5, col: 4 }
+    );
     expect(move.isEnPassant).toBe(true);
     expect(move.captured).toMatchObject({ type: 'p', color: 'w' });
     expect(after.board[4][4]).toBeNull();
@@ -96,7 +115,12 @@ describe('applyMove', () => {
   test('promotes to the requested piece', () => {
     const g = loadGame();
     const { position } = fromFen(g, '4k3/1P6/8/8/8/8/8/4K3 w - -');
-    const { position: next, move } = g.rules.applyMove(position, { row: 1, col: 1 }, { row: 0, col: 1 }, 'r');
+    const { position: next, move } = g.rules.applyMove(
+      position,
+      { row: 1, col: 1 },
+      { row: 0, col: 1 },
+      'r'
+    );
     expect(move.promotion).toBe('r');
     expect(next.board[0][1]).toMatchObject({ type: 'r', color: 'w' });
   });
@@ -110,6 +134,8 @@ describe('the live game uses the same rules', () => {
     g.play('e2e4', 'e7e5', 'g1f3');
     expect(JSON.stringify(start)).toBe(picture);
     expect(g.game.livePosition().board).toBe(g.game.boardState);
-    expect(g.rules.allLegalMoves(g.game.livePosition(), 'b')).toEqual(g.game.generateAllLegalMoves('b'));
+    expect(g.rules.allLegalMoves(g.game.livePosition(), 'b')).toEqual(
+      g.game.generateAllLegalMoves('b')
+    );
   });
 });

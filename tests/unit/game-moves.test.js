@@ -90,7 +90,9 @@ describe('game end', () => {
     g.play('f2f3', 'e7e5', 'g2g4', 'd8h4');
     expect(g.game.isGameOver).toBe(true);
     expect(g.game.moveHistory.at(-1).notation).toBe('Qh4#');
-    expect(g.window.document.getElementById('game-status').textContent).toBe('Checkmate! Black wins.');
+    expect(g.window.document.getElementById('game-status').textContent).toBe(
+      'Checkmate! Black wins.'
+    );
   });
 
   test('clicks are ignored after the game is over', () => {
@@ -106,7 +108,9 @@ describe('game end', () => {
     g.play('g5g6');
     expect(g.game.isGameOver).toBe(true);
     expect(g.game.moveHistory.at(-1).isStalemate).toBe(true);
-    expect(g.window.document.getElementById('game-status').textContent).toBe('Stalemate! Game is a draw.');
+    expect(g.window.document.getElementById('game-status').textContent).toBe(
+      'Stalemate! Game is a draw.'
+    );
   });
 
   test('a check that can be answered is not the end of the game', () => {

@@ -7,9 +7,10 @@ let boardState = getInitialPieces();
 let currentPlayer = WHITE;
 let moveHistory = []; // Array of move objects { from: {row, col}, to: {row, col}, piece: Piece, captured: Piece|null }
 let isGameOver = false;
-let kingPositions = { // Keep track of king positions for check detection
+let kingPositions = {
+    // Keep track of king positions for check detection
     [WHITE]: { row: 7, col: 4 },
-    [BLACK]: { row: 0, col: 4 }
+    [BLACK]: { row: 0, col: 4 },
 };
 let currentStatus = "White's turn";
 let enPassantTarget = null; // Stores coords {row, col} of square vulnerable to en passant, or null
@@ -27,17 +28,18 @@ let resetConfirmTimer = null; // Set while the New Game button is waiting for a 
 
 // Computer opponent
 let opponentLevel = null; // null for two players, otherwise a key of AI_LEVELS ('easy', 'medium', 'hard')
-let humanColor = WHITE;   // The side the person plays when there is a computer opponent
-let aiRequestId = 0;      // Goes up whenever a pending computer move must be dropped
+let humanColor = WHITE; // The side the person plays when there is a computer opponent
+let aiRequestId = 0; // Goes up whenever a pending computer move must be dropped
 let aiThinking = false;
-let aiWorker = null;      // The Web Worker, or false once it has proved unavailable
+let aiWorker = null; // The Web Worker, or false once it has proved unavailable
 
 /**
  * Initializes the game state, either from scratch or localStorage.
  */
 function initializeGame() {
     loadGameState(); // Try loading saved state first
-    if (moveHistory.length === 0) { // If no saved state or new game
+    if (moveHistory.length === 0) {
+        // If no saved state or new game
         resetGame();
     }
     createBoard();
@@ -71,7 +73,7 @@ function initializeGame() {
     }
 
     requestAIMove(); // In case it is the computer's turn in the loaded game
-    debugLog("Game initialized.");
+    debugLog('Game initialized.');
 }
 
 /**
@@ -83,10 +85,10 @@ function handleBoardClickEvent(event) {
     if (typeof window.dragJustEnded !== 'undefined' && window.dragJustEnded) {
         return;
     }
-    
+
     const target = event.target;
     const squareElement = target.closest('.square');
-    
+
     if (squareElement) {
         const row = parseInt(squareElement.dataset.row, 10);
         const col = parseInt(squareElement.dataset.col, 10);
@@ -98,7 +100,7 @@ function handleBoardClickEvent(event) {
  * Resets the game to the initial state.
  */
 function resetGame() {
-    debugLog("Resetting game...");
+    debugLog('Resetting game...');
     cancelAIMove();
     boardState = getInitialPieces();
     currentPlayer = WHITE;
@@ -106,7 +108,7 @@ function resetGame() {
     isGameOver = false;
     kingPositions = {
         [WHITE]: { row: 7, col: 4 },
-        [BLACK]: { row: 0, col: 4 }
+        [BLACK]: { row: 0, col: 4 },
     };
     currentStatus = "White's turn";
     enPassantTarget = null;
@@ -136,11 +138,14 @@ function handleBoardClick(row, col) {
     const selected = getSelectedSquare();
 
     if (selected) {
-        const isPossible = getPossibleMoves().some(pm => pm.row === row && pm.col === col);
+        const isPossible = getPossibleMoves().some((pm) => pm.row === row && pm.col === col);
         if (isPossible) {
             playChosenMove(selected, { row, col });
-        } else if (clickedPiece && clickedPiece.color === currentPlayer &&
-                   (selected.row !== row || selected.col !== col)) {
+        } else if (
+            clickedPiece &&
+            clickedPiece.color === currentPlayer &&
+            (selected.row !== row || selected.col !== col)
+        ) {
             // Clicked another of the player's own pieces: switch the selection to it
             setSelectedSquare(row, col);
             setPossibleMoves(generateLegalMovesForPiece(row, col));
@@ -151,7 +156,6 @@ function handleBoardClick(row, col) {
         clearSelectedSquare();
         clearPossibleMoves();
         refreshBoardVisuals();
-
     } else if (clickedPiece && clickedPiece.color === currentPlayer) {
         // Selecting a piece of the current player
         setSelectedSquare(row, col);
@@ -208,16 +212,35 @@ function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
     // --- Save snapshot for undo ---
     // applyMove builds a new position and leaves the old one untouched, so the
     // snapshot can keep the current objects as they are.
-    const before = { boardState, currentPlayer, isGameOver, kingPositions, currentStatus, enPassantTarget, halfmoveClock };
+    const before = {
+        boardState,
+        currentPlayer,
+        isGameOver,
+        kingPositions,
+        currentStatus,
+        enPassantTarget,
+        halfmoveClock,
+    };
     positionHistory.push(before);
 
     // --- Apply the move ---
-    const result = applyMove(livePosition(), { row: startRow, col: startCol }, { row: endRow, col: endCol }, promotionType);
-    const move = { ...result.move, notation: '', isCheck: false, isCheckmate: false, isStalemate: false };
+    const result = applyMove(
+        livePosition(),
+        { row: startRow, col: startCol },
+        { row: endRow, col: endCol },
+        promotionType
+    );
+    const move = {
+        ...result.move,
+        notation: '',
+        isCheck: false,
+        isCheckmate: false,
+        isStalemate: false,
+    };
     boardState = result.position.board;
     kingPositions = result.position.kingPositions;
     enPassantTarget = result.position.enPassantTarget;
-    halfmoveClock = (move.piece.type === PAWN || move.captured) ? 0 : halfmoveClock + 1; // Fifty-move rule counter
+    halfmoveClock = move.piece.type === PAWN || move.captured ? 0 : halfmoveClock + 1; // Fifty-move rule counter
     switchPlayer();
     move.notation = generateNotationWithDisambiguation(move, before.boardState);
     moveHistory.push(move);
@@ -234,7 +257,7 @@ function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
     } else if (isStalemate(currentPlayer)) {
         move.isStalemate = true;
         isGameOver = true;
-        currentStatus = "Stalemate! Game is a draw.";
+        currentStatus = 'Stalemate! Game is a draw.';
     }
     if (!isGameOver) {
         const drawReason = findDrawReason();
@@ -280,14 +303,16 @@ function showMoveResult(move, kingInCheck) {
         } else {
             playSound('move');
         }
-    } catch { /* ignore sound errors */ }
+    } catch {
+        /* ignore sound errors */
+    }
 }
 
 /**
  * Undo the last move and restore previous game state
  */
 function undoLastMove() {
-    if (positionHistory.length === 0 || isGameOver && moveHistory.length === 0) return;
+    if (positionHistory.length === 0 || (isGameOver && moveHistory.length === 0)) return;
     cancelPendingPromotion();
     cancelAIMove();
     const takeBack = () => {
@@ -405,9 +430,10 @@ function requestAIMove() {
             }
         }, wait);
     };
-    const thinkHere = () => setTimeout(() => {
-        if (id === aiRequestId) play(chooseAIMove(position, color, level));
-    }, 0);
+    const thinkHere = () =>
+        setTimeout(() => {
+            if (id === aiRequestId) play(chooseAIMove(position, color, level));
+        }, 0);
 
     const worker = getAIWorker();
     if (!worker) {
@@ -456,7 +482,7 @@ function findDrawReason() {
  * Switches the current player.
  */
 function switchPlayer() {
-    currentPlayer = (currentPlayer === WHITE) ? BLACK : WHITE;
+    currentPlayer = currentPlayer === WHITE ? BLACK : WHITE;
 }
 
 // --- Rules, asked of the live game ---
@@ -519,8 +545,7 @@ function canCastle(playerColor, side) {
     return canCastleIn(livePosition(), playerColor, side);
 }
 
-
-// --- Persistence --- 
+// --- Persistence ---
 
 const SAVED_GAME_KEY = CONFIG.STORAGE_KEYS.GAME_STATE;
 const SAVED_GAME_VERSION = 1;
@@ -539,12 +564,12 @@ function saveGameState() {
         currentStatus: currentStatus,
         enPassantTarget: enPassantTarget,
         halfmoveClock: halfmoveClock,
-        positionHistory: positionHistory // Undo stack, so Undo still works after a reload
+        positionHistory: positionHistory, // Undo stack, so Undo still works after a reload
     };
     try {
         localStorage.setItem(SAVED_GAME_KEY, JSON.stringify(gameState));
     } catch (e) {
-        console.error("Error saving game state:", e);
+        console.error('Error saving game state:', e);
     }
 }
 
@@ -553,14 +578,18 @@ function clearSavedGame() {
     try {
         localStorage.removeItem(SAVED_GAME_KEY);
     } catch (e) {
-        console.error("Error clearing saved game:", e);
+        console.error('Error clearing saved game:', e);
     }
 }
 
 /** @returns {boolean} True for a {row, col} pair that is on the board. */
 function isValidCoords(coords) {
-    return !!coords && Number.isInteger(coords.row) && Number.isInteger(coords.col) &&
-        isWithinBounds(coords.row, coords.col);
+    return (
+        !!coords &&
+        Number.isInteger(coords.row) &&
+        Number.isInteger(coords.col) &&
+        isWithinBounds(coords.row, coords.col)
+    );
 }
 
 /** @returns {boolean} True for an 8x8 board of known pieces with exactly one king per side. */
@@ -572,7 +601,8 @@ function isValidBoard(board) {
         if (!Array.isArray(row) || row.length !== 8) return false;
         for (const cell of row) {
             if (cell === null) continue;
-            if (typeof cell !== 'object' || !types.includes(cell.type) || !(cell.color in kings)) return false;
+            if (typeof cell !== 'object' || !types.includes(cell.type) || !(cell.color in kings))
+                return false;
             if (cell.type === KING) kings[cell.color]++;
         }
     }
@@ -609,7 +639,12 @@ function validateSavedGame(saved) {
     const history = saved.moveHistory === undefined ? [] : saved.moveHistory;
     if (!Array.isArray(history)) return null;
     for (const move of history) {
-        if (!move || !isValidCoords(move.from) || !isValidCoords(move.to) || typeof move.notation !== 'string') {
+        if (
+            !move ||
+            !isValidCoords(move.from) ||
+            !isValidCoords(move.to) ||
+            typeof move.notation !== 'string'
+        ) {
             return null;
         }
     }
@@ -621,18 +656,22 @@ function validateSavedGame(saved) {
     // If it is missing or damaged the game still loads, with nothing to undo.
     let undoStack = [];
     if (Array.isArray(saved.positionHistory) && saved.positionHistory.length === history.length) {
-        const usable = saved.positionHistory.every(s => s && isValidBoard(s.boardState) &&
-            (s.currentPlayer === WHITE || s.currentPlayer === BLACK) &&
-            (s.enPassantTarget === null || isValidCoords(s.enPassantTarget)));
+        const usable = saved.positionHistory.every(
+            (s) =>
+                s &&
+                isValidBoard(s.boardState) &&
+                (s.currentPlayer === WHITE || s.currentPlayer === BLACK) &&
+                (s.enPassantTarget === null || isValidCoords(s.enPassantTarget))
+        );
         if (usable) {
-            undoStack = saved.positionHistory.map(s => ({
+            undoStack = saved.positionHistory.map((s) => ({
                 boardState: s.boardState,
                 currentPlayer: s.currentPlayer,
                 isGameOver: !!s.isGameOver,
                 kingPositions: findKingPositions(s.boardState),
                 currentStatus: typeof s.currentStatus === 'string' ? s.currentStatus : '',
                 enPassantTarget: s.enPassantTarget,
-                halfmoveClock: cleanClock(s.halfmoveClock)
+                halfmoveClock: cleanClock(s.halfmoveClock),
             }));
         }
     }
@@ -643,10 +682,11 @@ function validateSavedGame(saved) {
         moveHistory: history,
         isGameOver: !!saved.isGameOver,
         kingPositions: findKingPositions(saved.boardState),
-        currentStatus: typeof saved.currentStatus === 'string' ? saved.currentStatus : "Game loaded",
+        currentStatus:
+            typeof saved.currentStatus === 'string' ? saved.currentStatus : 'Game loaded',
         enPassantTarget: target,
         halfmoveClock: cleanClock(saved.halfmoveClock),
-        positionHistory: undoStack
+        positionHistory: undoStack,
     };
 }
 
@@ -662,7 +702,7 @@ function loadGameState() {
         if (!savedState) return false;
         state = validateSavedGame(JSON.parse(savedState));
     } catch (e) {
-        console.error("Error loading game state:", e);
+        console.error('Error loading game state:', e);
     }
     if (!state) {
         clearSavedGame(); // Unusable saved state: start fresh next time too
@@ -681,7 +721,7 @@ function loadGameState() {
     return true;
 }
 
-// --- UI Updates --- 
+// --- UI Updates ---
 
 /**
  * Updates the move history display in the DOM.
@@ -701,17 +741,17 @@ function updateMoveHistoryDisplay() {
             const turnSpan = document.createElement('span');
             turnSpan.classList.add('turn-number');
             turnSpan.textContent = `${turnNumber}.`;
-            
+
             const whiteMoveSpan = document.createElement('span');
             whiteMoveSpan.classList.add('move', 'white-move');
-            
+
             const blackMoveSpan = document.createElement('span');
             blackMoveSpan.classList.add('move', 'black-move');
 
             listItem.appendChild(turnSpan);
             listItem.appendChild(whiteMoveSpan);
             listItem.appendChild(blackMoveSpan);
-            
+
             moveHistoryElement.appendChild(listItem);
             listItems[turnNumber] = listItem; // Store reference
         } else {
@@ -725,7 +765,7 @@ function updateMoveHistoryDisplay() {
             listItem.querySelector('.black-move').textContent = move.notation;
         }
     });
-    
+
     // Highlight the last list item
     if (moveHistoryElement.lastElementChild) {
         moveHistoryElement.lastElementChild.classList.add('last-move-entry');
@@ -778,7 +818,9 @@ function describeMove(move) {
  * Updates the game status message in the DOM.
  */
 function updateStatusDisplay() {
-    gameStatusElement.textContent = aiThinking ? `${currentStatus} (computer is thinking)` : currentStatus;
+    gameStatusElement.textContent = aiThinking
+        ? `${currentStatus} (computer is thinking)`
+        : currentStatus;
     // Undo is only available while there is a move to take back
     if (undoButton) {
         undoButton.disabled = positionHistory.length === 0;
@@ -841,7 +883,7 @@ function buildPGN() {
         ['Round', '-'],
         ['White', computerColor() === WHITE ? `Computer (${opponentLevel})` : 'White'],
         ['Black', computerColor() === BLACK ? `Computer (${opponentLevel})` : 'Black'],
-        ['Result', result]
+        ['Result', result],
     ].map(([name, value]) => `[${name} "${value}"]`);
 
     const moves = moveHistory.map((move, index) => {
@@ -861,7 +903,9 @@ function copyPGN() {
     const flash = (text) => {
         const original = 'Copy PGN';
         pgnButton.textContent = text;
-        setTimeout(() => { pgnButton.textContent = original; }, 1500);
+        setTimeout(() => {
+            pgnButton.textContent = original;
+        }, 1500);
     };
     const download = () => {
         const link = document.createElement('a');
@@ -905,7 +949,8 @@ function generateNotationWithDisambiguation(move, boardBefore) {
                     if (isPseudoLegalMove(other, r, c, move.to.row, move.to.col, isCapture)) {
                         if ([ROOK, BISHOP, QUEEN].includes(other.type)) {
                             // Respect obstructions on pre-move board
-                            if (isPathObstructed(r, c, move.to.row, move.to.col, boardBefore)) continue;
+                            if (isPathObstructed(r, c, move.to.row, move.to.col, boardBefore))
+                                continue;
                         }
                         rivals.push({ row: r, col: c });
                     }
@@ -916,8 +961,8 @@ function generateNotationWithDisambiguation(move, boardBefore) {
         // rank, else both.
         if (rivals.length > 0) {
             const from = coordsToAlgebraic(move.from.row, move.from.col);
-            if (!rivals.some(o => o.col === move.from.col)) disambiguation = from[0];
-            else if (!rivals.some(o => o.row === move.from.row)) disambiguation = from[1];
+            if (!rivals.some((o) => o.col === move.from.col)) disambiguation = from[0];
+            else if (!rivals.some((o) => o.row === move.from.row)) disambiguation = from[1];
             else disambiguation = from;
         }
     }
@@ -967,14 +1012,32 @@ if (typeof module !== 'undefined' && module.exports) {
         buildPGN,
         hasInsufficientMaterial,
         // Export state variables for test access
-        get boardState() { return boardState; },
-        get currentPlayer() { return currentPlayer; },
-        get moveHistory() { return moveHistory; },
-        get isGameOver() { return isGameOver; },
-        get kingPositions() { return kingPositions; },
-        get currentStatus() { return currentStatus; },
-        get enPassantTarget() { return enPassantTarget; },
-        get positionHistory() { return positionHistory; },
-        get halfmoveClock() { return halfmoveClock; }
+        get boardState() {
+            return boardState;
+        },
+        get currentPlayer() {
+            return currentPlayer;
+        },
+        get moveHistory() {
+            return moveHistory;
+        },
+        get isGameOver() {
+            return isGameOver;
+        },
+        get kingPositions() {
+            return kingPositions;
+        },
+        get currentStatus() {
+            return currentStatus;
+        },
+        get enPassantTarget() {
+            return enPassantTarget;
+        },
+        get positionHistory() {
+            return positionHistory;
+        },
+        get halfmoveClock() {
+            return halfmoveClock;
+        },
     };
-} 
+}

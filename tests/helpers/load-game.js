@@ -58,7 +58,17 @@ function loadGame(options = {}) {
   Object.assign(global, promotion);
 
   const game = require('../../js/game');
-  for (const name of ['moveHistory', 'boardState', 'currentPlayer', 'isGameOver', 'kingPositions', 'currentStatus', 'enPassantTarget', 'positionHistory', 'halfmoveClock']) {
+  for (const name of [
+    'moveHistory',
+    'boardState',
+    'currentPlayer',
+    'isGameOver',
+    'kingPositions',
+    'currentStatus',
+    'enPassantTarget',
+    'positionHistory',
+    'halfmoveClock',
+  ]) {
     Object.defineProperty(global, name, { get: () => game[name], configurable: true });
   }
   // The scripts share one global scope in the browser; give the functions the
@@ -119,19 +129,40 @@ function loadGame(options = {}) {
   };
   const movesFrom = (square) => {
     const { row, col } = utils.algebraicToCoords(square);
-    return game.generateLegalMovesForPiece(row, col).map((m) => utils.coordsToAlgebraic(m.row, m.col)).sort();
+    return game
+      .generateLegalMovesForPiece(row, col)
+      .map((m) => utils.coordsToAlgebraic(m.row, m.col))
+      .sort();
   };
   /** A comparable picture of everything undo has to restore. */
-  const snapshot = () => JSON.parse(JSON.stringify({
-    board: game.boardState,
-    player: game.currentPlayer,
-    kings: game.kingPositions,
-    enPassant: game.enPassantTarget,
-    clock: game.halfmoveClock,
-    notations: game.moveHistory.map((m) => m.notation),
-  }));
+  const snapshot = () =>
+    JSON.parse(
+      JSON.stringify({
+        board: game.boardState,
+        player: game.currentPlayer,
+        kings: game.kingPositions,
+        enPassant: game.enPassantTarget,
+        clock: game.halfmoveClock,
+        notations: game.moveHistory.map((m) => m.notation),
+      })
+    );
 
-  return { window, game, board, drag, utils, pieces, rules, ai, promotion, play, setPosition, at, movesFrom, snapshot };
+  return {
+    window,
+    game,
+    board,
+    drag,
+    utils,
+    pieces,
+    rules,
+    ai,
+    promotion,
+    play,
+    setPosition,
+    at,
+    movesFrom,
+    snapshot,
+  };
 }
 
 module.exports = { loadGame };

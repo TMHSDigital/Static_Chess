@@ -26,7 +26,16 @@ describe('board structure', () => {
     g.board.setBoardFlipped(true);
     const rows = Array.from(doc(g).querySelectorAll('#chess-board > [role="row"]'));
     expect(rows.map((r) => r.dataset.row)).toEqual(['7', '6', '5', '4', '3', '2', '1', '0']);
-    expect(Array.from(rows[0].children).map((s) => s.dataset.col)).toEqual(['7', '6', '5', '4', '3', '2', '1', '0']);
+    expect(Array.from(rows[0].children).map((s) => s.dataset.col)).toEqual([
+      '7',
+      '6',
+      '5',
+      '4',
+      '3',
+      '2',
+      '1',
+      '0',
+    ]);
   });
 });
 

@@ -5,7 +5,7 @@
 ✅ CHANGELOG.md updated with release date (2025-11-02)  
 ✅ Release notes created (releases/RELEASE_NOTES_v0.1.0.md)  
 ✅ All features documented  
-✅ Repository organized  
+✅ Repository organized
 
 ## Steps to Create GitHub Release
 
@@ -21,6 +21,7 @@ git status
 Check GitHub Actions at: https://github.com/TMHSDigital/Static_Chess/actions
 
 The CI workflow should show:
+
 - ✅ Linting passes
 - ✅ Tests pass
 
@@ -37,6 +38,7 @@ git push origin v0.1.0
 ### 4. Automatic Release Creation
 
 The GitHub Actions workflow (`.github/workflows/release.yml`) will automatically:
+
 - Detect the pushed tag (any tag starting with `v`)
 - Read `releases/RELEASE_NOTES_v0.1.0.md` if it exists (or root for backwards compatibility)
 - Create a GitHub Release with the tag name and release notes
@@ -69,12 +71,14 @@ This is the first official release of Static Chess, marking the completion of th
 ## What's New
 
 ### Core Features
+
 - **Drag and Drop**: Intuitive piece movement by dragging pieces
 - **Undo Move**: Easily revert your last move
 - **Accessibility**: Full keyboard navigation and screen reader support
 - **Performance**: Optimized rendering and move calculation
 
 ### Developer Experience
+
 - **CI/CD**: Automated testing and linting
 - **Testing**: Comprehensive Jest test suite
 - **Code Quality**: ESLint, Prettier, EditorConfig
@@ -96,6 +100,7 @@ This is the first official release of Static Chess, marking the completion of th
 ## Semantic Versioning
 
 This release follows [Semantic Versioning](https://semver.org/):
+
 - **MAJOR** (X.0.0): Breaking changes
 - **MINOR** (0.X.0): New features, backwards compatible
 - **PATCH** (0.0.X): Bug fixes
@@ -105,7 +110,7 @@ Since this is the first release, we're starting at **0.1.0** (minor version).
 ## Next Steps After Release
 
 After publishing v0.1.0:
+
 1. Continue with feature development
 2. Address any issues reported
 3. Plan next release (v0.2.0) with new features
-

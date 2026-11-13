@@ -8,6 +8,7 @@ Thanks for your interest in contributing! This project is a static site (no buil
 4. Open a PR with a clear description and screenshots if UI changes
 
 Guidelines:
+
 - Keep vanilla JS, HTML, CSS (no runtime frameworks)
 - Maintain accessibility (labels, keyboard, focus)
 - Preserve GitHub Pages deployment from repository root
@@ -23,7 +24,7 @@ The app itself needs no tooling: open `index.html` or serve the folder. Node is 
   - `npm test` runs the Jest suite
   - `npm run coverage` runs it with a coverage report
   - `npm run lint` runs ESLint (`eslint.config.mjs` is the only ESLint config)
-  - `npm run format` checks formatting with Prettier. It is not enforced in CI yet, and much of the existing code does not pass it, so do not reformat files you are not otherwise changing.
+  - `npm run format` checks formatting with Prettier, and CI fails if it does not pass. Run `npx prettier --write .` to fix formatting before you push.
 
 ### How the scripts fit together
 

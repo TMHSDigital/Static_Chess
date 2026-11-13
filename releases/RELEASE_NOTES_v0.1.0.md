@@ -9,18 +9,21 @@ This is the first official release of Static Chess, marking the completion of th
 ## What's New
 
 ### Core Features
+
 - **Drag and Drop**: Intuitive piece movement by dragging pieces to valid squares
 - **Undo Move**: Easily revert your last move with full game state restoration
 - **Accessibility**: Full keyboard navigation and screen reader support
 - **Performance**: Optimized rendering and move calculation for smooth gameplay
 
 ### Developer Experience
+
 - **CI/CD**: Automated testing and linting on every PR
 - **Testing**: Comprehensive Jest test suite (unit + integration)
 - **Code Quality**: ESLint, Prettier, and EditorConfig for consistent code style
 - **Documentation**: Complete architecture docs, roadmap, and contribution guidelines
 
 ### Repository Improvements
+
 - GitHub templates for issues and pull requests
 - CODE_OF_CONDUCT, SECURITY, and CONTRIBUTING documentation
 - Automated dependency updates via Dependabot
@@ -38,6 +41,7 @@ This is the first official release of Static Chess, marking the completion of th
 Simply open `index.html` in your browser - no build process required!
 
 For contributors:
+
 ```bash
 npm install
 npm test
@@ -58,4 +62,3 @@ Built with pure vanilla web technologies - no frameworks, no build step, just cl
 ---
 
 **Full Changelog**: See [CHANGELOG.md](https://github.com/TMHSDigital/Static_Chess/blob/main/CHANGELOG.md)
-

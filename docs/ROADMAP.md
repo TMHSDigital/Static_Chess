@@ -5,6 +5,7 @@ This document outlines the planned enhancements for the Static Chess project, or
 ## Current Status
 
 The current version includes:
+
 - ✅ Standard chess rules with all piece movements
 - ✅ Special moves (castling, en passant, pawn promotion)
 - ✅ Check/checkmate detection
@@ -22,6 +23,7 @@ The current version includes:
 ## Priority Queue
 
 Features are prioritized as follows:
+
 1. **Tier 1**: Essential gameplay enhancements
 2. **Tier 2**: Improved user experience
 3. **Tier 3**: Advanced features
@@ -30,30 +32,30 @@ Features are prioritized as follows:
 
 ### Tier 1: Essential Gameplay Enhancements
 
-| Feature | Complexity | Dependencies | Description | Status |
-|---------|------------|--------------|-------------|--------|
-| **Drag and Drop** | Medium | None | Allow moving pieces by dragging instead of just clicking | ✅ Completed |
-| **Promotion UI** | Medium | None | Display a UI for selecting which piece to promote a pawn to | ✅ Completed |
-| **Undo Move** | Medium | None | Add ability to take back the last move | ✅ Completed |
-| **Full SAN** | Medium | None | Algebraic notation with disambiguation | ✅ Completed |
+| Feature           | Complexity | Dependencies | Description                                                 | Status       |
+| ----------------- | ---------- | ------------ | ----------------------------------------------------------- | ------------ |
+| **Drag and Drop** | Medium     | None         | Allow moving pieces by dragging instead of just clicking    | ✅ Completed |
+| **Promotion UI**  | Medium     | None         | Display a UI for selecting which piece to promote a pawn to | ✅ Completed |
+| **Undo Move**     | Medium     | None         | Add ability to take back the last move                      | ✅ Completed |
+| **Full SAN**      | Medium     | None         | Algebraic notation with disambiguation                      | ✅ Completed |
 
 ### Tier 2: Improved User Experience
 
-| Feature | Complexity | Dependencies | Description | Status |
-|---------|------------|--------------|-------------|--------|
-| **Sound Effects** | Low | None | Add audio feedback for moves and events | Done (synthesized tones) |
-| **Advanced Draw Detection** | Medium | None | Insufficient material, threefold repetition and fifty-move rule | ✅ Completed |
-| **Game Timer** | Medium | None | Optional chess clock functionality | Planned |
-| **Theme Customization** | Medium | None | Allow customization of board colors and styles | Planned |
+| Feature                     | Complexity | Dependencies | Description                                                     | Status                   |
+| --------------------------- | ---------- | ------------ | --------------------------------------------------------------- | ------------------------ |
+| **Sound Effects**           | Low        | None         | Add audio feedback for moves and events                         | Done (synthesized tones) |
+| **Advanced Draw Detection** | Medium     | None         | Insufficient material, threefold repetition and fifty-move rule | ✅ Completed             |
+| **Game Timer**              | Medium     | None         | Optional chess clock functionality                              | Planned                  |
+| **Theme Customization**     | Medium     | None         | Allow customization of board colors and styles                  | Planned                  |
 
 ### Tier 3: Advanced Features
 
-| Feature | Complexity | Dependencies | Description | Status |
-|---------|------------|--------------|-------------|--------|
-| **AI Opponent** | High | None | Computer opponent with three levels (alpha-beta search) | ✅ Completed |
-| **Multiple Saved Games** | Medium | None | Save and load multiple games | Planned |
-| **Game Import/Export** | Medium | None | Import/export games in PGN format | Planned |
-| **Game Analysis** | High | AI Opponent | Basic position evaluation and move suggestions | Planned |
+| Feature                  | Complexity | Dependencies | Description                                             | Status       |
+| ------------------------ | ---------- | ------------ | ------------------------------------------------------- | ------------ |
+| **AI Opponent**          | High       | None         | Computer opponent with three levels (alpha-beta search) | ✅ Completed |
+| **Multiple Saved Games** | Medium     | None         | Save and load multiple games                            | Planned      |
+| **Game Import/Export**   | Medium     | None         | Import/export games in PGN format                       | Planned      |
+| **Game Analysis**        | High       | AI Opponent  | Basic position evaluation and move suggestions          | Planned      |
 
 ## Implementation Timeline
 
@@ -62,13 +64,13 @@ This is a rough guideline for feature implementation:
 ### Phase 1: Core Experience Improvements (1-2 months)
 
 - [x] **SVG Piece Images**
-- [x] **Drag and Drop** *(fully implemented)*
+- [x] **Drag and Drop** _(fully implemented)_
 - [x] **Promotion UI**
 - [x] **Undo Move**
 
 ### Phase 2: Usability Enhancements (2-3 months)
 
-- [x] **Sound Effects** *(synthesized tones; no audio assets needed)*
+- [x] **Sound Effects** _(synthesized tones; no audio assets needed)_
 - [x] **SAN Disambiguation (basic)**
 - [x] **Advanced Draw Detection**
 - [ ] **Game Timer**
@@ -126,4 +128,4 @@ Have a feature idea not listed here? Please submit feature requests by:
 1. Creating a new issue on GitHub
 2. Using the "Feature Request" template
 3. Describing the feature in detail
-4. Explaining why it would be valuable to the project 
+4. Explaining why it would be valuable to the project

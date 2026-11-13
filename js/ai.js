@@ -9,10 +9,17 @@
 const AI_LEVELS = {
     easy: { depth: 0 },
     medium: { depth: 2 },
-    hard: { depth: 3 }
+    hard: { depth: 3 },
 };
 
-const AI_PIECE_VALUES = { [PAWN]: 100, [KNIGHT]: 320, [BISHOP]: 330, [ROOK]: 500, [QUEEN]: 900, [KING]: 0 };
+const AI_PIECE_VALUES = {
+    [PAWN]: 100,
+    [KNIGHT]: 320,
+    [BISHOP]: 330,
+    [ROOK]: 500,
+    [QUEEN]: 900,
+    [KING]: 0,
+};
 const AI_MATE_SCORE = 100000;
 const AI_QUIESCENCE_DEPTH = 4; // Extra half-moves of captures looked at after the main search
 
@@ -59,9 +66,9 @@ function orderMoves(position, moves) {
         return AI_PIECE_VALUES[victim.type] * 10 - AI_PIECE_VALUES[attacker.type];
     };
     return moves
-        .map(move => ({ move, gain: gain(move) }))
+        .map((move) => ({ move, gain: gain(move) }))
         .sort((a, b) => b.gain - a.gain)
-        .map(entry => entry.move);
+        .map((entry) => entry.move);
 }
 
 /**
@@ -73,8 +80,9 @@ function quiescence(position, color, alpha, beta, depth) {
     if (depth === 0 || standPat >= beta) return standPat;
     if (standPat > alpha) alpha = standPat;
 
-    const captures = allLegalMoves(position, color)
-        .filter(move => position.board[move.to.row][move.to.col] !== null);
+    const captures = allLegalMoves(position, color).filter(
+        (move) => position.board[move.to.row][move.to.col] !== null
+    );
     for (const move of orderMoves(position, captures)) {
         const next = applyMove(position, move.from, move.to).position;
         const score = -quiescence(next, opponentOf(color), -beta, -alpha, depth - 1);
@@ -129,15 +137,22 @@ function chooseAIMove(position, color, level = 'easy', random = Math.random) {
 
     // Score every move, then choose among the best. Scores within a few
     // hundredths of a pawn count as equal, so games are not all the same.
-    const scored = orderMoves(position, moves).map(move => {
+    const scored = orderMoves(position, moves).map((move) => {
         const next = applyMove(position, move.from, move.to).position;
-        const score = -searchPosition(next, opponentOf(color), settings.depth - 1, -AI_MATE_SCORE, AI_MATE_SCORE, 1);
+        const score = -searchPosition(
+            next,
+            opponentOf(color),
+            settings.depth - 1,
+            -AI_MATE_SCORE,
+            AI_MATE_SCORE,
+            1
+        );
         return { move, score };
     });
-    const best = Math.max(...scored.map(entry => entry.score));
+    const best = Math.max(...scored.map((entry) => entry.score));
     // A forced mate is the exception: there the quickest one is simply best
     const tolerance = Math.abs(best) > AI_MATE_SCORE - 1000 ? 0 : 5;
-    const candidates = scored.filter(entry => entry.score >= best - tolerance);
+    const candidates = scored.filter((entry) => entry.score >= best - tolerance);
     return withPromotion(candidates[Math.floor(random() * candidates.length)].move);
 }
 
