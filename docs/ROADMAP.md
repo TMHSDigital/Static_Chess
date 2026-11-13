@@ -50,7 +50,7 @@ Features are prioritized as follows:
 
 | Feature | Complexity | Dependencies | Description | Status |
 |---------|------------|--------------|-------------|--------|
-| **AI Opponent** | High | None | Implement basic chess AI using minimax algorithm | Skeleton implementation ready |
+| **AI Opponent** | High | None | Computer opponent with three levels (alpha-beta search) | ✅ Completed |
 | **Multiple Saved Games** | Medium | None | Save and load multiple games | Planned |
 | **Game Import/Export** | Medium | None | Import/export games in PGN format | Planned |
 | **Game Analysis** | High | AI Opponent | Basic position evaluation and move suggestions | Planned |
@@ -77,7 +77,7 @@ This is a rough guideline for feature implementation:
 
 - [ ] **Multiple Saved Games**
 - [ ] **Theme Customization**
-- [ ] **AI Opponent (basic)** *(skeleton implementation available)*
+- [x] **AI Opponent (basic)**
 - [ ] **Game Import/Export**
 
 ### Phase 4: Final Polish (Ongoing)
@@ -104,9 +104,10 @@ The following files provide a foundation for implementing the planned features:
 - **js/utils.js**: Enhanced with helper functions for future features
 - **js/drag.js**: Drag and drop (complete and enabled)
 - **js/promotion.js**: Pawn promotion chooser (complete and enabled)
-- **js/ai.js**: Skeleton implementation for AI opponent (not loaded by `index.html` yet)
+- **js/rules.js**: The rules as pure functions, usable on board copies
+- **js/ai.js**: Computer opponent (complete and enabled)
 
-Enabling a flag in `config.js` is not enough on its own. For the AI opponent, first add the script to `index.html`, then enable the flag, then wire the feature into `game.js` following `docs/ARCHITECTURE.md`. The game timer has no flag or code yet.
+The game timer has no flag or code yet.
 
 ## Contribution Guidelines
 

@@ -66,6 +66,7 @@ function initDragAndDrop() {
 function handleDragStart(event) {
     if (!CONFIG.FEATURES.DRAG_AND_DROP) return;
     if (event.type === 'mousedown' && event.button !== 0) return; // Left button only
+    if (typeof window.isBoardLocked === 'function' && window.isBoardLocked()) return; // Game over or not the player's turn
 
     const target = event.target;
     

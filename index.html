@@ -27,6 +27,22 @@
             </div>
             <div id="announcer" class="visually-hidden" role="status" aria-live="polite"></div>
             <div class="settings-container">
+                <div class="toggle-container" id="opponent-setting">
+                    <label class="toggle-label" for="opponent-select">Opponent</label>
+                    <select id="opponent-select">
+                        <option value="human">Two players</option>
+                        <option value="easy">Computer: easy</option>
+                        <option value="medium">Computer: medium</option>
+                        <option value="hard">Computer: hard</option>
+                    </select>
+                </div>
+                <div class="toggle-container" id="side-setting" hidden>
+                    <label class="toggle-label" for="side-select">Play as</label>
+                    <select id="side-select">
+                        <option value="w">White</option>
+                        <option value="b">Black</option>
+                    </select>
+                </div>
                 <div class="toggle-container">
                     <span class="toggle-label">Show coordinates</span>
                     <label class="switch">
@@ -75,6 +91,7 @@
     <script src="js/utils.js"></script>
     <script src="js/pieces.js"></script>
     <script src="js/rules.js"></script>
+    <script src="js/ai.js"></script>
     <script src="js/board.js"></script>
     <script src="js/drag.js"></script>
     <script src="js/promotion.js"></script>

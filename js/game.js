@@ -25,6 +25,13 @@ const pgnButton = document.getElementById('pgn-button');
 const RESET_LABEL = resetButton ? resetButton.textContent : 'New Game';
 let resetConfirmTimer = null; // Set while the New Game button is waiting for a second click
 
+// Computer opponent
+let opponentLevel = null; // null for two players, otherwise a key of AI_LEVELS ('easy', 'medium', 'hard')
+let humanColor = WHITE;   // The side the person plays when there is a computer opponent
+let aiRequestId = 0;      // Goes up whenever a pending computer move must be dropped
+let aiThinking = false;
+let aiWorker = null;      // The Web Worker, or false once it has proved unavailable
+
 /**
  * Initializes the game state, either from scratch or localStorage.
  */
@@ -63,6 +70,7 @@ function initializeGame() {
         }
     }
 
+    requestAIMove(); // In case it is the computer's turn in the loaded game
     debugLog("Game initialized.");
 }
 
@@ -91,6 +99,7 @@ function handleBoardClickEvent(event) {
  */
 function resetGame() {
     debugLog("Resetting game...");
+    cancelAIMove();
     boardState = getInitialPieces();
     currentPlayer = WHITE;
     moveHistory = [];
@@ -112,6 +121,7 @@ function resetGame() {
     updateStatusDisplay();
     updateMoveHistoryDisplay();
     updateBoardVisuals(boardState, findKingInCheck(currentPlayer));
+    requestAIMove(); // The computer moves first when it plays White
 }
 
 /**
@@ -122,6 +132,7 @@ function resetGame() {
 function handleBoardClick(row, col) {
     if (isGameOver) return; // Don't allow moves if game is over
     if (isPromotionPending()) return; // The promotion chooser has to be answered first
+    if (currentPlayer === computerColor()) return; // Not the player's turn
 
     const clickedPiece = boardState[row][col];
 
@@ -232,6 +243,7 @@ function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
 
     showMoveResult(move, opponentKingInCheck);
     saveGameState();
+    requestAIMove();
 }
 
 /**
@@ -269,15 +281,23 @@ function showMoveResult(move, kingInCheck) {
 function undoLastMove() {
     if (positionHistory.length === 0 || isGameOver && moveHistory.length === 0) return;
     cancelPendingPromotion();
-    const snapshot = positionHistory.pop();
-    boardState = snapshot.boardState;
-    currentPlayer = snapshot.currentPlayer;
-    moveHistory.pop(); // Each snapshot is taken right before exactly one move is recorded
-    isGameOver = snapshot.isGameOver;
-    kingPositions = snapshot.kingPositions;
-    currentStatus = snapshot.currentStatus;
-    enPassantTarget = snapshot.enPassantTarget;
-    halfmoveClock = snapshot.halfmoveClock || 0;
+    cancelAIMove();
+    const takeBack = () => {
+        const snapshot = positionHistory.pop();
+        boardState = snapshot.boardState;
+        currentPlayer = snapshot.currentPlayer;
+        moveHistory.pop(); // Each snapshot is taken right before exactly one move is recorded
+        isGameOver = snapshot.isGameOver;
+        kingPositions = snapshot.kingPositions;
+        currentStatus = snapshot.currentStatus;
+        enPassantTarget = snapshot.enPassantTarget;
+        halfmoveClock = snapshot.halfmoveClock || 0;
+    };
+    takeBack();
+    // Against the computer, also take back its reply so it is the player's turn again
+    if (currentPlayer === computerColor() && positionHistory.length > 0) {
+        takeBack();
+    }
 
     clearSelectedSquare();
     clearPossibleMoves();
@@ -287,6 +307,7 @@ function undoLastMove() {
     updateBoardVisuals(boardState, findKingInCheck(currentPlayer));
     announce(`Move taken back. ${currentStatus}`);
     saveGameState();
+    requestAIMove(); // Only happens when the computer's first move was taken back
 }
 
 /** @returns {boolean} True while the promotion chooser is waiting for an answer. */
@@ -297,6 +318,103 @@ function isPromotionPending() {
 /** Closes the promotion chooser without playing the held move. */
 function cancelPendingPromotion() {
     if (isPromotionPending()) closePromotionChooser(null);
+}
+
+// --- Computer opponent ---
+
+/** @returns {string|null} The colour the computer plays, or null in a two-player game. */
+function computerColor() {
+    if (!opponentLevel || !CONFIG.FEATURES.AI_OPPONENT || typeof chooseAIMove !== 'function') return null;
+    return opponentOf(humanColor);
+}
+
+/** @returns {boolean} True while the player cannot move: game over, chooser open, or the computer's turn. */
+function isBoardLocked() {
+    return isGameOver || isPromotionPending() || currentPlayer === computerColor();
+}
+
+/**
+ * Chooses who plays the other side. Takes effect at once, also in the middle
+ * of a game: if it is now the computer's turn, it moves.
+ * @param {string|null} level - 'easy', 'medium' or 'hard'; anything else means two players.
+ * @param {string} [color] - The side the person plays.
+ */
+function setOpponent(level, color = WHITE) {
+    opponentLevel = typeof AI_LEVELS !== 'undefined' && Object.prototype.hasOwnProperty.call(AI_LEVELS, level) ? level : null;
+    humanColor = color === BLACK ? BLACK : WHITE;
+    cancelAIMove();
+    clearSelectedSquare();
+    clearPossibleMoves();
+    updateBoardVisuals(boardState, findKingInCheck(currentPlayer));
+    updateStatusDisplay();
+    requestAIMove();
+}
+
+/** Drops a computer move that is being worked out or waiting to be played. */
+function cancelAIMove() {
+    aiRequestId++;
+    aiThinking = false;
+}
+
+/** @returns {Worker|null} The search worker, or null where workers are not available. */
+function getAIWorker() {
+    if (aiWorker === null) {
+        try {
+            aiWorker = typeof Worker === 'function' ? new Worker('js/ai-worker.js') : false;
+        } catch {
+            aiWorker = false; // For example a page opened straight from a file
+        }
+    }
+    return aiWorker || null;
+}
+
+/**
+ * If it is the computer's turn, works out its move and plays it. The search
+ * runs in a Web Worker so the page stays responsive; without one it runs here
+ * after the page has had a chance to draw the player's move.
+ */
+function requestAIMove() {
+    const color = computerColor();
+    if (!color || isGameOver || currentPlayer !== color) return;
+
+    const id = ++aiRequestId;
+    const position = livePosition();
+    const level = opponentLevel;
+    const started = Date.now();
+    aiThinking = true;
+    updateStatusDisplay();
+
+    const play = (move) => {
+        // A short pause, so the reply does not land in the same instant as the player's move
+        const wait = Math.max(0, CONFIG.AI_MOVE_DELAY_MS - (Date.now() - started));
+        setTimeout(() => {
+            if (id !== aiRequestId) return; // Undone, reset or switched off in the meantime
+            aiThinking = false;
+            if (move) {
+                makeMove(move.from.row, move.from.col, move.to.row, move.to.col, move.promotion);
+            } else {
+                updateStatusDisplay();
+            }
+        }, wait);
+    };
+    const thinkHere = () => setTimeout(() => {
+        if (id === aiRequestId) play(chooseAIMove(position, color, level));
+    }, 0);
+
+    const worker = getAIWorker();
+    if (!worker) {
+        thinkHere();
+        return;
+    }
+    worker.onmessage = (event) => {
+        if (event.data.id === id) play(event.data.move);
+    };
+    worker.onerror = (event) => {
+        if (event && event.preventDefault) event.preventDefault();
+        aiWorker = false; // Do not try the worker again
+        thinkHere();
+    };
+    worker.postMessage({ id, position, color, level });
 }
 
 // --- Draw detection ---
@@ -652,7 +770,7 @@ function describeMove(move) {
  * Updates the game status message in the DOM.
  */
 function updateStatusDisplay() {
-    gameStatusElement.textContent = currentStatus;
+    gameStatusElement.textContent = aiThinking ? `${currentStatus} (computer is thinking)` : currentStatus;
     // Undo is only available while there is a move to take back
     if (undoButton) {
         undoButton.disabled = positionHistory.length === 0;
@@ -713,8 +831,8 @@ function buildPGN() {
         ['Site', '?'],
         ['Date', date],
         ['Round', '-'],
-        ['White', 'White'],
-        ['Black', 'Black'],
+        ['White', computerColor() === WHITE ? `Computer (${opponentLevel})` : 'White'],
+        ['Black', computerColor() === BLACK ? `Computer (${opponentLevel})` : 'Black'],
         ['Result', result]
     ].map(([name, value]) => `[${name} "${value}"]`);
 
@@ -821,6 +939,8 @@ if (typeof window !== 'undefined') {
     window.generateLegalMovesForPiece = generateLegalMovesForPiece;
     window.findKingInCheck = findKingInCheck;
     window.makeMove = makeMove;
+    window.isBoardLocked = isBoardLocked;
+    window.setOpponent = setOpponent;
     // Expose state getters (selectedSquare and possibleMoves are in board.js)
     Object.defineProperty(window, 'boardState', {
         get: function() { return boardState; }
@@ -837,6 +957,9 @@ if (typeof module !== 'undefined' && module.exports) {
         handleBoardClick,
         makeMove,
         livePosition,
+        setOpponent,
+        computerColor,
+        isBoardLocked,
         resetGame,
         generateLegalMovesForPiece,
         generateAllLegalMoves,

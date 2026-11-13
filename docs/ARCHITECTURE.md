@@ -22,7 +22,8 @@ Static_Chess/
 │   ├── game.js          # The live game: state, move flow, undo, saving, page updates
 │   ├── main.js          # Application entry point
 │   ├── drag.js          # Drag and drop functionality (integrated via click flow)
-│   ├── ai.js            # Skeleton for AI opponent (not loaded by index.html)
+│   ├── ai.js            # Computer opponent: evaluation and search
+│   ├── ai-worker.js     # Web Worker that runs the search off the main thread
 │   └── promotion.js     # Pawn promotion chooser
 ├── tests/               # Jest tests (dev only)
 │   ├── helpers/         # Shared loader that builds a fresh page and game per test
@@ -92,12 +93,12 @@ Static_Chess/
 | `DRAG_AND_DROP` | `true` | Enables dragging pieces (`drag.js`) |
 | `UNDO_MOVE` | `true` | Shows and enables the Undo button |
 | `SOUND_EFFECTS` | `false` | Runtime state. It is overwritten at startup from the "Sound effects" toggle, so editing it in `config.js` has no lasting effect; change `DEFAULT_SETTINGS.ENABLE_SOUNDS` instead |
-| `AI_OPPONENT` | `false` | Nothing until `ai.js` is loaded and wired in (see below) |
+| `AI_OPPONENT` | `true` | Offers the computer opponent in the settings. When `false`, the selectors are hidden and the game is always two-player |
 | `PROMOTION_UI` | `true` | Asks which piece a pawn promotes to. When `false`, pawns become queens without asking |
 
 ### Stored data
 
-Everything is kept in `localStorage` under the keys in `CONFIG.STORAGE_KEYS`: `chessGameState` (the game, its move list, undo stack and fifty-move counter, with a `version` field) and one key per setting (`showCoords`, `showPossibleMoves`, `showLastMove`, `enableSounds`). A saved game is validated before it is used; anything unusable is discarded and a fresh game starts.
+Everything is kept in `localStorage` under the keys in `CONFIG.STORAGE_KEYS`: `chessGameState` (the game, its move list, undo stack and fifty-move counter, with a `version` field) and one key per setting (`showCoords`, `showPossibleMoves`, `showLastMove`, `enableSounds`, `flipBoard`, `opponent`, `playerSide`). A saved game is validated before it is used; anything unusable is discarded and a fresh game starts.
 
 ## Data Flow
 
@@ -126,15 +127,13 @@ The game state is primarily managed in `game.js` and consists of:
 - Half-move clock for the fifty-move rule
 - Selected piece and possible moves
 
-## Skeleton Implementations
+## Optional Modules
 
-Several planned features already have skeleton implementations that provide a foundation for full implementation:
+- **drag.js**: Drag and drop, integrated with the click-based flow
+- **promotion.js**: Dialog for choosing the promotion piece
+- **ai.js** and **ai-worker.js**: The computer opponent
 
-- **drag.js**: ✅ Fully implemented - drag and drop functionality integrated with click-based flow
-- **promotion.js**: ✅ Fully implemented - dialog for choosing the promotion piece
-- **ai.js**: Framework for implementing the AI opponent
-
-Drag and drop and the promotion chooser are complete and enabled. `ai.js` is not loaded by `index.html` and nothing in `game.js` calls it yet; the section below describes what is there and what is missing.
+All three are loaded and enabled. Each has a feature flag in `config.js`.
 
 ## Implementing Future Features
 
@@ -158,46 +157,28 @@ The implementation includes:
 - Drop validation using `elementsFromPoint()` to find target square
 - Proper cleanup and event prevention to avoid click conflicts
 
-### 2. AI Opponent
+### 2. Computer Opponent
 
-> **Skeleton Implementation Available: `js/ai.js`**
+> **✅ Fully Implemented: `js/ai.js`, `js/ai-worker.js`**
 
-To implement the AI opponent:
+1. `chooseAIMove(position, color, level)` in `ai.js` picks a move. It uses only `rules.js`, so it has no DOM access
+   - `easy` plays a random legal move
+   - `medium` and `hard` run a negamax search with alpha-beta pruning, 2 and 3 half-moves deep, followed by a captures-only (quiescence) search so an exchange is counted to its end
+   - `evaluatePosition()` counts material, plus small bonuses for central minor pieces, advanced pawns and a king kept at home
+   - Moves within a few hundredths of a pawn of the best are treated as equal and one is picked at random; a forced mate always takes the quickest line
+2. `setOpponent(level, humanColor)` in `game.js` turns the opponent on or off. `main.js` calls it from the "Opponent" and "Play as" selectors, which are saved like the other settings
+3. `requestAIMove()` runs after every move, undo, reset and load. If it is the computer's turn it posts the position to `ai-worker.js` and plays the answer with `makeMove()`. Where a Worker cannot be created (a page opened from a file, or the tests) the search runs on the main thread after a `setTimeout`
+4. Each request has an id. Undo, New Game and changing the opponent bump the id, so an answer that arrives late is dropped
+5. While it is the computer's turn `isBoardLocked()` is true: clicks and drags are ignored and the status line says the computer is thinking
+6. Undo takes back the computer's reply together with the player's move
 
-1. Update `config.js` to enable the AI_OPPONENT feature flag
-2. Add the `ai.js` script to `index.html`:
-   ```html
-   <script src="js/ai.js"></script>
-   ```
-3. Implement in `game.js`:
-   ```javascript
-   // Initialize AI
-   const ai = new ChessAI(CONFIG.DEFAULT_SETTINGS.AI_DIFFICULTY);
-   
-   // Call AI after player move
-   if (CONFIG.FEATURES.AI_OPPONENT && currentPlayer === BLACK) {
-     ai.findBestMove(boardState, currentPlayer).then(move => {
-       // Execute AI move
-     });
-   }
-   ```
-4. Fill in the placeholders in `ai.js`:
-   - `_getAllLegalMoves` returns an empty list, so `findBestMove` currently always resolves `null`
-   - `_minimax` returns 0
-   - The position evaluation only counts material
-
-Move generation and `applyMove()` in `rules.js` take a position as an argument, so a search can try moves on copies without touching the live game.
-
-The skeleton already includes:
-- AI configuration with difficulty levels
-- Material-based evaluation
-- Promise-based API for "thinking" delays
+To make it stronger, raise the `depth` values in `AI_LEVELS`; each extra half-move costs roughly an order of magnitude in time, so move generation in `rules.js` would need to get faster first.
 
 ### 3. Promotion Choice UI
 
 > **✅ Fully Implemented: `js/promotion.js`**
 
-1. `makeMove()` takes an optional fifth argument, the piece type to promote to. It defaults to a queen, so tests and a future AI can call it directly
+1. `makeMove()` takes an optional fifth argument, the piece type to promote to. It defaults to a queen, so tests and the computer opponent can call it directly
 2. When a click or drop would move a pawn to the last rank, `handleBoardClick()` does not play the move. It calls `showPromotionChooser(color, onChoose)` and plays the move from the callback, once a piece has been picked
 3. While the chooser is open the board ignores input. Escape or a click outside the panel cancels, leaving the pawn where it was; Undo and New Game also close it
 4. The choices are `<button>` elements with labels. The first one takes focus, and Tab and the arrow keys cycle through them

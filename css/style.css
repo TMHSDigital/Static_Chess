@@ -422,3 +422,24 @@ body.coords-visible {
         transition-duration: 0.01ms !important;
     }
 }
+
+/* Opponent and side selectors in the settings panel */
+.toggle-container[hidden] {
+    display: none;
+}
+
+.toggle-container select {
+    background-color: var(--main-bg);
+    color: var(--text-color);
+    border: 1px solid var(--accent-color);
+    border-radius: var(--border-radius);
+    padding: 4px 8px;
+    font: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.toggle-container select:focus-visible {
+    outline: 2px solid var(--text-color);
+    outline-offset: 2px;
+}

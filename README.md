@@ -75,6 +75,7 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 - **Stalemate Detection:** Detects stalemate conditions (no legal moves, but not in check)
 - **Draw Detection:** Ends the game on insufficient material, threefold repetition and the fifty-move rule
 - **Local Multiplayer:** Two players can play against each other on the same device
+- **Computer Opponent:** Play against the computer at three levels, as White or Black; it thinks in a background worker so the page stays responsive
 - **Visual Feedback:**
   - Highlights the selected piece
   - Shows possible legal moves for the selected piece
@@ -161,13 +162,14 @@ That's it! No build process or dependencies are required.
 9. Click "Undo" to take back the last move, or "New Game" to reset the board (a game in progress asks for a second click)
 10. Click "Copy PGN" to copy the game for an analysis board or to share it
 11. Keyboard: Tab to the board, move between squares with the arrow keys, and press Enter or Space to select a piece or move it
-12. Toggle settings:
+12. To play against the computer, pick a level under "Opponent" and a side under "Play as" (use "Flip board" to sit behind the black pieces). Undo then takes back your move and the computer's reply
+13. Toggle settings:
    - Show coordinates
    - Show possible moves
    - Highlight last move
    - Sound effects
    - Flip board (play from Black's side)
-13. The game and its undo history are saved automatically to localStorage, so a refresh picks up where you left off
+14. The game and its undo history are saved automatically to localStorage, so a refresh picks up where you left off
 
 ---
 
@@ -193,7 +195,8 @@ Static_Chess/
 │   ├── game.js          # The live game: state, move flow, undo, saving
 │   ├── main.js          # Application entry point
 │   ├── drag.js          # Drag and drop functionality (integrated with click flow)
-│   ├── ai.js            # AI opponent (skeleton)
+│   ├── ai.js            # Computer opponent (evaluation and search)
+│   ├── ai-worker.js     # Runs the search in a Web Worker
 │   └── promotion.js     # Pawn promotion chooser
 ├── assets/              # Static assets
 │   ├── screenshots/     # UI screenshots for documentation
@@ -244,7 +247,7 @@ The project follows a clear separation of concerns:
   - `main.js`: Bootstraps the application
   - `drag.js`: Drag and drop integrated via existing click handlers
   - `promotion.js`: Dialog for choosing the promotion piece
-  - `ai.js`: Skeleton for the planned AI opponent
+  - `ai.js`, `ai-worker.js`: Computer opponent, searched in a Web Worker
 - **SVG assets:** Vector graphics for all chess pieces, ensuring consistent rendering across browsers
 - **Tests:** Jest unit and integration tests with jsdom for browser simulation
 - **Documentation:** Architecture guides, development roadmap, and release process
@@ -297,7 +300,7 @@ See the [Development Roadmap](docs/ROADMAP.md) for a detailed plan of upcoming f
 <summary><b>Planned Features</b></summary>
 <br>
 
-- **AI Opponent:** Implement basic chess AI using minimax algorithm
+- **Stronger Computer Opponent:** Deeper search and a better evaluation
 - **Game Timer:** Optional chess clock functionality
 - **Sound Effects:** Recorded sounds as an alternative to the built-in synthesized tones
 - **Multiple Saved Games:** Save and load multiple games

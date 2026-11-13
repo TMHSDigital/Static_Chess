@@ -104,6 +104,38 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Apply the opponent settings
+    const opponentSelect = document.getElementById('opponent-select');
+    const sideSelect = document.getElementById('side-select');
+    if (opponentSelect && sideSelect) {
+        const opponentSetting = document.getElementById('opponent-setting');
+        const sideSetting = document.getElementById('side-setting');
+        if (!CONFIG.FEATURES.AI_OPPONENT) {
+            if (opponentSetting) opponentSetting.hidden = true;
+            if (sideSetting) sideSetting.hidden = true;
+        } else {
+            const levels = Array.from(opponentSelect.options).map(option => option.value);
+            const savedOpponent = readSetting(KEYS.OPPONENT);
+            opponentSelect.value = levels.includes(savedOpponent) ? savedOpponent : DEFAULTS.OPPONENT;
+            sideSelect.value = (readSetting(KEYS.PLAYER_SIDE) || DEFAULTS.PLAYER_SIDE) === 'b' ? 'b' : 'w';
+
+            const applyOpponent = () => {
+                const againstComputer = opponentSelect.value !== 'human';
+                if (sideSetting) sideSetting.hidden = !againstComputer; // Only matters against the computer
+                setOpponent(againstComputer ? opponentSelect.value : null, sideSelect.value);
+            };
+            opponentSelect.addEventListener('change', () => {
+                writeSetting(KEYS.OPPONENT, opponentSelect.value);
+                applyOpponent();
+            });
+            sideSelect.addEventListener('change', () => {
+                writeSetting(KEYS.PLAYER_SIDE, sideSelect.value);
+                applyOpponent();
+            });
+            applyOpponent();
+        }
+    }
+
     // --- Initialize Game ---
     initializeGame();
     
@@ -113,9 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /**
  * Initialize optional feature modules based on feature flags.
- * Drag and drop is the only one that needs starting today (the promotion chooser
- * is opened by game.js on demand). The AI opponent starts here too once its
- * script is added to index.html.
+ * Drag and drop is the only one that needs starting; the promotion chooser and
+ * the computer opponent are started by game.js when they are needed.
  */
 function initializeFeatureModules() {
     debugLog('Initializing optional feature modules...');
@@ -124,11 +155,5 @@ function initializeFeatureModules() {
     if (CONFIG.FEATURES.DRAG_AND_DROP && typeof window.initDragAndDrop === 'function') {
         debugLog('Initializing drag and drop feature');
         window.initDragAndDrop();
-    }
-
-    // Initialize AI opponent if enabled
-    if (CONFIG.FEATURES.AI_OPPONENT && typeof window.ChessAI === 'function') {
-        debugLog('Initializing AI opponent');
-        // AI is initialized when needed in game.js
     }
 } 

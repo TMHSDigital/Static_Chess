@@ -9,9 +9,7 @@ const CONFIG = {
         DRAG_AND_DROP: true,   // Move pieces by dragging (drag.js)
         UNDO_MOVE: true,       // Show and enable the Undo button
         SOUND_EFFECTS: false,  // Runtime state: set from the "Sound effects" toggle at startup
-        // The next two only take effect once their script is added to index.html
-        // and wired into game.js; see docs/ARCHITECTURE.md.
-        AI_OPPONENT: false,    // ai.js (skeleton)
+        AI_OPPONENT: true,     // Offer a computer opponent in the settings (ai.js)
         PROMOTION_UI: true,    // Ask which piece a pawn promotes to (off: always a queen)
     },
 
@@ -22,8 +20,12 @@ const CONFIG = {
         SHOW_LAST_MOVE: true,
         ENABLE_SOUNDS: false,
         FLIP_BOARD: false,     // true shows the board from Black's side
-        AI_DIFFICULTY: 'easy', // For the future AI opponent
+        OPPONENT: 'human',     // 'human' for two players, or 'easy', 'medium', 'hard' for the computer
+        PLAYER_SIDE: 'w',      // The side the person plays against the computer: 'w' or 'b'
     },
+
+    // Shortest time between the player's move and the computer's reply (ms)
+    AI_MOVE_DELAY_MS: 400,
 
     // How long the New Game button waits for a confirming second click (ms)
     RESET_CONFIRM_MS: 4000,
@@ -54,6 +56,8 @@ const CONFIG = {
         SHOW_LAST_MOVE: 'showLastMove',
         ENABLE_SOUNDS: 'enableSounds',
         FLIP_BOARD: 'flipBoard',
+        OPPONENT: 'opponent',
+        PLAYER_SIDE: 'playerSide',
     },
 
     // Debug mode: when true, debugLog() prints to the console

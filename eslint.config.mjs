@@ -126,6 +126,9 @@ export default [
         allLegalMoves: 'readonly',
         positionKey: 'readonly',
         hasInsufficientMaterial: 'readonly',
+        opponentOf: 'readonly',
+        chooseAIMove: 'readonly',
+        AI_LEVELS: 'readonly',
         coordsToAlgebraic: 'readonly',
         deepClone: 'readonly',
         playSound: 'readonly',
@@ -158,7 +161,7 @@ export default [
         initializeGame: 'readonly',
         initDragAndDrop: 'readonly',
         setBoardFlipped: 'readonly',
-        ChessAI: 'readonly'
+        setOpponent: 'readonly'
       }
     }
   },
@@ -173,14 +176,22 @@ export default [
       }
     }
   },
-  // ai.js - uses CONFIG, debugLog, deepClone
+  // ai.js - the computer opponent; uses piece constants and rules.js
   {
     files: ['js/ai.js'],
     languageOptions: {
       globals: {
-        CONFIG: 'readonly',
-        debugLog: 'readonly',
-        deepClone: 'readonly'
+        PAWN: 'readonly',
+        ROOK: 'readonly',
+        KNIGHT: 'readonly',
+        BISHOP: 'readonly',
+        QUEEN: 'readonly',
+        KING: 'readonly',
+        WHITE: 'readonly',
+        allLegalMoves: 'readonly',
+        applyMove: 'readonly',
+        isInCheck: 'readonly',
+        opponentOf: 'readonly'
       }
     }
   },
