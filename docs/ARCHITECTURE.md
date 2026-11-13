@@ -30,7 +30,7 @@ Static_Chess/
 │   ├── unit/            # Rules, undo, persistence, input, utilities
 │   └── integration/     # Move flow through the DOM
 ├── package.json         # Dev tooling only: lint, format and test scripts
-├── eslint.config.mjs     # ESLint configuration, including per-file globals
+├── eslint.config.mjs     # ESLint configuration, including the list of names shared between scripts
 ├── assets/              # SVG files for chess pieces, plus screenshots/ for the README
 │   ├── wp.svg, bp.svg   # Pawns
 │   ├── wr.svg, br.svg   # Rooks
@@ -100,6 +100,17 @@ Static_Chess/
 
 Everything is kept in `localStorage` under the keys in `CONFIG.STORAGE_KEYS`: `chessGameState` (the game, its move list, undo stack and fifty-move counter, with a `version` field) and one key per setting (`showCoords`, `showPossibleMoves`, `showLastMove`, `enableSounds`, `flipBoard`, `opponent`, `playerSide`). A saved game is validated before it is used; anything unusable is discarded and a fresh game starts.
 
+## How the scripts depend on each other
+
+The scripts are plain `<script>` files in one global scope, loaded in the order in `index.html`: `config`, `utils`, `pieces`, `rules`, `ai`, `board`, `drag`, `promotion`, `game`, `main`.
+
+- `rules.js` and `ai.js` depend only on `pieces.js` and `utils.js`
+- `board.js` owns the selection (`getSelectedSquare()`, `getPossibleMoves()` and their setters) and renders what it is given; it reads nothing from `game.js`. The last move to highlight is an argument of `updateBoardVisuals()`
+- `game.js` owns the game state and calls into `board.js`, `rules.js`, `promotion.js` and `ai.js`
+- `drag.js` calls `board.js` for the selection and `game.js` for `isBoardLocked()`, `generateLegalMovesForPiece()`, `playChosenMove()` and `refreshBoardVisuals()`
+- Cross-file calls are direct, with no `window.` lookups or `typeof` guards, so a missing script is a `ReferenceError` rather than a click that does nothing. The names involved are listed once in `eslint.config.mjs`
+- The one shared flag on `window` is `dragJustEnded`, which lets the click handler ignore the click that follows a drag
+
 ## Data Flow
 
 1. User interacts with the board (clicks a square)
@@ -147,7 +158,7 @@ Drag and drop is fully implemented and enabled. It works by:
 2. The `drag.js` script is included in `index.html`
 3. `initDragAndDrop()` is called in `main.js` after game initialization
 4. A press on a piece only arms a drag. Once the pointer moves more than 5px, the piece is selected, its possible moves are shown, and it follows the pointer
-5. On drop, `makeMove()` is called directly if the drop square is valid; either way the selection is cleared
+5. On drop, `playChosenMove()` in `game.js` is called if the drop square is valid, the same function a click uses, so a dropped pawn also gets the promotion chooser; either way the selection is cleared
 6. A press that never moves is an ordinary click or tap and is handled by the click handler in `game.js`
 
 The implementation includes:
@@ -179,7 +190,7 @@ To make it stronger, raise the `depth` values in `AI_LEVELS`; each extra half-mo
 > **✅ Fully Implemented: `js/promotion.js`**
 
 1. `makeMove()` takes an optional fifth argument, the piece type to promote to. It defaults to a queen, so tests and the computer opponent can call it directly
-2. When a click or drop would move a pawn to the last rank, `handleBoardClick()` does not play the move. It calls `showPromotionChooser(color, onChoose)` and plays the move from the callback, once a piece has been picked
+2. Clicks and drops both play their move through `playChosenMove()`. When the move would take a pawn to the last rank it does not play it; it calls `showPromotionChooser(color, onChoose)` and plays the move from the callback, once a piece has been picked
 3. While the chooser is open the board ignores input. Escape or a click outside the panel cancels, leaving the pawn where it was; Undo and New Game also close it
 4. The choices are `<button>` elements with labels. The first one takes focus, and Tab and the arrow keys cycle through them
 5. With `PROMOTION_UI` set to `false` the chooser is skipped and the pawn becomes a queen

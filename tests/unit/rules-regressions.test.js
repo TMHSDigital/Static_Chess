@@ -192,6 +192,31 @@ describe('mouse and touch input with drag and drop enabled', () => {
     expect(pawn.classList.contains('dragging')).toBe(false);
   });
 
+  test('dragging a pawn to the last rank asks for the promotion piece, like a click does', () => {
+    const g = loadGame({ drag: true });
+    g.setPosition({ e1: 'wk*', h6: 'bk*', b7: 'wp*', a8: 'br*' });
+    g.board.renderPieces(g.game.boardState);
+    g.window.document.elementsFromPoint = () => [g.board.getSquareElement(0, 1)];
+    mouse(g, 'mousedown', pieceAt(g, 1, 1), 100, 100);
+    mouse(g, 'mousemove', g.window.document, 100, 60);
+    mouse(g, 'mouseup', g.window.document, 100, 60);
+
+    expect(g.promotion.isPromotionChooserOpen()).toBe(true);
+    expect(g.game.moveHistory).toHaveLength(0);
+    g.window.document.querySelector('.promotion-choice[data-piece="n"]').click();
+    expect(g.at('b8').type).toBe('n');
+  });
+
+  test('pieces cannot be picked up while it is the computer\'s turn', () => {
+    const g = loadGame({ drag: true });
+    g.game.setOpponent('easy', 'b'); // The computer plays White and is to move
+    mouse(g, 'mousedown', pieceAt(g, 6, 4), 100, 100);
+    mouse(g, 'mousemove', g.window.document, 100, 60);
+    expect(g.board.selectedSquare).toBeNull();
+    expect(pieceAt(g, 6, 4).classList.contains('dragging')).toBe(false);
+    g.game.setOpponent(null); // Drop the pending computer move
+  });
+
   test('touchstart on the board is not cancelled, so taps still produce clicks', () => {
     const g = loadGame({ drag: true });
     const touchstart = new g.window.Event('touchstart', { bubbles: true, cancelable: true });

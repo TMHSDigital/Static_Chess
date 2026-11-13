@@ -1,6 +1,7 @@
 /**
- * @fileoverview Drag and drop functionality for chess pieces.
- * This file manages the dragging interaction for chess pieces.
+ * @fileoverview Drag and drop for chess pieces. It only handles the pointer:
+ * selection lives in board.js, and the move itself is played by game.js
+ * through the same function a click uses.
  */
 
 // Drag state tracking
@@ -66,7 +67,7 @@ function initDragAndDrop() {
 function handleDragStart(event) {
     if (!CONFIG.FEATURES.DRAG_AND_DROP) return;
     if (event.type === 'mousedown' && event.button !== 0) return; // Left button only
-    if (typeof window.isBoardLocked === 'function' && window.isBoardLocked()) return; // Game over or not the player's turn
+    if (isBoardLocked()) return; // Game over or not the player's turn
 
     const target = event.target;
     
@@ -90,12 +91,10 @@ function handleDragStart(event) {
     const row = parseInt(squareElement.dataset.row, 10);
     const col = parseInt(squareElement.dataset.col, 10);
     
-    // Check if this piece belongs to the current player
-    if (typeof window.boardState !== 'undefined' && typeof window.currentPlayer !== 'undefined') {
-        const piece = window.boardState[row][col];
-        if (!piece || piece.color !== window.currentPlayer) {
-            return; // Can't drag opponent's pieces
-        }
+    // Only the side to move can pick up its pieces
+    const piece = boardState[row][col];
+    if (!piece || piece.color !== currentPlayer) {
+        return;
     }
     
     // Get start position
@@ -135,9 +134,9 @@ function beginDrag() {
     const pieceElement = dragState.element;
     const rect = dragState.rect;
 
-    window.setSelectedSquare(row, col);
-    window.setPossibleMoves(window.generateLegalMovesForPiece(row, col));
-    window.updateBoardVisuals(window.boardState, window.findKingInCheck(window.currentPlayer));
+    setSelectedSquare(row, col);
+    setPossibleMoves(generateLegalMovesForPiece(row, col));
+    refreshBoardVisuals();
 
     // Add dragging class for styling and set initial position
     pieceElement.classList.add('dragging');
@@ -237,41 +236,20 @@ function handleDragEnd(event) {
         
         debugLog('Dropped at square', endRow, endCol);
         
-        // Check if the drop square is a valid move (piece is already selected from drag start)
-        if (typeof window.selectedSquare !== 'undefined' && 
-            typeof window.possibleMoves !== 'undefined' &&
-            typeof window.makeMove === 'function') {
-            
-            // Verify the piece is still selected and this is a valid move
-            const isPossible = window.possibleMoves.some(pm => pm.row === endRow && pm.col === endCol);
-            
-            if (isPossible && window.selectedSquare && 
-                window.selectedSquare.row === startSquare.row &&
-                window.selectedSquare.col === startSquare.col) {
-                // Make the move directly
-                window.makeMove(
-                    startSquare.row, 
-                    startSquare.col, 
-                    endRow, 
-                    endCol
-                );
-            } else {
-                debugLog('Invalid drop: not a possible move or selection changed', {
-                    isPossible,
-                    selectedSquare: window.selectedSquare,
-                    startSquare: startSquare,
-                    possibleMoves: window.possibleMoves
-                });
-            }
+        // The piece was selected when the drag began; play the move if the drop square is one of its targets
+        const selected = getSelectedSquare();
+        const isPossible = getPossibleMoves().some(pm => pm.row === endRow && pm.col === endCol);
+        if (isPossible && selected && selected.row === startSquare.row && selected.col === startSquare.col) {
+            playChosenMove(startSquare, { row: endRow, col: endCol });
         } else {
-            debugLog('Required functions not available for drop');
+            debugLog('Invalid drop: not a possible move or selection changed');
         }
     }
 
     // A drag always ends with nothing selected, whether or not it made a move
-    window.clearSelectedSquare();
-    window.clearPossibleMoves();
-    window.updateBoardVisuals(window.boardState, window.findKingInCheck(window.currentPlayer));
+    clearSelectedSquare();
+    clearPossibleMoves();
+    refreshBoardVisuals();
 
     // Swallow the click the browser may fire after the drag
     dragJustEnded = true;
@@ -284,11 +262,6 @@ function handleDragEnd(event) {
     dragState.piece = null;
     dragState.element = null;
     dragState.hasMoved = false;
-}
-
-// Export the initialization function
-if (typeof window !== 'undefined') {
-    window.initDragAndDrop = initDragAndDrop;
 }
 
 // Export for Node/Jest tests (CommonJS)

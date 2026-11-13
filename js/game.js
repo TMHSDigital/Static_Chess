@@ -44,7 +44,7 @@ function initializeGame() {
     renderPieces(boardState);
     updateStatusDisplay();
     updateMoveHistoryDisplay();
-    updateBoardVisuals(boardState, findKingInCheck(currentPlayer));
+    refreshBoardVisuals();
 
     // Add event listener for board clicks (delegated)
     boardElement.removeEventListener('click', handleBoardClickEvent);
@@ -120,7 +120,7 @@ function resetGame() {
     renderPieces(boardState);
     updateStatusDisplay();
     updateMoveHistoryDisplay();
-    updateBoardVisuals(boardState, findKingInCheck(currentPlayer));
+    refreshBoardVisuals();
     requestAIMove(); // The computer moves first when it plays White
 }
 
@@ -130,53 +130,61 @@ function resetGame() {
  * @param {number} col
  */
 function handleBoardClick(row, col) {
-    if (isGameOver) return; // Don't allow moves if game is over
-    if (isPromotionPending()) return; // The promotion chooser has to be answered first
-    if (currentPlayer === computerColor()) return; // Not the player's turn
+    if (isBoardLocked()) return; // Game over, promotion chooser open, or the computer's turn
 
     const clickedPiece = boardState[row][col];
+    const selected = getSelectedSquare();
 
-    if (selectedSquare && Array.isArray(possibleMoves)) {
-        // Attempting to make a move
-        const move = {
-            from: selectedSquare,
-            to: { row, col }
-        };
-
-        // Check if the destination is a valid possible move
-        const isPossible = possibleMoves.some(pm => pm.row === row && pm.col === col);
-
+    if (selected) {
+        const isPossible = getPossibleMoves().some(pm => pm.row === row && pm.col === col);
         if (isPossible) {
-            const mover = boardState[move.from.row][move.from.col];
-            const promotes = mover && mover.type === PAWN && (row === 0 || row === 7);
-            if (promotes && CONFIG.FEATURES.PROMOTION_UI && typeof showPromotionChooser === 'function') {
-                // Hold the move until the player has picked a piece
-                showPromotionChooser(mover.color, (type) => {
-                    makeMove(move.from.row, move.from.col, move.to.row, move.to.col, type);
-                });
-            } else {
-                makeMove(move.from.row, move.from.col, move.to.row, move.to.col);
-            }
+            playChosenMove(selected, { row, col });
         } else if (clickedPiece && clickedPiece.color === currentPlayer &&
-                   (selectedSquare.row !== row || selectedSquare.col !== col)) {
+                   (selected.row !== row || selected.col !== col)) {
             // Clicked another of the player's own pieces: switch the selection to it
             setSelectedSquare(row, col);
             setPossibleMoves(generateLegalMovesForPiece(row, col));
-            updateBoardVisuals(boardState, findKingInCheck(currentPlayer));
+            refreshBoardVisuals();
             return;
         }
         // Otherwise clear the selection (after a move, or a click elsewhere or on the same square)
         clearSelectedSquare();
         clearPossibleMoves();
-        updateBoardVisuals(boardState, findKingInCheck(currentPlayer));
+        refreshBoardVisuals();
 
     } else if (clickedPiece && clickedPiece.color === currentPlayer) {
         // Selecting a piece of the current player
         setSelectedSquare(row, col);
-        const moves = generateLegalMovesForPiece(row, col);
-        setPossibleMoves(moves);
-        updateBoardVisuals(boardState, findKingInCheck(currentPlayer));
+        setPossibleMoves(generateLegalMovesForPiece(row, col));
+        refreshBoardVisuals();
     }
+}
+
+/**
+ * Plays a move the player picked on the board, by click or by drop. A pawn
+ * reaching the last rank first asks which piece it should become; the move is
+ * held until the chooser is answered.
+ * @param {{row: number, col: number}} from
+ * @param {{row: number, col: number}} to
+ */
+function playChosenMove(from, to) {
+    const mover = boardState[from.row][from.col];
+    const promotes = mover && mover.type === PAWN && (to.row === 0 || to.row === 7);
+    if (promotes && CONFIG.FEATURES.PROMOTION_UI) {
+        showPromotionChooser(mover.color, (type) => {
+            makeMove(from.row, from.col, to.row, to.col, type);
+        });
+    } else {
+        makeMove(from.row, from.col, to.row, to.col);
+    }
+}
+
+/**
+ * Redraws the highlights: selection, legal targets, the last move and a king in check.
+ * @param {{row: number, col: number}|null} [kingInCheck] - Pass it when already known.
+ */
+function refreshBoardVisuals(kingInCheck = findKingInCheck(currentPlayer)) {
+    updateBoardVisuals(boardState, kingInCheck, moveHistory[moveHistory.length - 1] || null);
 }
 
 /** @returns {object} The live game as a position for the functions in rules.js. */
@@ -256,7 +264,7 @@ function showMoveResult(move, kingInCheck) {
     renderPieces(boardState, move.to);
     updateStatusDisplay();
     updateMoveHistoryDisplay();
-    updateBoardVisuals(boardState, kingInCheck);
+    refreshBoardVisuals(kingInCheck);
     announce(describeMove(move));
     try {
         if (isGameOver) {
@@ -304,7 +312,7 @@ function undoLastMove() {
     renderPieces(boardState);
     updateStatusDisplay();
     updateMoveHistoryDisplay();
-    updateBoardVisuals(boardState, findKingInCheck(currentPlayer));
+    refreshBoardVisuals();
     announce(`Move taken back. ${currentStatus}`);
     saveGameState();
     requestAIMove(); // Only happens when the computer's first move was taken back
@@ -312,7 +320,7 @@ function undoLastMove() {
 
 /** @returns {boolean} True while the promotion chooser is waiting for an answer. */
 function isPromotionPending() {
-    return typeof isPromotionChooserOpen === 'function' && isPromotionChooserOpen();
+    return isPromotionChooserOpen();
 }
 
 /** Closes the promotion chooser without playing the held move. */
@@ -324,7 +332,7 @@ function cancelPendingPromotion() {
 
 /** @returns {string|null} The colour the computer plays, or null in a two-player game. */
 function computerColor() {
-    if (!opponentLevel || !CONFIG.FEATURES.AI_OPPONENT || typeof chooseAIMove !== 'function') return null;
+    if (!opponentLevel || !CONFIG.FEATURES.AI_OPPONENT) return null;
     return opponentOf(humanColor);
 }
 
@@ -340,12 +348,12 @@ function isBoardLocked() {
  * @param {string} [color] - The side the person plays.
  */
 function setOpponent(level, color = WHITE) {
-    opponentLevel = typeof AI_LEVELS !== 'undefined' && Object.prototype.hasOwnProperty.call(AI_LEVELS, level) ? level : null;
+    opponentLevel = Object.prototype.hasOwnProperty.call(AI_LEVELS, level) ? level : null;
     humanColor = color === BLACK ? BLACK : WHITE;
     cancelAIMove();
     clearSelectedSquare();
     clearPossibleMoves();
-    updateBoardVisuals(boardState, findKingInCheck(currentPlayer));
+    refreshBoardVisuals();
     updateStatusDisplay();
     requestAIMove();
 }
@@ -933,28 +941,13 @@ function generateNotationWithDisambiguation(move, boardBefore) {
     return notation;
 }
 
-// Expose handleBoardClick and related functions globally for drag.js and other modules
-if (typeof window !== 'undefined') {
-    window.handleBoardClick = handleBoardClick;
-    window.generateLegalMovesForPiece = generateLegalMovesForPiece;
-    window.findKingInCheck = findKingInCheck;
-    window.makeMove = makeMove;
-    window.isBoardLocked = isBoardLocked;
-    window.setOpponent = setOpponent;
-    // Expose state getters (selectedSquare and possibleMoves are in board.js)
-    Object.defineProperty(window, 'boardState', {
-        get: function() { return boardState; }
-    });
-    Object.defineProperty(window, 'currentPlayer', {
-        get: function() { return currentPlayer; }
-    });
-}
-
 // Export for Node/Jest tests (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         initializeGame,
         handleBoardClick,
+        playChosenMove,
+        refreshBoardVisuals,
         makeMove,
         livePosition,
         setOpponent,

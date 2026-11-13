@@ -208,8 +208,9 @@ function getSquareElement(row, col) {
  * Updates the visual state of the board (selection, possible moves, checks).
  * @param {Array<Array<Piece|null>>} boardState - Current board state.
  * @param {{row: number, col: number} | null} kingInCheckCoords - Coordinates of the king in check, or null.
+ * @param {{from: {row, col}, to: {row, col}} | null} lastMove - The move to highlight as the last one played, or null.
  */
-function updateBoardVisuals(boardState, kingInCheckCoords = null) {
+function updateBoardVisuals(boardState, kingInCheckCoords = null, lastMove = null) {
     // Clear previous visual states
     document.querySelectorAll('.square.selected, .square.possible-move, .square.in-check, .square.last-move-from, .square.last-move-to').forEach(el => {
         el.classList.remove('selected', 'possible-move', 'in-check', 'last-move-from', 'last-move-to');
@@ -248,9 +249,7 @@ function updateBoardVisuals(boardState, kingInCheckCoords = null) {
     }
 
     // Highlight last move if available
-    if (moveHistory && moveHistory.length > 0) {
-        const lastMove = moveHistory[moveHistory.length - 1];
-        
+    if (lastMove) {
         // From square
         const fromElement = getSquareElement(lastMove.from.row, lastMove.from.col);
         if (fromElement) {
@@ -300,21 +299,14 @@ function clearPossibleMoves() {
     possibleMoves = [];
 }
 
-// Expose board functions and state globally for drag.js and other modules
-if (typeof window !== 'undefined') {
-    window.clearSelectedSquare = clearSelectedSquare;
-    window.clearPossibleMoves = clearPossibleMoves;
-    window.setSelectedSquare = setSelectedSquare;
-    window.setPossibleMoves = setPossibleMoves;
-    window.updateBoardVisuals = updateBoardVisuals;
-    window.setBoardFlipped = setBoardFlipped;
-    // Expose state getters
-    Object.defineProperty(window, 'selectedSquare', {
-        get: function() { return selectedSquare; }
-    });
-    Object.defineProperty(window, 'possibleMoves', {
-        get: function() { return possibleMoves; }
-    });
+/** @returns {{row: number, col: number} | null} The selected square, if any. */
+function getSelectedSquare() {
+    return selectedSquare;
+}
+
+/** @returns {Array<{row: number, col: number}>} The squares the selected piece can move to. */
+function getPossibleMoves() {
+    return possibleMoves;
 }
 
 // Export for Node/Jest tests (CommonJS)
@@ -329,6 +321,8 @@ if (typeof module !== 'undefined' && module.exports) {
         clearSelectedSquare,
         setPossibleMoves,
         clearPossibleMoves,
+        getSelectedSquare,
+        getPossibleMoves,
         setBoardFlipped,
         // Export state variables with getters for test access
         get selectedSquare() { return selectedSquare; },

@@ -49,10 +49,10 @@ function loadGame(options = {}) {
     clearSelectedSquare: board.clearSelectedSquare,
     setPossibleMoves: board.setPossibleMoves,
     clearPossibleMoves: board.clearPossibleMoves,
+    getSelectedSquare: board.getSelectedSquare,
+    getPossibleMoves: board.getPossibleMoves,
+    setBoardFlipped: board.setBoardFlipped,
   });
-  for (const name of ['selectedSquare', 'possibleMoves']) {
-    Object.defineProperty(global, name, { get: () => board[name], configurable: true });
-  }
 
   const promotion = require('../../js/promotion');
   Object.assign(global, promotion);
@@ -61,13 +61,17 @@ function loadGame(options = {}) {
   for (const name of ['moveHistory', 'boardState', 'currentPlayer', 'isGameOver', 'kingPositions', 'currentStatus', 'enPassantTarget', 'positionHistory', 'halfmoveClock']) {
     Object.defineProperty(global, name, { get: () => game[name], configurable: true });
   }
-  Object.defineProperty(window, 'moveHistory', { get: () => game.moveHistory, configurable: true });
+  // The scripts share one global scope in the browser; give the functions the
+  // other files call the same reach here
+  for (const [name, property] of Object.entries(Object.getOwnPropertyDescriptors(game))) {
+    if (typeof property.value === 'function') global[name] = property.value;
+  }
 
   game.initializeGame();
 
-  let drag = null;
+  const drag = require('../../js/drag');
+  Object.assign(global, drag);
   if (options.drag) {
-    drag = require('../../js/drag');
     drag.initDragAndDrop();
   }
 

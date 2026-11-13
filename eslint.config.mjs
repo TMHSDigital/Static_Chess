@@ -1,7 +1,37 @@
-// ESLint v9 flat config
-// Structured to avoid redeclare errors by only adding globals to files that USE them, not DECLARE them
+// ESLint flat config
 import js from '@eslint/js';
 import globals from 'globals';
+
+// The page loads its scripts into one global scope, in the order given in
+// index.html. These are the names one file may use from another. A name is
+// listed once here, not once per file that uses it.
+const shared = (names, access = 'readonly') => Object.fromEntries(names.map((name) => [name, access]));
+const appGlobals = {
+  // config.js
+  ...shared(['CONFIG']),
+  // utils.js
+  ...shared(['algebraicToCoords', 'coordsToAlgebraic', 'isWithinBounds', 'deepClone', 'playSound', 'debugLog']),
+  // pieces.js
+  ...shared(['PAWN', 'ROOK', 'KNIGHT', 'BISHOP', 'QUEEN', 'KING', 'WHITE', 'BLACK', 'PIECE_NAMES', 'Piece',
+    'isPseudoLegalMove', 'getInitialPieces']),
+  // rules.js
+  ...shared(['opponentOf', 'isPathObstructed', 'isInCheck', 'applyMove', 'canCastleIn', 'legalMovesFrom',
+    'allLegalMoves', 'positionKey', 'hasInsufficientMaterial']),
+  // ai.js
+  ...shared(['AI_LEVELS', 'chooseAIMove']),
+  // board.js
+  ...shared(['boardElement', 'createBoard', 'renderPieces', 'getSquareElement', 'updateBoardVisuals',
+    'setSelectedSquare', 'clearSelectedSquare', 'getSelectedSquare', 'setPossibleMoves', 'clearPossibleMoves',
+    'getPossibleMoves', 'setBoardFlipped']),
+  // drag.js
+  ...shared(['initDragAndDrop']),
+  // promotion.js
+  ...shared(['showPromotionChooser', 'closePromotionChooser', 'isPromotionChooserOpen']),
+  // game.js (the two state variables are reassigned there)
+  ...shared(['initializeGame', 'generateLegalMovesForPiece', 'playChosenMove', 'refreshBoardVisuals',
+    'isBoardLocked', 'setOpponent']),
+  ...shared(['boardState', 'currentPlayer'], 'writable')
+};
 
 export default [
   js.configs.recommended,
@@ -31,168 +61,20 @@ export default [
     files: ['tests/**/*.js'],
     languageOptions: {
       globals: {
-        ...globals.jest,
-        describe: 'readonly',
-        test: 'readonly',
-        expect: 'readonly',
-        beforeEach: 'readonly'
+        ...globals.jest
       }
     }
   },
-  // config.js - declares CONFIG, uses nothing
+  // Application scripts
   {
-    files: ['js/config.js'],
+    files: ['js/**/*.js'],
     languageOptions: {
-      globals: {}
-    }
-  },
-  // utils.js - declares utilities, uses CONFIG, WHITE, BLACK
-  {
-    files: ['js/utils.js'],
-    languageOptions: {
-      globals: {
-        CONFIG: 'readonly',
-        WHITE: 'readonly',
-        BLACK: 'readonly'
-      }
-    }
-  },
-  // pieces.js - declares constants/Piece/getInitialPieces, uses isWithinBounds
-  {
-    files: ['js/pieces.js'],
-    languageOptions: {
-      globals: {
-        isWithinBounds: 'readonly'
-      }
-    }
-  },
-  // rules.js - declares the rules functions, uses piece constants and helpers
-  {
-    files: ['js/rules.js'],
-    languageOptions: {
-      globals: {
-        PAWN: 'readonly',
-        ROOK: 'readonly',
-        KNIGHT: 'readonly',
-        BISHOP: 'readonly',
-        QUEEN: 'readonly',
-        KING: 'readonly',
-        WHITE: 'readonly',
-        BLACK: 'readonly',
-        Piece: 'readonly',
-        isPseudoLegalMove: 'readonly',
-        isWithinBounds: 'readonly',
-        coordsToAlgebraic: 'readonly'
-      }
-    }
-  },
-  // board.js - declares selectedSquare, possibleMoves, boardElement, and board functions
-  // Uses: coordsToAlgebraic, moveHistory (from game.js)
-  {
-    files: ['js/board.js'],
-    languageOptions: {
-      globals: {
-        CONFIG: 'readonly',
-        PIECE_NAMES: 'readonly',
-        coordsToAlgebraic: 'readonly',
-        moveHistory: 'readonly'
-      }
-    }
-  },
-  // game.js - declares boardState, currentPlayer, moveHistory, and game functions
-  // Uses: everything from other files, but doesn't redeclare them
-  {
-    files: ['js/game.js'],
-    languageOptions: {
-      globals: {
-        CONFIG: 'readonly',
-        debugLog: 'readonly',
-        PAWN: 'readonly',
-        ROOK: 'readonly',
-        KNIGHT: 'readonly',
-        BISHOP: 'readonly',
-        QUEEN: 'readonly',
-        KING: 'readonly',
-        WHITE: 'readonly',
-        BLACK: 'readonly',
-        PIECE_NAMES: 'readonly',
-        isWithinBounds: 'readonly',
-        isPseudoLegalMove: 'readonly',
-        isPathObstructed: 'readonly',
-        isInCheck: 'readonly',
-        applyMove: 'readonly',
-        canCastleIn: 'readonly',
-        legalMovesFrom: 'readonly',
-        allLegalMoves: 'readonly',
-        positionKey: 'readonly',
-        hasInsufficientMaterial: 'readonly',
-        opponentOf: 'readonly',
-        chooseAIMove: 'readonly',
-        AI_LEVELS: 'readonly',
-        coordsToAlgebraic: 'readonly',
-        deepClone: 'readonly',
-        playSound: 'readonly',
-        Piece: 'readonly',
-        getInitialPieces: 'readonly',
-        getSquareElement: 'readonly',
-        setSelectedSquare: 'readonly',
-        clearSelectedSquare: 'readonly',
-        setPossibleMoves: 'readonly',
-        clearPossibleMoves: 'readonly',
-        renderPieces: 'readonly',
-        updateBoardVisuals: 'readonly',
-        createBoard: 'readonly',
-        boardElement: 'readonly',
-        showPromotionChooser: 'readonly',
-        closePromotionChooser: 'readonly',
-        isPromotionChooserOpen: 'readonly',
-        selectedSquare: 'writable',
-        possibleMoves: 'writable'
-      }
-    }
-  },
-  // main.js - uses CONFIG, debugLog, initializeGame, initDragAndDrop, initPromotionUI, ChessAI
-  {
-    files: ['js/main.js'],
-    languageOptions: {
-      globals: {
-        CONFIG: 'readonly',
-        debugLog: 'readonly',
-        initializeGame: 'readonly',
-        initDragAndDrop: 'readonly',
-        setBoardFlipped: 'readonly',
-        setOpponent: 'readonly'
-      }
-    }
-  },
-  // drag.js - uses CONFIG, debugLog, handleBoardClick
-  {
-    files: ['js/drag.js'],
-    languageOptions: {
-      globals: {
-        CONFIG: 'readonly',
-        debugLog: 'readonly',
-        handleBoardClick: 'readonly'
-      }
-    }
-  },
-  // ai.js - the computer opponent; uses piece constants and rules.js
-  {
-    files: ['js/ai.js'],
-    languageOptions: {
-      globals: {
-        PAWN: 'readonly',
-        ROOK: 'readonly',
-        KNIGHT: 'readonly',
-        BISHOP: 'readonly',
-        QUEEN: 'readonly',
-        KING: 'readonly',
-        WHITE: 'readonly',
-        allLegalMoves: 'readonly',
-        applyMove: 'readonly',
-        isInCheck: 'readonly',
-        opponentOf: 'readonly'
-      }
+      globals: appGlobals
+    },
+    rules: {
+      // Each shared name is declared by exactly one of these files, which would
+      // otherwise count as redeclaring the global listed above
+      'no-redeclare': ['error', { builtinGlobals: false }]
     }
   },
   {
@@ -202,9 +84,7 @@ export default [
       'playwright-report/**',
       'test-results/**',
       '.playwright/**',
-      'eslint.config.js' // ESLint config file itself uses ES modules
+      '.playwright-mcp/**'
     ]
   }
 ];
-
-

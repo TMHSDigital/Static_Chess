@@ -29,7 +29,7 @@ The app itself needs no tooling: open `index.html` or serve the folder. Node is 
 
 The files in `js/` are plain `<script>` files that share one global scope and load in the order listed in `index.html`. Two conventions follow from that:
 
-1. **Calling a function from another file needs an ESLint entry.** `eslint.config.mjs` lists, per file, which names from other files that file may use. A new cross-file call fails lint with `no-undef` until you add the name to the block for the calling file.
+1. **A name used from another file needs an ESLint entry.** `eslint.config.mjs` has one list, `appGlobals`, of the names files may use from each other, grouped by the file that declares them. A new cross-file call fails lint with `no-undef` until the name is added there. Call such functions directly, without `window.` or `typeof` guards, so a missing script fails loudly.
 2. **Anything a test needs must be exported.** Each file ends with a small CommonJS footer (`if (typeof module !== 'undefined' && module.exports) { ... }`). Add new functions there if tests call them. Browsers ignore the footer.
 
 ### Writing tests
@@ -46,7 +46,7 @@ test('castling moves the rook', () => {
 });
 ```
 
-`loadGame()` gives every test a fresh page and game. It returns helpers for playing moves (`play`), setting up a position (`setPosition`), and reading the board (`at`, `movesFrom`); see `tests/helpers/load-game.js`. If a new source file exposes globals that other files read, add it to that helper.
+`loadGame()` gives every test a fresh page and game. It returns helpers for playing moves (`play`), setting up a position (`setPosition`), and reading the board (`at`, `movesFrom`); see `tests/helpers/load-game.js`. The helper puts the functions each file exports into the global scope, as the browser does. If you add a new source file, load it there.
 
 ## Reporting security issues
 

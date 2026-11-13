@@ -152,8 +152,8 @@ function initializeFeatureModules() {
     debugLog('Initializing optional feature modules...');
     
     // Initialize drag and drop if enabled
-    if (CONFIG.FEATURES.DRAG_AND_DROP && typeof window.initDragAndDrop === 'function') {
+    if (CONFIG.FEATURES.DRAG_AND_DROP) {
         debugLog('Initializing drag and drop feature');
-        window.initDragAndDrop();
+        initDragAndDrop();
     }
 } 

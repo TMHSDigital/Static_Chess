@@ -105,7 +105,6 @@ function saveToLocalStorage(key, data) {
  * @returns {any} The retrieved data or defaultValue.
  * @exports loadFromLocalStorage
  */
-// eslint-disable-next-line no-unused-vars
 function loadFromLocalStorage(key, defaultValue = null) {
     try {
         const serialized = localStorage.getItem(key);

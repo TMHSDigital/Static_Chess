@@ -26,6 +26,17 @@ describe('board rendering', () => {
     expect(g.board.getSquareElement(0, 4).classList.contains('in-check')).toBe(true);
   });
 
+  test('the last move is highlighted from the argument, not from game state', () => {
+    const g = loadGame();
+    const lastMove = { from: { row: 6, col: 3 }, to: { row: 4, col: 3 } };
+    g.board.updateBoardVisuals(g.game.boardState, null, lastMove);
+    expect(g.board.getSquareElement(6, 3).classList.contains('last-move-from')).toBe(true);
+    expect(g.board.getSquareElement(4, 3).classList.contains('last-move-to')).toBe(true);
+
+    g.board.updateBoardVisuals(g.game.boardState, null, null);
+    expect(g.window.document.querySelectorAll('.last-move-from, .last-move-to')).toHaveLength(0);
+  });
+
   test('squares are labelled for screen readers', () => {
     const g = loadGame();
     expect(g.board.getSquareElement(7, 4).getAttribute('aria-label')).toBe('white king on e1');
