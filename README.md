@@ -69,7 +69,7 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 <br>
 
 - **Standard Chess Rules:** Implements all standard piece movements (Pawn, Rook, Knight, Bishop, Queen, King)
-- **Special Moves:** Supports castling (kingside and queenside), en passant, and pawn promotion
+- **Special Moves:** Supports castling (kingside and queenside), en passant, and pawn promotion (always to a queen for now)
 - **Move Validation:** Prevents illegal moves based on piece movement, obstacles, and check rules
 - **Check/Checkmate Detection:** Identifies check situations and declares checkmate when appropriate
 - **Stalemate Detection:** Detects stalemate conditions (no legal moves, but not in check)
@@ -155,14 +155,16 @@ That's it! No build process or dependencies are required.
 4. Click on a highlighted square to move the selected piece (or drop if dragging)
 5. The board updates, move is added to the Move History, and turn switches
 6. If a move results in check, the opponent's king will be highlighted in red
-7. Game ends with checkmate or stalemate
-8. Click "New Game" to reset the board
-9. Toggle settings:
+7. A pawn that reaches the last rank becomes a queen
+8. Game ends with checkmate or stalemate
+9. Click "Undo" to take back the last move, or "New Game" to reset the board
+10. Keyboard: move between squares with the arrow keys, and press Enter or Space to select a piece or move it
+11. Toggle settings:
    - Show coordinates
    - Show possible moves
    - Highlight last move
    - Sound effects
-10. Game state is saved automatically to localStorage
+12. The game and its undo history are saved automatically to localStorage, so a refresh picks up where you left off
 
 ---
 
@@ -311,6 +313,8 @@ Contributions are welcome! Please check the [Development Roadmap](docs/ROADMAP.m
 4. Submit a pull request
 
 For major changes, please open an issue first to discuss what you would like to change.
+
+See [CONTRIBUTING](.github/CONTRIBUTING.md) for development setup and the test and lint conventions, the [Code of Conduct](.github/CODE_OF_CONDUCT.md), and the [Security Policy](.github/SECURITY.md) for reporting vulnerabilities.
 
 ---
 

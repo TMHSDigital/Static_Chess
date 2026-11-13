@@ -3,7 +3,7 @@
 ## Pre-Release Checklist
 
 ✅ CHANGELOG.md updated with release date (2025-11-02)  
-✅ Release notes created (RELEASE_NOTES_v0.1.0.md)  
+✅ Release notes created (releases/RELEASE_NOTES_v0.1.0.md)  
 ✅ All features documented  
 ✅ Repository organized  
 

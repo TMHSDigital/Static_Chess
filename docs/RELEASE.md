@@ -7,15 +7,16 @@ This project is a static site; no build. Releases are automated via GitHub Actio
 When you push a tag starting with `v` (e.g., `v0.1.0`, `v1.2.3`), the `.github/workflows/release.yml` workflow automatically:
 
 1. Detects the pushed tag
-2. Reads release notes from `RELEASE_NOTES_vX.Y.Z.md` if it exists
-3. Creates a GitHub Release with the tag name and release notes
-4. Publishes the release automatically
+2. Runs lint and tests; the release is not created if they fail
+3. Reads release notes from `releases/RELEASE_NOTES_vX.Y.Z.md` if it exists
+4. Creates and publishes a GitHub Release with the tag name and release notes
 
 ## Release Steps
 
 1. **Prepare Release**:
    - Update `CHANGELOG.md` with the new version and date
-   - Create `RELEASE_NOTES_vX.Y.Z.md` with release summary (optional but recommended)
+   - Create `releases/RELEASE_NOTES_vX.Y.Z.md` with release summary (optional but recommended)
+   - Set `"version"` in `package.json` to the new version and run `npm install --package-lock-only` so the lockfile matches
    - Ensure all changes are committed and pushed to `main`
 
 2. **Verify CI Passes**:
@@ -64,9 +65,9 @@ Example structure:
 
 ## Links
 - Play Now: https://tmhsdigital.github.io/Static_Chess/
-- Full Changelog: See CHANGELOG.md
+- Full Changelog: https://github.com/TMHSDigital/Static_Chess/blob/main/CHANGELOG.md
 ```
 
 ## Labels and Triage
 
-Use labels: `bug`, `enhancement`, `good first issue`, `help wanted`, `a11y`, `perf`.
+Use labels: `bug`, `enhancement`, `documentation`, `dependencies`, `testing`, `performance`, `tech-debt`, `good first issue`, `help wanted`, plus one `severity: high`, `severity: medium` or `severity: low` label.

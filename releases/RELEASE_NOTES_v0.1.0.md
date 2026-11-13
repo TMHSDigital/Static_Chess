@@ -57,5 +57,5 @@ Built with pure vanilla web technologies - no frameworks, no build step, just cl
 
 ---
 
-**Full Changelog**: See [CHANGELOG.md](CHANGELOG.md)
+**Full Changelog**: See [CHANGELOG.md](https://github.com/TMHSDigital/Static_Chess/blob/main/CHANGELOG.md)
 

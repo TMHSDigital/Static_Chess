@@ -34,8 +34,8 @@ Features are prioritized as follows:
 |---------|------------|--------------|-------------|--------|
 | **Drag and Drop** | Medium | None | Allow moving pieces by dragging instead of just clicking | ✅ Completed |
 | **Promotion UI** | Medium | None | Display a UI for selecting which piece to promote a pawn to | Skeleton implementation ready |
-| **Undo Move** | Medium | None | Add ability to take back the last move | Completed |
-| **Full SAN** | Medium | None | Algebraic notation with disambiguation | Implemented (basic) |
+| **Undo Move** | Medium | None | Add ability to take back the last move | ✅ Completed |
+| **Full SAN** | Medium | None | Algebraic notation with disambiguation | ✅ Completed |
 
 ### Tier 2: Improved User Experience
 
@@ -92,7 +92,7 @@ This is a rough guideline for feature implementation:
 These are areas that need improvement in the current codebase:
 
 1. **Refactoring board.js** - Currently handles too many responsibilities
-2. **Improving test coverage** - Add automated tests for core functionality
+2. **Improving test coverage** - Jest suites cover the rules engine, undo, persistence and input; board rendering and settings are still untested
 3. **Performance optimization** - Improve rendering and move calculation performance
 4. **Accessibility enhancements** - Ensure game is fully accessible
 
@@ -102,11 +102,11 @@ The following files provide a foundation for implementing the planned features:
 
 - **js/config.js**: Contains feature flags for enabling/disabling features
 - **js/utils.js**: Enhanced with helper functions for future features
-- **js/drag.js**: Skeleton implementation for drag and drop functionality
-- **js/promotion.js**: Skeleton implementation for pawn promotion UI
-- **js/ai.js**: Skeleton implementation for AI opponent
+- **js/drag.js**: Drag and drop (complete and enabled)
+- **js/promotion.js**: Skeleton implementation for pawn promotion UI (not loaded by `index.html` yet)
+- **js/ai.js**: Skeleton implementation for AI opponent (not loaded by `index.html` yet)
 
-To implement a feature, enable its flag in `config.js` and follow the implementation guide in `docs/ARCHITECTURE.md`.
+Enabling a flag in `config.js` is not enough on its own. For the promotion UI and the AI opponent, first add the script to `index.html`, then enable the flag, then wire the feature into `game.js` following `docs/ARCHITECTURE.md`. The `GAME_TIMER` and `ADVANCED_DRAW_DETECTION` flags have no code behind them yet.
 
 ## Contribution Guidelines
 
