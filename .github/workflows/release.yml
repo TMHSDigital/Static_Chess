@@ -5,45 +5,44 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: read
+
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test -- --ci
+
   create-release:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
-      - name: Extract version from tag
-        id: tag_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-      
-      - name: Read release notes
-        id: release_notes
-        shell: bash
-        run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          # Check in releases/ directory first, then root for backwards compatibility
-          if [ -f "releases/RELEASE_NOTES_${TAG}.md" ]; then
-            NOTES=$(cat "releases/RELEASE_NOTES_${TAG}.md")
-          elif [ -f "RELEASE_NOTES_${TAG}.md" ]; then
-            NOTES=$(cat "RELEASE_NOTES_${TAG}.md")
-          else
-            NOTES="# Release ${TAG}\n\nSee [CHANGELOG.md](CHANGELOG.md) for details."
-          fi
-          echo "NOTES<<EOF" >> $GITHUB_OUTPUT
-          echo "$NOTES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-      
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ steps.tag_version.outputs.VERSION }}
-          body: ${{ steps.release_notes.outputs.NOTES }}
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          # Notes live in releases/; the repository root is checked for older tags
+          if [ -f "releases/RELEASE_NOTES_${TAG}.md" ]; then
+            NOTES_FILE="releases/RELEASE_NOTES_${TAG}.md"
+          elif [ -f "RELEASE_NOTES_${TAG}.md" ]; then
+            NOTES_FILE="RELEASE_NOTES_${TAG}.md"
+          else
+            NOTES_FILE="${RUNNER_TEMP}/release-notes.md"
+            printf '# Release %s\n\nSee [CHANGELOG.md](https://github.com/%s/blob/%s/CHANGELOG.md) for details.\n' \
+              "$TAG" "$GITHUB_REPOSITORY" "$TAG" > "$NOTES_FILE"
+          fi
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "Release ${TAG}" --notes-file "$NOTES_FILE"

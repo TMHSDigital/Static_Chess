@@ -1,13 +1,22 @@
 {
   "name": "static_chess",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "description": "Dev tooling for Static Chess (lint/test only)",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "lint": "eslint . --ext .js",
+    "lint": "eslint .",
     "format": "prettier --check .",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "coverage": "jest --runInBand --coverage"
+  },
+  "jest": {
+    "collectCoverageFrom": [
+      "js/**/*.js"
+    ]
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",
@@ -19,4 +28,3 @@
     "prettier": "^3.3.3"
   }
 }
-
