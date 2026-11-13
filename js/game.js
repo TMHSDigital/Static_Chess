@@ -934,6 +934,7 @@ function generateNotationWithDisambiguation(move, boardBefore) {
 
     let disambiguation = '';
     if (piece.type !== PAWN) {
+        const rivals = []; // Other pieces of the same type that could also reach the square
         // Check for same-type pieces that could also move to the destination
         for (let r = 0; r < 8; r++) {
             for (let c = 0; c < 8; c++) {
@@ -957,15 +958,18 @@ function generateNotationWithDisambiguation(move, boardBefore) {
                             })();
                             if (blocked) continue;
                         }
-                        // Need disambiguation
-                        const needFile = move.from.col !== c;
-                        const needRank = move.from.row !== r;
-                        if (needFile && !needRank) disambiguation = coordsToAlgebraic(move.from.row, move.from.col)[0];
-                        else if (!needFile && needRank) disambiguation = coordsToAlgebraic(move.from.row, move.from.col)[1];
-                        else disambiguation = coordsToAlgebraic(move.from.row, move.from.col);
+                        rivals.push({ row: r, col: c });
                     }
                 }
             }
+        }
+        // SAN rule: the file if it is enough to tell the pieces apart, else the
+        // rank, else both.
+        if (rivals.length > 0) {
+            const from = coordsToAlgebraic(move.from.row, move.from.col);
+            if (!rivals.some(o => o.col === move.from.col)) disambiguation = from[0];
+            else if (!rivals.some(o => o.row === move.from.row)) disambiguation = from[1];
+            else disambiguation = from;
         }
     }
 
