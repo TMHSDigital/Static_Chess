@@ -18,7 +18,7 @@ Guidelines:
 
 The app itself needs no tooling: open `index.html` or serve the folder. Node is only used for linting and tests.
 
-- **Node:** version 22 or newer (CI uses 24).
+- **Node:** 22.22.2 or newer on the 22 line, or 24.15 or newer (CI uses 24). jsdom sets this floor.
 - **Install:** `npm ci`
 - **Scripts:**
   - `npm test` runs the Jest suite
@@ -48,6 +48,8 @@ test('castling moves the rook', () => {
 ```
 
 `loadGame()` gives every test a fresh page and game. It returns helpers for playing moves (`play`), setting up a position (`setPosition`), and reading the board (`at`, `movesFrom`); see `tests/helpers/load-game.js`. The helper puts the functions each file exports into the global scope, as the browser does. If you add a new source file, load it there.
+
+Do not `require('jsdom')` in a test. `JSDOM` is a global, provided by `tests/helpers/jsdom-environment.js`, because jsdom 31 breaks when it is loaded inside Jest's module sandbox.
 
 ## Reporting security issues
 

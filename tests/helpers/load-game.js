@@ -1,4 +1,4 @@
-const { JSDOM } = require('jsdom');
+const { JSDOM } = globalThis; // Provided by tests/helpers/jsdom-environment.js
 
 const HTML = `<!DOCTYPE html><body><div id="chess-board"></div><ul id="move-history"></ul><div id="game-status"></div><button id="undo-button">Undo</button><button id="pgn-button">Copy PGN</button><button id="reset-button">New Game</button></body>`;
 

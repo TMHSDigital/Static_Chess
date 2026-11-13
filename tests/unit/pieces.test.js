@@ -1,4 +1,4 @@
-const { JSDOM } = require('jsdom');
+const { JSDOM } = globalThis; // Provided by tests/helpers/jsdom-environment.js
 
 describe('pieces', () => {
   let getInitialPieces;

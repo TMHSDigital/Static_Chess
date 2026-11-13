@@ -31,7 +31,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - CI installs from a lockfile on Node 24 with pinned actions; the release workflow runs lint and tests first
-- Dev tooling: ESLint 10, Jest 30, jsdom 26; the ESLint config is now `eslint.config.mjs` and `package.json` no longer declares `"type": "module"`
+- Dev tooling: ESLint 10, Jest 30, jsdom 31 (loaded through a small Jest environment, `tests/helpers/jsdom-environment.js`; Node 22.22.2+ or 24.15+ is needed for development); the ESLint config is now `eslint.config.mjs` and `package.json` no longer declares `"type": "module"`
 - `config.js` is now the single source for feature flags, setting defaults and storage keys; debug output is off unless `CONFIG.DEBUG` is set
 - The rules of chess moved from `game.js` into a DOM-free `rules.js`, checked against published perft counts
 - The whole repository is formatted with Prettier, and CI checks it
