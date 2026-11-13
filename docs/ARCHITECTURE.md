@@ -100,6 +100,14 @@ Everything is kept in `localStorage` under the keys in `CONFIG.STORAGE_KEYS`: `c
 4. If valid, `game.js` updates the game state and calls `renderPieces()` in `board.js`
 5. `board.js` updates the visual representation
 
+## Accessibility
+
+- The board is an ARIA grid: `board.js` builds eight `role="row"` elements of eight `role="gridcell"` squares. The rows use `display: contents`, so the squares still lay out in the board's CSS grid
+- Roving tabindex: one square has `tabindex="0"` and the rest `-1`, so Tab enters and leaves the board in one press. The tab stop follows focus
+- Each square's `aria-label` names its piece and square, and `updateBoardVisuals()` appends "selected", "legal move" or "in check" to match the visual highlights
+- `announce()` in `game.js` writes to the hidden `#announcer` live region. `describeMove()` turns a move into a sentence followed by the new status, for example "White knight takes on f3. Check. Black's turn". The visible status line is not a live region, so nothing is read twice
+- `style.css` shortens animations and transitions under `prefers-reduced-motion: reduce`
+
 ## State Management
 
 The game state is primarily managed in `game.js` and consists of:

@@ -73,6 +73,7 @@ export default [
     languageOptions: {
       globals: {
         CONFIG: 'readonly',
+        PIECE_NAMES: 'readonly',
         coordsToAlgebraic: 'readonly',
         moveHistory: 'readonly'
       }
@@ -94,6 +95,7 @@ export default [
         KING: 'readonly',
         WHITE: 'readonly',
         BLACK: 'readonly',
+        PIECE_NAMES: 'readonly',
         isWithinBounds: 'readonly',
         isPseudoLegalMove: 'readonly',
         coordsToAlgebraic: 'readonly',

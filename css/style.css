@@ -393,3 +393,32 @@ body.coords-visible {
     outline: 2px solid var(--text-color);
     outline-offset: 2px;
 }
+
+/* Rows exist for assistive technology only; the squares lay out in the board's grid */
+.board-row {
+    display: contents;
+}
+
+/* Read by screen readers, not shown */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Respect the system setting for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

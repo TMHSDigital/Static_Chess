@@ -17,6 +17,7 @@ let halfmoveClock = 0; // Half-moves since the last pawn move or capture (fifty-
 
 const moveHistoryElement = document.getElementById('move-history');
 const gameStatusElement = document.getElementById('game-status');
+let announcerElement = document.getElementById('announcer'); // Live region read out by screen readers
 const resetButton = document.getElementById('reset-button');
 const undoButton = document.getElementById('undo-button');
 const pgnButton = document.getElementById('pgn-button');
@@ -305,6 +306,7 @@ function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
     updateStatusDisplay();
     updateMoveHistoryDisplay();
     updateBoardVisuals(boardState, opponentKingInCheck);
+    announce(describeMove(move));
     // Sounds
     try {
         if (isGameOver) {
@@ -346,6 +348,7 @@ function undoLastMove() {
     updateStatusDisplay();
     updateMoveHistoryDisplay();
     updateBoardVisuals(boardState, findKingInCheck(currentPlayer));
+    announce(`Move taken back. ${currentStatus}`);
     saveGameState();
 }
 
@@ -478,15 +481,14 @@ function generateLegalMovesForPiece(startRow, startCol) {
     const playerColor = piece.color;
     const opponentColor = playerColor === WHITE ? BLACK : WHITE;
 
-    // 1. Generate Pseudo-Legal Moves (based on piece type)
-    // This part needs detailed implementation for each piece type,
-    // checking for obstacles along paths for sliders (Rook, Bishop, Queen).
+    // 1. Generate pseudo-legal moves: the piece's movement pattern, with
+    // blocked paths removed. isPseudoLegalMove already keeps pawns from moving
+    // straight onto a piece or diagonally onto an empty square.
 
     for (let endRow = 0; endRow < 8; endRow++) {
         for (let endCol = 0; endCol < 8; endCol++) {
             const targetSquare = boardState[endRow][endCol];
             const isCapture = targetSquare !== null && targetSquare.color === opponentColor;
-            const isEmpty = targetSquare === null;
 
             // Basic check: Can't capture own piece
             if (targetSquare && targetSquare.color === playerColor) continue;
@@ -498,30 +500,19 @@ function generateLegalMovesForPiece(startRow, startCol) {
                         continue;
                     }
                 }
-                 // Special check for pawn non-capture forward moves
-                if (piece.type === PAWN && !isCapture && !isEmpty && startCol === endCol) {
-                     continue; // Cannot move pawn forward onto occupied square
-                }
-                 // Special check for pawn initial double move obstruction
+                // A pawn's double move needs the square it passes over to be empty
                 if (piece.type === PAWN && Math.abs(endRow - startRow) === 2 && !isCapture) {
                     const intermediateRow = (startRow + endRow) / 2;
                     if (boardState[intermediateRow][startCol] !== null) {
                          continue; // Path blocked for double move
                     }
                 }
-                // Check for en passant validity (target square must be empty)
-                const isEnPassantMove = piece.type === PAWN && enPassantTarget &&
-                                       endRow === enPassantTarget.row && endCol === enPassantTarget.col &&
-                                       Math.abs(startCol - endCol) === 1; // Must be diagonal
-                if(isEnPassantMove && !isEmpty) continue; // En passant target must be empty
-                if(!isEnPassantMove && piece.type === PAWN && Math.abs(startCol - endCol) === 1 && isEmpty) continue; // Standard pawn diagonal requires capture
-
                 pseudoLegalMoves.push({ row: endRow, col: endCol });
             }
         }
     }
 
-    // Add En Passant move explicitly if valid
+    // En passant lands on an empty square, so it is not covered above
     if (piece.type === PAWN && enPassantTarget) {
         const direction = piece.color === WHITE ? -1 : 1;
         if (startRow === (enPassantTarget.row - direction)) { // Is the pawn on the correct rank?
@@ -972,6 +963,45 @@ function updateMoveHistoryDisplay() {
 }
 
 /**
+ * Has screen readers read a message out. The status line is not a live region
+ * itself, so a move and the status that follows it are read as one sentence.
+ * @param {string} message
+ */
+function announce(message) {
+    if (!announcerElement) {
+        announcerElement = document.createElement('div');
+        announcerElement.id = 'announcer';
+        announcerElement.className = 'visually-hidden';
+        announcerElement.setAttribute('role', 'status');
+        announcerElement.setAttribute('aria-live', 'polite');
+        document.body.appendChild(announcerElement);
+    }
+    announcerElement.textContent = message;
+}
+
+/**
+ * Puts a move into words, followed by the new status:
+ * "White knight takes on f3. Check. Black's turn".
+ * @param {object} move - An entry of moveHistory.
+ * @returns {string}
+ */
+function describeMove(move) {
+    const side = move.piece.color === WHITE ? 'White' : 'Black';
+    let text;
+    if (move.isCastling) {
+        text = `${side} castles ${move.to.col > move.from.col ? 'kingside' : 'queenside'}`;
+    } else {
+        const square = coordsToAlgebraic(move.to.row, move.to.col);
+        text = `${side} ${PIECE_NAMES[move.piece.type]} ${move.captured ? 'takes on' : 'to'} ${square}`;
+        if (move.isEnPassant) text += ' en passant';
+        if (move.promotion) text += `, promotes to ${PIECE_NAMES[move.promotion]}`;
+    }
+    text += '.';
+    if (move.isCheck && !move.isCheckmate) text += ' Check.';
+    return `${text} ${currentStatus}`;
+}
+
+/**
  * Updates the game status message in the DOM.
  */
 function updateStatusDisplay() {
@@ -1010,6 +1040,7 @@ function handleResetClick() {
     }
     cancelResetConfirm();
     resetGame();
+    announce(`New game. ${currentStatus}`);
 }
 
 /**

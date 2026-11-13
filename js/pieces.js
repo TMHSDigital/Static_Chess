@@ -14,6 +14,16 @@ const KING = 'k';
 const WHITE = 'w';
 const BLACK = 'b';
 
+// Names used wherever a piece is described in words (labels, announcements)
+const PIECE_NAMES = {
+    [PAWN]: 'pawn',
+    [ROOK]: 'rook',
+    [KNIGHT]: 'knight',
+    [BISHOP]: 'bishop',
+    [QUEEN]: 'queen',
+    [KING]: 'king'
+};
+
 /**
  * Represents a chess piece.
  * @param {string} type - Piece type (e.g., PAWN, ROOK).
@@ -130,6 +140,7 @@ if (typeof module !== 'undefined' && module.exports) {
         KING,
         WHITE,
         BLACK,
+        PIECE_NAMES,
         Piece,
         isPseudoLegalMove,
         getInitialPieces

@@ -102,8 +102,8 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 - **Sophisticated Colors:** Carefully selected color palette for optimal contrast and reduced eye strain
 - **Subtle Move Indicators:** Non-intrusive indicators for possible moves and last move played
 - **Animated Pieces:** Smooth animations enhance the playing experience
-- **Keyboard Navigation:** Navigate the board with arrow keys; Enter/Space to select/move
-- **Accessibility:** ARIA roles on board and polite live-region updates for status
+- **Keyboard Navigation:** The board is one Tab stop; navigate it with the arrow keys, Enter/Space to select/move
+- **Accessibility:** ARIA grid with labelled squares; every move, check and result is announced to screen readers; animations are reduced when the system asks for reduced motion
 - **Sound Effects:** Optional synthesized tones for moves, captures, check, castling, promotion, and game end (toggle in settings)
 - **Settings Panel:** Customizable display options with toggle switches
 - **Mobile-Friendly Design:** Works well on touchscreens with appropriate sizing
@@ -160,7 +160,7 @@ That's it! No build process or dependencies are required.
 8. Game ends with checkmate, stalemate or a draw (insufficient material, threefold repetition, fifty-move rule)
 9. Click "Undo" to take back the last move, or "New Game" to reset the board (a game in progress asks for a second click)
 10. Click "Copy PGN" to copy the game for an analysis board or to share it
-11. Keyboard: move between squares with the arrow keys, and press Enter or Space to select a piece or move it
+11. Keyboard: Tab to the board, move between squares with the arrow keys, and press Enter or Space to select a piece or move it
 12. Toggle settings:
    - Show coordinates
    - Show possible moves

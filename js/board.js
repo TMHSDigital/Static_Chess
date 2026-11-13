@@ -7,6 +7,7 @@ let selectedSquare = null; // { row: number, col: number } | null
 let possibleMoves = []; // Array<{ row: number, col: number }>
 let renderedState = null; // Cache of last rendered board signatures
 let boardFlipped = false; // True when the board is shown from Black's side
+let tabStopSquare = null; // The one square that is in the tab order (roving tabindex)
 
 /**
  * Creates the initial chessboard squares in the DOM.
@@ -14,7 +15,14 @@ let boardFlipped = false; // True when the board is shown from Black's side
 function createBoard() {
     boardElement.innerHTML = ''; // Clear existing board
     renderedState = null; // Reset render cache
+    tabStopSquare = null;
     for (let row = 0; row < 8; row++) {
+        // One row element per rank, as the grid role requires. CSS makes it
+        // invisible to layout, so the squares still sit in the board's grid.
+        const rowElement = document.createElement('div');
+        rowElement.classList.add('board-row');
+        rowElement.dataset.row = row;
+        rowElement.setAttribute('role', 'row');
         for (let col = 0; col < 8; col++) {
             const square = document.createElement('div');
             square.classList.add('square');
@@ -22,18 +30,42 @@ function createBoard() {
             square.dataset.row = row;
             square.dataset.col = col;
             square.setAttribute('role', 'gridcell');
-            square.setAttribute('tabindex', '0');
-            boardElement.appendChild(square);
+            square.setAttribute('tabindex', '-1');
+            rowElement.appendChild(square);
         }
+        boardElement.appendChild(rowElement);
     }
 
     if (boardFlipped) {
         setBoardFlipped(true); // Keep the chosen orientation when the board is rebuilt
     }
 
+    // The board is a single tab stop; the arrow keys move between squares
+    setTabStop(getSquareElement(7, 4));
+
     // Keyboard navigation for accessibility
     boardElement.removeEventListener('keydown', handleBoardKeydown);
     boardElement.addEventListener('keydown', handleBoardKeydown);
+    boardElement.removeEventListener('focusin', handleBoardFocus);
+    boardElement.addEventListener('focusin', handleBoardFocus);
+}
+
+/**
+ * Makes one square the board's tab stop and takes every other square out of
+ * the tab order.
+ * @param {HTMLElement|null} square
+ */
+function setTabStop(square) {
+    if (!square || square === tabStopSquare) return;
+    if (tabStopSquare) tabStopSquare.setAttribute('tabindex', '-1');
+    square.setAttribute('tabindex', '0');
+    tabStopSquare = square;
+}
+
+/** Whichever square was focused last is where Tab returns to. */
+function handleBoardFocus(event) {
+    const square = event.target.closest ? event.target.closest('.square') : null;
+    if (square) setTabStop(square);
 }
 
 /**
@@ -45,10 +77,13 @@ function createBoard() {
 function setBoardFlipped(flipped) {
     boardFlipped = !!flipped;
     boardElement.classList.toggle('flipped', boardFlipped);
-    const index = (square) => Number(square.dataset.row) * 8 + Number(square.dataset.col);
-    Array.from(boardElement.querySelectorAll('.square'))
-        .sort((a, b) => (boardFlipped ? index(b) - index(a) : index(a) - index(b)))
-        .forEach(square => boardElement.appendChild(square));
+    const inOrder = (elements, key) => elements
+        .sort((a, b) => (boardFlipped ? -1 : 1) * (Number(a.dataset[key]) - Number(b.dataset[key])));
+    inOrder(Array.from(boardElement.querySelectorAll('.board-row')), 'row').forEach(rowElement => {
+        boardElement.appendChild(rowElement);
+        inOrder(Array.from(rowElement.querySelectorAll('.square')), 'col')
+            .forEach(square => rowElement.appendChild(square));
+    });
 }
 
 /**
@@ -73,7 +108,8 @@ function renderPieces(boardState, movedPiece = null) {
 
             if (squareElement) {
                 const alg = coordsToAlgebraic(row, col);
-                const label = piece ? `${piece.color === 'w' ? 'white' : 'black'} ${piece.type} on ${alg}` : `${alg}`;
+                const label = piece ? `${piece.color === 'w' ? 'white' : 'black'} ${PIECE_NAMES[piece.type]} on ${alg}` : `${alg}`;
+                squareElement.dataset.label = label; // Plain label; updateBoardVisuals adds the state
                 squareElement.setAttribute('aria-label', label);
             }
 
@@ -177,13 +213,19 @@ function updateBoardVisuals(boardState, kingInCheckCoords = null) {
     // Clear previous visual states
     document.querySelectorAll('.square.selected, .square.possible-move, .square.in-check, .square.last-move-from, .square.last-move-to').forEach(el => {
         el.classList.remove('selected', 'possible-move', 'in-check', 'last-move-from', 'last-move-to');
+        el.removeAttribute('aria-selected');
+        if (el.dataset.label) el.setAttribute('aria-label', el.dataset.label);
     });
+    // The highlights are visual only, so say the same thing in the square's label
+    const describe = (el, state) => el.setAttribute('aria-label', `${el.getAttribute('aria-label') || ''}, ${state}`);
 
     // Highlight selected square
     if (selectedSquare) {
         const selectedElement = getSquareElement(selectedSquare.row, selectedSquare.col);
         if (selectedElement) {
             selectedElement.classList.add('selected');
+            selectedElement.setAttribute('aria-selected', 'true');
+            describe(selectedElement, 'selected');
         }
     }
 
@@ -192,6 +234,7 @@ function updateBoardVisuals(boardState, kingInCheckCoords = null) {
         const moveElement = getSquareElement(move.row, move.col);
         if (moveElement) {
             moveElement.classList.add('possible-move');
+            describe(moveElement, 'legal move');
         }
     });
 
@@ -200,6 +243,7 @@ function updateBoardVisuals(boardState, kingInCheckCoords = null) {
         const checkElement = getSquareElement(kingInCheckCoords.row, kingInCheckCoords.col);
         if (checkElement) {
             checkElement.classList.add('in-check');
+            describe(checkElement, 'in check');
         }
     }
 

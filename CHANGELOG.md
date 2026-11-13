@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - **New Game confirmation**: A game in progress needs a second click on New Game before it is discarded
 - **Promotion choice**: A pawn reaching the last rank asks for a queen, rook, bishop or knight; the dialog works with mouse, touch and keyboard, and Escape takes the move back
 - **Draw detection**: The game ends as a draw on insufficient material, threefold repetition and the fifty-move rule
+- **Accessibility**: The board is a single Tab stop; moves, checks and results are announced to screen readers; squares say when they are selected, a legal move or in check; `prefers-reduced-motion` is respected
 - Tests for the rules engine, undo, persistence, and mouse and touch input
 
 ### Fixed

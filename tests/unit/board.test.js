@@ -28,7 +28,7 @@ describe('board rendering', () => {
 
   test('squares are labelled for screen readers', () => {
     const g = loadGame();
-    expect(g.board.getSquareElement(7, 4).getAttribute('aria-label')).toBe('white k on e1');
+    expect(g.board.getSquareElement(7, 4).getAttribute('aria-label')).toBe('white king on e1');
     expect(g.board.getSquareElement(4, 4).getAttribute('aria-label')).toBe('e4');
   });
 });
