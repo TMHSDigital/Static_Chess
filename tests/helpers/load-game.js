@@ -5,7 +5,9 @@ const HTML = `<!DOCTYPE html><body><div id="chess-board"></div><ul id="move-hist
 /**
  * Loads a fresh copy of the game into a new JSDOM. Modules are reset first, so
  * every call gets its own DOM and game state.
- * @param {{ drag?: boolean }} [options] - Pass drag: true to also load and start drag.js.
+ * @param {{ drag?: boolean, storage?: Object<string, string>, brokenStorage?: boolean }} [options]
+ *   drag: also load and start drag.js. storage: values to put in localStorage before
+ *   the game starts. brokenStorage: make every localStorage call throw.
  */
 function loadGame(options = {}) {
   jest.resetModules();
@@ -13,7 +15,15 @@ function loadGame(options = {}) {
   const window = dom.window;
   global.window = window;
   global.document = window.document;
-  global.localStorage = window.localStorage;
+  for (const [key, value] of Object.entries(options.storage || {})) {
+    window.localStorage.setItem(key, value);
+  }
+  const blocked = () => {
+    throw new Error('storage is blocked');
+  };
+  global.localStorage = options.brokenStorage
+    ? { getItem: blocked, setItem: blocked, removeItem: blocked }
+    : window.localStorage;
 
   Object.assign(global, { CONFIG: require('../../js/config').CONFIG });
 

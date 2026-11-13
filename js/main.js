@@ -15,11 +15,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const body = document.body;
     const rootStyle = document.documentElement.style;
 
+    // Storage can be blocked by the browser; settings then fall back to defaults
+    const readSetting = (key) => {
+        try {
+            return localStorage.getItem(key);
+        } catch {
+            return null;
+        }
+    };
+    const writeSetting = (key, value) => {
+        try {
+            localStorage.setItem(key, value);
+        } catch {
+            // Setting still applies for this visit; it just is not remembered
+        }
+    };
+
     // Load saved settings or set defaults
-    const showCoords = localStorage.getItem('showCoords') === 'true';
-    const showPossibleMoves = localStorage.getItem('showPossibleMoves') !== 'false'; // Default true
-    const showLastMove = localStorage.getItem('showLastMove') !== 'false'; // Default true
-    const enableSounds = localStorage.getItem('enableSounds') === 'true';
+    const showCoords = readSetting('showCoords') === 'true';
+    const showPossibleMoves = readSetting('showPossibleMoves') !== 'false'; // Default true
+    const showLastMove = readSetting('showLastMove') !== 'false'; // Default true
+    const enableSounds = readSetting('enableSounds') === 'true';
 
     // Apply Coordinate setting
     if (coordsToggle) {
@@ -30,10 +46,10 @@ document.addEventListener('DOMContentLoaded', () => {
         coordsToggle.addEventListener('change', function() {
             if (this.checked) {
                 body.classList.add('coords-visible');
-                localStorage.setItem('showCoords', 'true');
+                writeSetting('showCoords', 'true');
             } else {
                 body.classList.remove('coords-visible');
-                localStorage.setItem('showCoords', 'false');
+                writeSetting('showCoords', 'false');
             }
         });
     }
@@ -46,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
         possibleMovesToggle.addEventListener('change', function() {
             const displayValue = this.checked ? 'block' : 'none';
             rootStyle.setProperty('--show-possible-moves', displayValue);
-            localStorage.setItem('showPossibleMoves', this.checked.toString());
+            writeSetting('showPossibleMoves', this.checked.toString());
         });
     }
 
@@ -58,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
         lastMoveToggle.addEventListener('change', function() {
             const displayValue = this.checked ? 'block' : 'none';
             rootStyle.setProperty('--show-last-move', displayValue);
-            localStorage.setItem('showLastMove', this.checked.toString());
+            writeSetting('showLastMove', this.checked.toString());
         });
     }
 
@@ -68,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
         CONFIG.FEATURES.SOUND_EFFECTS = enableSounds;
         soundToggle.addEventListener('change', function() {
             CONFIG.FEATURES.SOUND_EFFECTS = this.checked;
-            localStorage.setItem('enableSounds', this.checked.toString());
+            writeSetting('enableSounds', this.checked.toString());
         });
     }
 

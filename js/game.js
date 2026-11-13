@@ -88,7 +88,7 @@ function resetGame() {
     positionHistory = [];
     clearSelectedSquare();
     clearPossibleMoves();
-    localStorage.removeItem('chessGameState'); // Clear saved state
+    clearSavedGame();
     // Re-render board and pieces
     renderPieces(boardState);
     updateStatusDisplay();
@@ -171,7 +171,6 @@ function makeMove(startRow, startCol, endRow, endCol) {
     const preMoveSnapshot = {
         boardState: deepClone(boardState),
         currentPlayer,
-        moveHistory: deepClone(moveHistory),
         isGameOver,
         kingPositions: deepClone(kingPositions),
         currentStatus,
@@ -291,7 +290,7 @@ function undoLastMove() {
     const snapshot = positionHistory.pop();
     boardState = snapshot.boardState;
     currentPlayer = snapshot.currentPlayer;
-    moveHistory = snapshot.moveHistory;
+    moveHistory.pop(); // Each snapshot is taken right before exactly one move is recorded
     isGameOver = snapshot.isGameOver;
     kingPositions = snapshot.kingPositions;
     currentStatus = snapshot.currentStatus;
@@ -660,82 +659,154 @@ function canCastle(playerColor, side) {
 
 // --- Persistence --- 
 
+const SAVED_GAME_KEY = 'chessGameState';
+const SAVED_GAME_VERSION = 1;
+
 /**
  * Saves the current game state to localStorage.
  */
 function saveGameState() {
     const gameState = {
+        version: SAVED_GAME_VERSION,
         boardState: boardState,
         currentPlayer: currentPlayer,
         moveHistory: moveHistory,
         isGameOver: isGameOver,
         kingPositions: kingPositions,
         currentStatus: currentStatus,
-        enPassantTarget: enPassantTarget
-        // Note: Piece methods are not saved, need to reconstruct pieces on load if using classes
-        // Using plain objects here avoids this issue
+        enPassantTarget: enPassantTarget,
+        positionHistory: positionHistory // Undo stack, so Undo still works after a reload
     };
     try {
-        localStorage.setItem('chessGameState', JSON.stringify(gameState));
-        // console.log("Game state saved.");
+        localStorage.setItem(SAVED_GAME_KEY, JSON.stringify(gameState));
     } catch (e) {
         console.error("Error saving game state:", e);
     }
 }
 
-/**
- * Loads game state from localStorage.
- */
-function loadGameState() {
-    const savedState = localStorage.getItem('chessGameState');
-    if (savedState) {
-        try {
-            const gameState = JSON.parse(savedState);
-            // Basic validation
-            if (gameState && gameState.boardState && gameState.currentPlayer) {
-                boardState = gameState.boardState;
-                currentPlayer = gameState.currentPlayer;
-                moveHistory = gameState.moveHistory || [];
-                isGameOver = gameState.isGameOver || false;
-                kingPositions = gameState.kingPositions || { [WHITE]: { row: -1, col: -1 }, [BLACK]: { row: -1, col: -1 } }; // Recalculate if missing?
-                currentStatus = gameState.currentStatus || "Game loaded";
-                enPassantTarget = gameState.enPassantTarget || null;
-
-                // Important: Reconstruct piece objects if they had methods or used classes
-                // Since we used plain objects {type, color, hasMoved}, direct load is okay here.
-                // If Piece was a class: boardState = boardState.map(row => row.map(p => p ? new Piece(p.type, p.color, p.hasMoved) : null));
-
-                 // Find king positions if they weren't saved properly
-                if(kingPositions[WHITE].row === -1 || kingPositions[BLACK].row === -1) {
-                    recalculateKingPositions();
-                }
-
-                console.log("Game state loaded.");
-                return true;
-            }
-        } catch (e) {
-            console.error("Error loading game state:", e);
-            localStorage.removeItem('chessGameState'); // Clear corrupted state
-        }
+/** Removes the saved game. Storage may be unavailable, which must not stop the game. */
+function clearSavedGame() {
+    try {
+        localStorage.removeItem(SAVED_GAME_KEY);
+    } catch (e) {
+        console.error("Error clearing saved game:", e);
     }
-    return false;
 }
 
-/** Recalculates king positions by scanning the board */
-function recalculateKingPositions() {
-    let foundW = false;
-    let foundB = false;
-    for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-            const piece = boardState[r][c];
-            if (piece && piece.type === KING) {
-                kingPositions[piece.color] = { row: r, col: c };
-                if (piece.color === WHITE) foundW = true;
-                if (piece.color === BLACK) foundB = true;
-            }
-            if(foundW && foundB) return; // Stop early
+/** @returns {boolean} True for a {row, col} pair that is on the board. */
+function isValidCoords(coords) {
+    return !!coords && Number.isInteger(coords.row) && Number.isInteger(coords.col) &&
+        isWithinBounds(coords.row, coords.col);
+}
+
+/** @returns {boolean} True for an 8x8 board of known pieces with exactly one king per side. */
+function isValidBoard(board) {
+    if (!Array.isArray(board) || board.length !== 8) return false;
+    const types = [PAWN, ROOK, KNIGHT, BISHOP, QUEEN, KING];
+    const kings = { [WHITE]: 0, [BLACK]: 0 };
+    for (const row of board) {
+        if (!Array.isArray(row) || row.length !== 8) return false;
+        for (const cell of row) {
+            if (cell === null) continue;
+            if (typeof cell !== 'object' || !types.includes(cell.type) || !(cell.color in kings)) return false;
+            if (cell.type === KING) kings[cell.color]++;
         }
     }
+    return kings[WHITE] === 1 && kings[BLACK] === 1;
+}
+
+/** Finds both kings on a board. */
+function findKingPositions(board) {
+    const positions = {};
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const piece = board[r][c];
+            if (piece && piece.type === KING) positions[piece.color] = { row: r, col: c };
+        }
+    }
+    return positions;
+}
+
+/**
+ * Checks a parsed saved game and returns a clean state object, or null if it
+ * cannot be trusted. Nothing in the live game is touched here.
+ */
+function validateSavedGame(saved) {
+    if (!saved || typeof saved !== 'object') return null;
+    if (saved.version !== undefined && saved.version !== SAVED_GAME_VERSION) return null;
+    if (!isValidBoard(saved.boardState)) return null;
+    if (saved.currentPlayer !== WHITE && saved.currentPlayer !== BLACK) return null;
+
+    const history = saved.moveHistory === undefined ? [] : saved.moveHistory;
+    if (!Array.isArray(history)) return null;
+    for (const move of history) {
+        if (!move || !isValidCoords(move.from) || !isValidCoords(move.to) || typeof move.notation !== 'string') {
+            return null;
+        }
+    }
+
+    const target = saved.enPassantTarget === undefined ? null : saved.enPassantTarget;
+    if (target !== null && !isValidCoords(target)) return null;
+
+    // The undo stack is optional: saves from older versions do not have one.
+    // If it is missing or damaged the game still loads, with nothing to undo.
+    let undoStack = [];
+    if (Array.isArray(saved.positionHistory) && saved.positionHistory.length === history.length) {
+        const usable = saved.positionHistory.every(s => s && isValidBoard(s.boardState) &&
+            (s.currentPlayer === WHITE || s.currentPlayer === BLACK) &&
+            (s.enPassantTarget === null || isValidCoords(s.enPassantTarget)));
+        if (usable) {
+            undoStack = saved.positionHistory.map(s => ({
+                boardState: s.boardState,
+                currentPlayer: s.currentPlayer,
+                isGameOver: !!s.isGameOver,
+                kingPositions: findKingPositions(s.boardState),
+                currentStatus: typeof s.currentStatus === 'string' ? s.currentStatus : '',
+                enPassantTarget: s.enPassantTarget
+            }));
+        }
+    }
+
+    return {
+        boardState: saved.boardState,
+        currentPlayer: saved.currentPlayer,
+        moveHistory: history,
+        isGameOver: !!saved.isGameOver,
+        kingPositions: findKingPositions(saved.boardState),
+        currentStatus: typeof saved.currentStatus === 'string' ? saved.currentStatus : "Game loaded",
+        enPassantTarget: target,
+        positionHistory: undoStack
+    };
+}
+
+/**
+ * Loads game state from localStorage. The live game is only changed once the
+ * saved value has passed validation; anything else is discarded.
+ * @returns {boolean} True if a saved game was loaded.
+ */
+function loadGameState() {
+    let state = null;
+    try {
+        const savedState = localStorage.getItem(SAVED_GAME_KEY);
+        if (!savedState) return false;
+        state = validateSavedGame(JSON.parse(savedState));
+    } catch (e) {
+        console.error("Error loading game state:", e);
+    }
+    if (!state) {
+        clearSavedGame(); // Unusable saved state: start fresh next time too
+        return false;
+    }
+
+    boardState = state.boardState;
+    currentPlayer = state.currentPlayer;
+    moveHistory = state.moveHistory;
+    isGameOver = state.isGameOver;
+    kingPositions = state.kingPositions;
+    currentStatus = state.currentStatus;
+    enPassantTarget = state.enPassantTarget;
+    positionHistory = state.positionHistory;
+    return true;
 }
 
 // --- UI Updates --- 
@@ -797,6 +868,10 @@ function updateMoveHistoryDisplay() {
  */
 function updateStatusDisplay() {
     gameStatusElement.textContent = currentStatus;
+    // Undo is only available while there is a move to take back
+    if (undoButton) {
+        undoButton.disabled = positionHistory.length === 0;
+    }
 }
 
 /**
