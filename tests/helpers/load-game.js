@@ -50,8 +50,11 @@ function loadGame(options = {}) {
     Object.defineProperty(global, name, { get: () => board[name], configurable: true });
   }
 
+  const promotion = require('../../js/promotion');
+  Object.assign(global, promotion);
+
   const game = require('../../js/game');
-  for (const name of ['moveHistory', 'boardState', 'currentPlayer', 'isGameOver', 'kingPositions', 'currentStatus', 'enPassantTarget', 'positionHistory']) {
+  for (const name of ['moveHistory', 'boardState', 'currentPlayer', 'isGameOver', 'kingPositions', 'currentStatus', 'enPassantTarget', 'positionHistory', 'halfmoveClock']) {
     Object.defineProperty(global, name, { get: () => game[name], configurable: true });
   }
   Object.defineProperty(window, 'moveHistory', { get: () => game.moveHistory, configurable: true });
@@ -116,10 +119,11 @@ function loadGame(options = {}) {
     player: game.currentPlayer,
     kings: game.kingPositions,
     enPassant: game.enPassantTarget,
+    clock: game.halfmoveClock,
     notations: game.moveHistory.map((m) => m.notation),
   }));
 
-  return { window, game, board, drag, utils, pieces, play, setPosition, at, movesFrom, snapshot };
+  return { window, game, board, drag, utils, pieces, promotion, play, setPosition, at, movesFrom, snapshot };
 }
 
 module.exports = { loadGame };

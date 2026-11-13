@@ -69,10 +69,11 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 <br>
 
 - **Standard Chess Rules:** Implements all standard piece movements (Pawn, Rook, Knight, Bishop, Queen, King)
-- **Special Moves:** Supports castling (kingside and queenside), en passant, and pawn promotion (always to a queen for now)
+- **Special Moves:** Supports castling (kingside and queenside), en passant, and pawn promotion with a choice of queen, rook, bishop or knight
 - **Move Validation:** Prevents illegal moves based on piece movement, obstacles, and check rules
 - **Check/Checkmate Detection:** Identifies check situations and declares checkmate when appropriate
 - **Stalemate Detection:** Detects stalemate conditions (no legal moves, but not in check)
+- **Draw Detection:** Ends the game on insufficient material, threefold repetition and the fifty-move rule
 - **Local Multiplayer:** Two players can play against each other on the same device
 - **Visual Feedback:**
   - Highlights the selected piece
@@ -156,7 +157,7 @@ That's it! No build process or dependencies are required.
 5. The board updates, move is added to the Move History, and turn switches
 6. If a move results in check, the opponent's king will be highlighted in red
 7. A pawn that reaches the last rank becomes a queen
-8. Game ends with checkmate or stalemate
+8. Game ends with checkmate, stalemate or a draw (insufficient material, threefold repetition, fifty-move rule)
 9. Click "Undo" to take back the last move, or "New Game" to reset the board (a game in progress asks for a second click)
 10. Click "Copy PGN" to copy the game for an analysis board or to share it
 11. Keyboard: move between squares with the arrow keys, and press Enter or Space to select a piece or move it
@@ -192,7 +193,7 @@ Static_Chess/
 │   ├── main.js          # Application entry point
 │   ├── drag.js          # Drag and drop functionality (integrated with click flow)
 │   ├── ai.js            # AI opponent (skeleton)
-│   └── promotion.js     # Pawn promotion UI (skeleton)
+│   └── promotion.js     # Pawn promotion chooser
 ├── assets/              # Static assets
 │   ├── screenshots/     # UI screenshots for documentation
 │   │   ├── ui-with-settings.png
@@ -240,7 +241,8 @@ The project follows a clear separation of concerns:
   - `game.js`: Core chess logic including special moves, undo, SAN, check detection
   - `main.js`: Bootstraps the application
   - `drag.js`: Drag and drop integrated via existing click handlers
-  - `ai.js`, `promotion.js`: Skeletons for upcoming features
+  - `promotion.js`: Dialog for choosing the promotion piece
+  - `ai.js`: Skeleton for the planned AI opponent
 - **SVG assets:** Vector graphics for all chess pieces, ensuring consistent rendering across browsers
 - **Tests:** Jest unit and integration tests with jsdom for browser simulation
 - **Documentation:** Architecture guides, development roadmap, and release process
@@ -294,11 +296,9 @@ See the [Development Roadmap](docs/ROADMAP.md) for a detailed plan of upcoming f
 <br>
 
 - **AI Opponent:** Implement basic chess AI using minimax algorithm
-- **Promotion Choice:** UI for selecting which piece to promote a pawn to
 - **Game Timer:** Optional chess clock functionality
 - **Sound Effects:** Recorded sounds as an alternative to the built-in synthesized tones
 - **Multiple Saved Games:** Save and load multiple games
-- **Advanced Draw Detection:** Implement threefold repetition and fifty-move rule
 - **Full SAN Implementation:** Complete algebraic notation with full disambiguation
 
 </details>

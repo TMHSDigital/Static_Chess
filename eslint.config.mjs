@@ -110,6 +110,9 @@ export default [
         updateBoardVisuals: 'readonly',
         createBoard: 'readonly',
         boardElement: 'readonly',
+        showPromotionChooser: 'readonly',
+        closePromotionChooser: 'readonly',
+        isPromotionChooserOpen: 'readonly',
         selectedSquare: 'writable',
         possibleMoves: 'writable'
       }
@@ -124,7 +127,6 @@ export default [
         debugLog: 'readonly',
         initializeGame: 'readonly',
         initDragAndDrop: 'readonly',
-        initPromotionUI: 'readonly',
         setBoardFlipped: 'readonly',
         ChessAI: 'readonly'
       }
@@ -138,16 +140,6 @@ export default [
         CONFIG: 'readonly',
         debugLog: 'readonly',
         handleBoardClick: 'readonly'
-      }
-    }
-  },
-  // promotion.js - uses CONFIG, debugLog
-  {
-    files: ['js/promotion.js'],
-    languageOptions: {
-      globals: {
-        CONFIG: 'readonly',
-        debugLog: 'readonly'
       }
     }
   },

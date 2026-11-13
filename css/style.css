@@ -338,4 +338,58 @@ body.coords-visible {
     text-align: center;
     margin: 0 0 15px 0;
     letter-spacing: 1px;
-} 
+}
+
+/* Pawn promotion chooser */
+.promotion-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.promotion-backdrop[hidden] {
+    display: none;
+}
+
+.promotion-panel {
+    background-color: var(--panel-bg);
+    padding: 20px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    text-align: center;
+}
+
+.promotion-panel h3 {
+    color: var(--text-color);
+    margin: 0 0 15px;
+}
+
+.promotion-choices {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+.promotion-choice {
+    width: 64px;
+    height: 64px;
+    padding: 0;
+    background-color: var(--light-square);
+    background-size: 85%;
+    background-repeat: no-repeat;
+    background-position: center;
+    border: 3px solid transparent;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+}
+
+.promotion-choice:hover,
+.promotion-choice:focus-visible {
+    border-color: var(--accent-color);
+    outline: 2px solid var(--text-color);
+    outline-offset: 2px;
+}

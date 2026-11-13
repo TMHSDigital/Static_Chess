@@ -11,6 +11,8 @@ All notable changes to this project will be documented in this file.
 - **Copy PGN**: Copies the game to the clipboard in PGN format (downloads a file where the clipboard is unavailable)
 - **Flip board**: A setting that shows the board from Black's side; arrow-key navigation follows the screen
 - **New Game confirmation**: A game in progress needs a second click on New Game before it is discarded
+- **Promotion choice**: A pawn reaching the last rank asks for a queen, rook, bishop or knight; the dialog works with mouse, touch and keyboard, and Escape takes the move back
+- **Draw detection**: The game ends as a draw on insufficient material, threefold repetition and the fifty-move rule
 - Tests for the rules engine, undo, persistence, and mouse and touch input
 
 ### Fixed

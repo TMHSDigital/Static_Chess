@@ -33,7 +33,7 @@ Features are prioritized as follows:
 | Feature | Complexity | Dependencies | Description | Status |
 |---------|------------|--------------|-------------|--------|
 | **Drag and Drop** | Medium | None | Allow moving pieces by dragging instead of just clicking | ✅ Completed |
-| **Promotion UI** | Medium | None | Display a UI for selecting which piece to promote a pawn to | Skeleton implementation ready |
+| **Promotion UI** | Medium | None | Display a UI for selecting which piece to promote a pawn to | ✅ Completed |
 | **Undo Move** | Medium | None | Add ability to take back the last move | ✅ Completed |
 | **Full SAN** | Medium | None | Algebraic notation with disambiguation | ✅ Completed |
 
@@ -42,7 +42,7 @@ Features are prioritized as follows:
 | Feature | Complexity | Dependencies | Description | Status |
 |---------|------------|--------------|-------------|--------|
 | **Sound Effects** | Low | None | Add audio feedback for moves and events | Done (synthesized tones) |
-| **Advanced Draw Detection** | Medium | None | Implement threefold repetition and fifty-move rule | Planned |
+| **Advanced Draw Detection** | Medium | None | Insufficient material, threefold repetition and fifty-move rule | ✅ Completed |
 | **Game Timer** | Medium | None | Optional chess clock functionality | Planned |
 | **Theme Customization** | Medium | None | Allow customization of board colors and styles | Planned |
 
@@ -63,14 +63,14 @@ This is a rough guideline for feature implementation:
 
 - [x] **SVG Piece Images**
 - [x] **Drag and Drop** *(fully implemented)*
-- [ ] **Promotion UI** *(skeleton implementation available)*
+- [x] **Promotion UI**
 - [x] **Undo Move**
 
 ### Phase 2: Usability Enhancements (2-3 months)
 
 - [x] **Sound Effects** *(synthesized tones; no audio assets needed)*
 - [x] **SAN Disambiguation (basic)**
-- [ ] **Advanced Draw Detection**
+- [x] **Advanced Draw Detection**
 - [ ] **Game Timer**
 
 ### Phase 3: Advanced Features (3-6 months)
@@ -103,10 +103,10 @@ The following files provide a foundation for implementing the planned features:
 - **js/config.js**: Contains feature flags for enabling/disabling features
 - **js/utils.js**: Enhanced with helper functions for future features
 - **js/drag.js**: Drag and drop (complete and enabled)
-- **js/promotion.js**: Skeleton implementation for pawn promotion UI (not loaded by `index.html` yet)
+- **js/promotion.js**: Pawn promotion chooser (complete and enabled)
 - **js/ai.js**: Skeleton implementation for AI opponent (not loaded by `index.html` yet)
 
-Enabling a flag in `config.js` is not enough on its own. For the promotion UI and the AI opponent, first add the script to `index.html`, then enable the flag, then wire the feature into `game.js` following `docs/ARCHITECTURE.md`. The `GAME_TIMER` and `ADVANCED_DRAW_DETECTION` flags have no code behind them yet.
+Enabling a flag in `config.js` is not enough on its own. For the AI opponent, first add the script to `index.html`, then enable the flag, then wire the feature into `game.js` following `docs/ARCHITECTURE.md`. The game timer has no flag or code yet.
 
 ## Contribution Guidelines
 

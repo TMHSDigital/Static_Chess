@@ -113,8 +113,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /**
  * Initialize optional feature modules based on feature flags.
- * Drag and drop is the only one that ships today. The promotion UI and the AI
- * opponent start here too once their scripts are added to index.html.
+ * Drag and drop is the only one that needs starting today (the promotion chooser
+ * is opened by game.js on demand). The AI opponent starts here too once its
+ * script is added to index.html.
  */
 function initializeFeatureModules() {
     debugLog('Initializing optional feature modules...');
@@ -124,13 +125,7 @@ function initializeFeatureModules() {
         debugLog('Initializing drag and drop feature');
         window.initDragAndDrop();
     }
-    
-    // Initialize promotion UI if enabled
-    if (CONFIG.FEATURES.PROMOTION_UI && typeof window.initPromotionUI === 'function') {
-        debugLog('Initializing pawn promotion UI');
-        window.initPromotionUI();
-    }
-    
+
     // Initialize AI opponent if enabled
     if (CONFIG.FEATURES.AI_OPPONENT && typeof window.ChessAI === 'function') {
         debugLog('Initializing AI opponent');

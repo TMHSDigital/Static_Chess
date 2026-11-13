@@ -22,7 +22,7 @@ Static_Chess/
 │   ├── main.js          # Application entry point
 │   ├── drag.js          # Drag and drop functionality (integrated via click flow)
 │   ├── ai.js            # Skeleton for AI opponent (not loaded by index.html)
-│   └── promotion.js     # Skeleton for pawn promotion UI (not loaded by index.html)
+│   └── promotion.js     # Pawn promotion chooser
 ├── tests/               # Jest tests (dev only)
 │   ├── helpers/         # Shared loader that builds a fresh page and game per test
 │   ├── unit/            # Rules, undo, persistence, input, utilities
@@ -86,11 +86,11 @@ Static_Chess/
 | `UNDO_MOVE` | `true` | Shows and enables the Undo button |
 | `SOUND_EFFECTS` | `false` | Runtime state. It is overwritten at startup from the "Sound effects" toggle, so editing it in `config.js` has no lasting effect; change `DEFAULT_SETTINGS.ENABLE_SOUNDS` instead |
 | `AI_OPPONENT` | `false` | Nothing until `ai.js` is loaded and wired in (see below) |
-| `PROMOTION_UI` | `false` | Nothing until `promotion.js` is loaded and wired in (see below) |
+| `PROMOTION_UI` | `true` | Asks which piece a pawn promotes to. When `false`, pawns become queens without asking |
 
 ### Stored data
 
-Everything is kept in `localStorage` under the keys in `CONFIG.STORAGE_KEYS`: `chessGameState` (the game, its move list and undo stack, with a `version` field) and one key per setting (`showCoords`, `showPossibleMoves`, `showLastMove`, `enableSounds`). A saved game is validated before it is used; anything unusable is discarded and a fresh game starts.
+Everything is kept in `localStorage` under the keys in `CONFIG.STORAGE_KEYS`: `chessGameState` (the game, its move list, undo stack and fifty-move counter, with a `version` field) and one key per setting (`showCoords`, `showPossibleMoves`, `showLastMove`, `enableSounds`). A saved game is validated before it is used; anything unusable is discarded and a fresh game starts.
 
 ## Data Flow
 
@@ -107,7 +107,8 @@ The game state is primarily managed in `game.js` and consists of:
 - Current board state (2D array of pieces)
 - Current turn (white or black)
 - Move history
-- Game status (in progress, check, checkmate, stalemate)
+- Game status (in progress, check, checkmate, stalemate, draw)
+- Half-move clock for the fifty-move rule
 - Selected piece and possible moves
 
 ## Skeleton Implementations
@@ -115,10 +116,10 @@ The game state is primarily managed in `game.js` and consists of:
 Several planned features already have skeleton implementations that provide a foundation for full implementation:
 
 - **drag.js**: ✅ Fully implemented - drag and drop functionality integrated with click-based flow
+- **promotion.js**: ✅ Fully implemented - dialog for choosing the promotion piece
 - **ai.js**: Framework for implementing the AI opponent
-- **promotion.js**: UI components for pawn promotion
 
-The drag and drop feature is complete and enabled. `ai.js` and `promotion.js` are not loaded by `index.html` and nothing in `game.js` calls them yet; the sections below describe what is there and what is missing.
+Drag and drop and the promotion chooser are complete and enabled. `ai.js` is not loaded by `index.html` and nothing in `game.js` calls it yet; the section below describes what is there and what is missing.
 
 ## Implementing Future Features
 
@@ -179,32 +180,13 @@ The skeleton already includes:
 
 ### 3. Promotion Choice UI
 
-> **Skeleton Implementation Available: `js/promotion.js`**
+> **✅ Fully Implemented: `js/promotion.js`**
 
-To implement the promotion choice UI:
-
-1. Update `config.js` to enable the PROMOTION_UI feature flag
-2. Add the `promotion.js` script to `index.html`:
-   ```html
-   <script src="js/promotion.js"></script>
-   ```
-3. Call `initPromotionUI()` in `main.js` after initializing the game
-4. Change the promotion step in `makeMove()` in `game.js`. Today it is synchronous and always creates a queen, so it cannot simply wait for a dialog. The move has to be split: when a pawn reaches the last rank, hold the move, show the dialog, and finish the move (notation, check detection, saving) once a piece is chosen:
-   ```javascript
-   // When a pawn reaches the last rank
-   if (pieceToMove.type === PAWN && (endRow === 0 || endRow === 7)) {
-     showPromotionModal(pieceToMove.color, endRow, endCol)
-       .then(promotionPiece => {
-         // Complete the move with the chosen piece
-       });
-   }
-   ```
-   Block board input while the dialog is open.
-
-The skeleton already includes:
-- Modal dialog creation and styling
-- Piece selection UI
-- Promise-based API for waiting for user selection
+1. `makeMove()` takes an optional fifth argument, the piece type to promote to. It defaults to a queen, so tests and a future AI can call it directly
+2. When a click or drop would move a pawn to the last rank, `handleBoardClick()` does not play the move. It calls `showPromotionChooser(color, onChoose)` and plays the move from the callback, once a piece has been picked
+3. While the chooser is open the board ignores input. Escape or a click outside the panel cancels, leaving the pawn where it was; Undo and New Game also close it
+4. The choices are `<button>` elements with labels. The first one takes focus, and Tab and the arrow keys cycle through them
+5. With `PROMOTION_UI` set to `false` the chooser is skipped and the pawn becomes a queen
 
 ### 4. Game Timer
 
@@ -228,7 +210,7 @@ Sound effects are feature-flagged and user-toggleable:
 
 Undo is implemented using a pre-move snapshot stack:
 
-1. At the start of `makeMove()`, before anything changes, `game.js` pushes a snapshot of the board, side to move, king positions and en passant target to `positionHistory`
+1. At the start of `makeMove()`, before anything changes, `game.js` pushes a snapshot of the board, side to move, king positions, en passant target and half-move clock to `positionHistory`
 2. `undoLastMove()` restores the previous snapshot, removes the last move from the move list and rerenders
 3. The stack is saved with the game, so Undo still works after a reload
 4. `index.html` includes an Undo button, which is disabled when there is nothing to undo
@@ -242,16 +224,15 @@ To implement multiple saved games:
 3. Implement `saveCurrentGame(name)` and `loadGame(name)` functions
 4. Update `config.js` to define the saved games storage structure
 
-### 8. Advanced Draw Detection
+### 8. Draw Detection
 
-To implement advanced draw detection:
+After every move that is not checkmate or stalemate, `findDrawReason()` in `game.js` checks three rules and ends the game if one applies:
 
-1. Enhance `game.js` to track:
-   - Threefold repetition (same position 3 times)
-   - Fifty-move rule (50 moves without captures or pawn moves)
-   - Insufficient material (e.g., K vs K, K+B vs K)
-2. Add draw detection to the move validation logic
-3. Update UI to show draw conditions
+1. **Insufficient material**: bare kings, a single bishop or knight, or only bishops that all stand on squares of one colour
+2. **Threefold repetition**: `positionKey()` turns a position into a string (placement, side to move, castling rights, and the en passant square if a pawn can capture there). The current key is compared with the snapshots on the undo stack back to the last pawn move or capture
+3. **Fifty-move rule**: `halfmoveClock` counts half-moves since the last pawn move or capture; the game is drawn at 100
+
+Draws are declared automatically; there is no claim button. The clock is part of the undo snapshot and the saved game, and repetition is counted from the undo stack, so both survive Undo and a reload.
 
 ### 9. SAN Generation
 

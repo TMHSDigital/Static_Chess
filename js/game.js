@@ -13,6 +13,7 @@ let kingPositions = { // Keep track of king positions for check detection
 let currentStatus = "White's turn";
 let enPassantTarget = null; // Stores coords {row, col} of square vulnerable to en passant, or null
 let positionHistory = []; // Undo stack: one pre-move snapshot per move played
+let halfmoveClock = 0; // Half-moves since the last pawn move or capture (fifty-move rule)
 
 const moveHistoryElement = document.getElementById('move-history');
 const gameStatusElement = document.getElementById('game-status');
@@ -99,6 +100,8 @@ function resetGame() {
     currentStatus = "White's turn";
     enPassantTarget = null;
     positionHistory = [];
+    halfmoveClock = 0;
+    cancelPendingPromotion();
     clearSelectedSquare();
     clearPossibleMoves();
     clearSavedGame();
@@ -116,6 +119,7 @@ function resetGame() {
  */
 function handleBoardClick(row, col) {
     if (isGameOver) return; // Don't allow moves if game is over
+    if (isPromotionPending()) return; // The promotion chooser has to be answered first
 
     const clickedPiece = boardState[row][col];
 
@@ -130,7 +134,16 @@ function handleBoardClick(row, col) {
         const isPossible = possibleMoves.some(pm => pm.row === row && pm.col === col);
 
         if (isPossible) {
-            makeMove(move.from.row, move.from.col, move.to.row, move.to.col);
+            const mover = boardState[move.from.row][move.from.col];
+            const promotes = mover && mover.type === PAWN && (row === 0 || row === 7);
+            if (promotes && CONFIG.FEATURES.PROMOTION_UI && typeof showPromotionChooser === 'function') {
+                // Hold the move until the player has picked a piece
+                showPromotionChooser(mover.color, (type) => {
+                    makeMove(move.from.row, move.from.col, move.to.row, move.to.col, type);
+                });
+            } else {
+                makeMove(move.from.row, move.from.col, move.to.row, move.to.col);
+            }
         } else if (clickedPiece && clickedPiece.color === currentPlayer &&
                    (selectedSquare.row !== row || selectedSquare.col !== col)) {
             // Clicked another of the player's own pieces: switch the selection to it
@@ -159,8 +172,9 @@ function handleBoardClick(row, col) {
  * @param {number} startCol
  * @param {number} endRow
  * @param {number} endCol
+ * @param {string} [promotionType] - Piece a pawn reaching the last rank becomes; queen by default.
  */
-function makeMove(startRow, startCol, endRow, endCol) {
+function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
     const pieceToMove = boardState[startRow][startCol];
     if (!pieceToMove) return; // Should not happen if logic is correct
 
@@ -187,7 +201,8 @@ function makeMove(startRow, startCol, endRow, endCol) {
         isGameOver,
         kingPositions: deepClone(kingPositions),
         currentStatus,
-        enPassantTarget: enPassantTarget ? { ...enPassantTarget } : null
+        enPassantTarget: enPassantTarget ? { ...enPassantTarget } : null,
+        halfmoveClock
     };
     positionHistory.push(preMoveSnapshot);
 
@@ -238,14 +253,17 @@ function makeMove(startRow, startCol, endRow, endCol) {
         kingPositions[pieceToMove.color] = { row: endRow, col: endCol };
     }
 
-    // Pawn Promotion (simple auto-queen for now)
+    // Pawn Promotion
     if (pieceToMove.type === PAWN && (endRow === 0 || endRow === 7)) {
-        const promotedPieceType = QUEEN; // TODO: Implement choice?
+        const promotedPieceType = [QUEEN, ROOK, BISHOP, KNIGHT].includes(promotionType) ? promotionType : QUEEN;
         boardState[endRow][endCol] = new Piece(promotedPieceType, pieceToMove.color);
         boardState[endRow][endCol].hasMoved = true; // Promoted piece counts as moved
         move.promotion = promotedPieceType;
-        debugLog("Pawn promoted to Queen.");
+        debugLog("Pawn promoted to", promotedPieceType);
     }
+
+    // Fifty-move rule counter
+    halfmoveClock = (pieceToMove.type === PAWN || move.captured) ? 0 : halfmoveClock + 1;
 
     // --- Post-Move Updates --- 
     switchPlayer();
@@ -268,6 +286,15 @@ function makeMove(startRow, startCol, endRow, endCol) {
         isGameOver = true;
         currentStatus = "Stalemate! Game is a draw.";
         debugLog("Stalemate!");
+    }
+    if (!isGameOver) {
+        const drawReason = findDrawReason();
+        if (drawReason) {
+            move.isDraw = true;
+            isGameOver = true;
+            currentStatus = `Draw by ${drawReason}.`;
+            debugLog(currentStatus);
+        }
     }
 
     // --- Update UI --- 
@@ -302,6 +329,7 @@ function makeMove(startRow, startCol, endRow, endCol) {
  */
 function undoLastMove() {
     if (positionHistory.length === 0 || isGameOver && moveHistory.length === 0) return;
+    cancelPendingPromotion();
     const snapshot = positionHistory.pop();
     boardState = snapshot.boardState;
     currentPlayer = snapshot.currentPlayer;
@@ -310,6 +338,7 @@ function undoLastMove() {
     kingPositions = snapshot.kingPositions;
     currentStatus = snapshot.currentStatus;
     enPassantTarget = snapshot.enPassantTarget;
+    halfmoveClock = snapshot.halfmoveClock || 0;
 
     clearSelectedSquare();
     clearPossibleMoves();
@@ -318,6 +347,94 @@ function undoLastMove() {
     updateMoveHistoryDisplay();
     updateBoardVisuals(boardState, findKingInCheck(currentPlayer));
     saveGameState();
+}
+
+/** @returns {boolean} True while the promotion chooser is waiting for an answer. */
+function isPromotionPending() {
+    return typeof isPromotionChooserOpen === 'function' && isPromotionChooserOpen();
+}
+
+/** Closes the promotion chooser without playing the held move. */
+function cancelPendingPromotion() {
+    if (isPromotionPending()) closePromotionChooser(null);
+}
+
+// --- Draw detection ---
+
+/**
+ * A key that is equal for two positions exactly when they count as the same
+ * position for the repetition rule: same placement, side to move, castling
+ * rights and en passant possibility.
+ */
+function positionKey(board, player, epTarget) {
+    let key = player;
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const piece = board[r][c];
+            key += piece ? piece.color + piece.type : '-';
+        }
+    }
+    for (const color of [WHITE, BLACK]) {
+        const row = color === WHITE ? 7 : 0;
+        const king = board[row][4];
+        const kingReady = !!king && king.type === KING && king.color === color && !king.hasMoved;
+        for (const col of [7, 0]) {
+            const rook = board[row][col];
+            key += kingReady && rook && rook.type === ROOK && rook.color === color && !rook.hasMoved ? '1' : '0';
+        }
+    }
+    // The en passant square only matters if a pawn is placed to capture on it
+    if (epTarget) {
+        const pawnRow = epTarget.row + (player === WHITE ? 1 : -1);
+        const canCapture = [epTarget.col - 1, epTarget.col + 1].some((col) => {
+            const piece = isWithinBounds(pawnRow, col) ? board[pawnRow][col] : null;
+            return !!piece && piece.type === PAWN && piece.color === player;
+        });
+        if (canCapture) key += coordsToAlgebraic(epTarget.row, epTarget.col);
+    }
+    return key;
+}
+
+/** @returns {boolean} True if the current position has now occurred three times. */
+function isThreefoldRepetition() {
+    const current = positionKey(boardState, currentPlayer, enPassantTarget);
+    let occurrences = 1;
+    // A pawn move or capture makes every earlier position unreachable, so only
+    // the positions since the last one can repeat.
+    const oldest = Math.max(0, positionHistory.length - halfmoveClock);
+    for (let i = positionHistory.length - 1; i >= oldest; i--) {
+        const past = positionHistory[i];
+        if (positionKey(past.boardState, past.currentPlayer, past.enPassantTarget) === current) {
+            occurrences++;
+            if (occurrences >= 3) return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * @returns {boolean} True if neither side can possibly give checkmate: bare
+ * kings, a single bishop or knight, or only bishops that all stand on one colour.
+ */
+function hasInsufficientMaterial(board = boardState) {
+    const others = [];
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const piece = board[r][c];
+            if (piece && piece.type !== KING) others.push({ type: piece.type, shade: (r + c) % 2 });
+        }
+    }
+    if (others.length === 0) return true;
+    if (others.length === 1) return others[0].type === BISHOP || others[0].type === KNIGHT;
+    return others.every(p => p.type === BISHOP && p.shade === others[0].shade);
+}
+
+/** @returns {string|null} Why the current position is drawn, or null if it is not. */
+function findDrawReason() {
+    if (hasInsufficientMaterial()) return 'insufficient material';
+    if (isThreefoldRepetition()) return 'threefold repetition';
+    if (halfmoveClock >= 100) return 'the fifty-move rule';
+    return null;
 }
 
 /**
@@ -657,6 +774,7 @@ function saveGameState() {
         kingPositions: kingPositions,
         currentStatus: currentStatus,
         enPassantTarget: enPassantTarget,
+        halfmoveClock: halfmoveClock,
         positionHistory: positionHistory // Undo stack, so Undo still works after a reload
     };
     try {
@@ -695,6 +813,11 @@ function isValidBoard(board) {
         }
     }
     return kings[WHITE] === 1 && kings[BLACK] === 1;
+}
+
+/** @returns {number} A saved half-move counter, or 0 if it is missing or not a count. */
+function cleanClock(value) {
+    return Number.isInteger(value) && value >= 0 ? value : 0;
 }
 
 /** Finds both kings on a board. */
@@ -744,7 +867,8 @@ function validateSavedGame(saved) {
                 isGameOver: !!s.isGameOver,
                 kingPositions: findKingPositions(s.boardState),
                 currentStatus: typeof s.currentStatus === 'string' ? s.currentStatus : '',
-                enPassantTarget: s.enPassantTarget
+                enPassantTarget: s.enPassantTarget,
+                halfmoveClock: cleanClock(s.halfmoveClock)
             }));
         }
     }
@@ -757,6 +881,7 @@ function validateSavedGame(saved) {
         kingPositions: findKingPositions(saved.boardState),
         currentStatus: typeof saved.currentStatus === 'string' ? saved.currentStatus : "Game loaded",
         enPassantTarget: target,
+        halfmoveClock: cleanClock(saved.halfmoveClock),
         positionHistory: undoStack
     };
 }
@@ -787,6 +912,7 @@ function loadGameState() {
     kingPositions = state.kingPositions;
     currentStatus = state.currentStatus;
     enPassantTarget = state.enPassantTarget;
+    halfmoveClock = state.halfmoveClock;
     positionHistory = state.positionHistory;
     return true;
 }
@@ -1044,6 +1170,7 @@ if (typeof module !== 'undefined' && module.exports) {
         generateNotationWithDisambiguation,
         handleResetClick,
         buildPGN,
+        hasInsufficientMaterial,
         // Export state variables for test access
         get boardState() { return boardState; },
         get currentPlayer() { return currentPlayer; },
@@ -1052,6 +1179,7 @@ if (typeof module !== 'undefined' && module.exports) {
         get kingPositions() { return kingPositions; },
         get currentStatus() { return currentStatus; },
         get enPassantTarget() { return enPassantTarget; },
-        get positionHistory() { return positionHistory; }
+        get positionHistory() { return positionHistory; },
+        get halfmoveClock() { return halfmoveClock; }
     };
 } 

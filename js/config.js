@@ -12,7 +12,7 @@ const CONFIG = {
         // The next two only take effect once their script is added to index.html
         // and wired into game.js; see docs/ARCHITECTURE.md.
         AI_OPPONENT: false,    // ai.js (skeleton)
-        PROMOTION_UI: false,   // promotion.js (skeleton)
+        PROMOTION_UI: true,    // Ask which piece a pawn promotes to (off: always a queen)
     },
 
     // Defaults for the settings panel, used until the player changes a toggle

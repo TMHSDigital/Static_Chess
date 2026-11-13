@@ -1,214 +1,125 @@
 /**
- * @fileoverview Pawn promotion UI for Static Chess
- * Displays a modal dialog allowing players to choose a piece for pawn promotion.
+ * @fileoverview Pawn promotion chooser: a small dialog with one button per
+ * piece. game.js opens it when a pawn is about to reach the last rank and
+ * finishes the move once a piece has been picked.
  */
 
-let promotionCallback = null;
-let promotionState = {
-    isActive: false,
-    color: null,
-    position: { row: 0, col: 0 }
-};
+const PROMOTION_CHOICES = [
+    { type: 'q', label: 'Queen' },
+    { type: 'r', label: 'Rook' },
+    { type: 'b', label: 'Bishop' },
+    { type: 'n', label: 'Knight' }
+];
 
-/**
- * Initialize the promotion UI.
- * Creates the modal dialog if it doesn't exist yet.
- */
-function initPromotionUI() {
-    if (!CONFIG.FEATURES.PROMOTION_UI) return;
-    
-    debugLog('Initializing promotion UI');
-    
-    // Create modal if it doesn't exist
-    if (!document.getElementById('promotion-modal')) {
-        createPromotionModal();
-    }
-}
+let promotionRequest = null; // { onChoose, onCancel, returnFocus } while the dialog is open
 
-/**
- * Create the modal dialog for piece selection.
- * @private
- */
-function createPromotionModal() {
-    // Create the modal container
-    const modal = document.createElement('div');
-    modal.id = 'promotion-modal';
-    modal.className = 'promotion-modal';
-    modal.style.display = 'none';
-    
-    // Create the modal content
-    const modalContent = document.createElement('div');
-    modalContent.className = 'promotion-modal-content';
-    
-    // Add title
+/** Builds the dialog once and returns it. */
+function getPromotionDialog() {
+    let dialog = document.getElementById('promotion-dialog');
+    if (dialog) return dialog;
+
+    dialog = document.createElement('div');
+    dialog.id = 'promotion-dialog';
+    dialog.className = 'promotion-backdrop';
+    dialog.hidden = true;
+
+    const panel = document.createElement('div');
+    panel.className = 'promotion-panel';
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-modal', 'true');
+    panel.setAttribute('aria-labelledby', 'promotion-title');
+
     const title = document.createElement('h3');
-    title.textContent = 'Promote Pawn';
-    modalContent.appendChild(title);
-    
-    // Add piece selection container
-    const pieceContainer = document.createElement('div');
-    pieceContainer.className = 'promotion-pieces';
-    
-    // The pieces to choose from
-    const pieces = ['q', 'r', 'b', 'n'];
-    
-    // Create piece selection buttons
-    pieces.forEach(piece => {
-        const pieceButton = document.createElement('div');
-        pieceButton.className = 'promotion-piece';
-        pieceButton.dataset.piece = piece;
-        
-        // We'll set the background image dynamically based on the color
-        pieceButton.addEventListener('click', () => {
-            selectPromotionPiece(piece);
-        });
-        
-        pieceContainer.appendChild(pieceButton);
-    });
-    
-    modalContent.appendChild(pieceContainer);
-    modal.appendChild(modalContent);
-    
-    // Add to the document
-    document.body.appendChild(modal);
-    
-    // Add CSS if not already added
-    addPromotionStyles();
-}
+    title.id = 'promotion-title';
+    title.textContent = 'Promote pawn to';
+    panel.appendChild(title);
 
-/**
- * Add the necessary CSS styles for the promotion modal.
- * @private
- */
-function addPromotionStyles() {
-    // Check if styles already exist
-    if (document.getElementById('promotion-styles')) return;
-    
-    const style = document.createElement('style');
-    style.id = 'promotion-styles';
-    
-    style.textContent = `
-        .promotion-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        
-        .promotion-modal-content {
-            background-color: var(--panel-bg);
-            padding: 20px;
-            border-radius: var(--border-radius);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-            text-align: center;
-        }
-        
-        .promotion-modal-content h3 {
-            color: var(--text-color);
-            margin-top: 0;
-            margin-bottom: 15px;
-        }
-        
-        .promotion-pieces {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-        }
-        
-        .promotion-piece {
-            width: 60px;
-            height: 60px;
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            cursor: pointer;
-            border: 2px solid transparent;
-            border-radius: 5px;
-            transition: all 0.2s ease;
-        }
-        
-        .promotion-piece:hover {
-            transform: scale(1.1);
-            border-color: var(--accent-color);
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-        }
-    `;
-    
-    document.head.appendChild(style);
-}
-
-/**
- * Show the promotion modal and wait for the player's choice.
- * @param {string} color - The color of the pawn being promoted ('w' or 'b').
- * @param {number} row - The row of the pawn.
- * @param {number} col - The column of the pawn.
- * @returns {Promise<string>} A promise that resolves to the selected piece type.
- */
-function showPromotionModal(color, row, col) {
-    if (!CONFIG.FEATURES.PROMOTION_UI) {
-        // If the UI feature is disabled, default to queen promotion
-        return Promise.resolve('q');
+    const choices = document.createElement('div');
+    choices.className = 'promotion-choices';
+    for (const choice of PROMOTION_CHOICES) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'promotion-choice';
+        button.dataset.piece = choice.type;
+        button.setAttribute('aria-label', choice.label);
+        button.title = choice.label;
+        button.addEventListener('click', () => closePromotionChooser(choice.type));
+        choices.appendChild(button);
     }
-    
-    // Ensure the modal exists
-    if (!document.getElementById('promotion-modal')) {
-        createPromotionModal();
+    panel.appendChild(choices);
+    dialog.appendChild(panel);
+
+    // A click on the dimmed area around the panel cancels the move
+    dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) closePromotionChooser(null);
+    });
+    dialog.addEventListener('keydown', handlePromotionKeydown);
+
+    document.body.appendChild(dialog);
+    return dialog;
+}
+
+/** Escape cancels; Tab and the arrow keys stay inside the four buttons. */
+function handlePromotionKeydown(event) {
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        closePromotionChooser(null);
+        return;
     }
-    
-    // Set promotion state
-    promotionState.isActive = true;
-    promotionState.color = color;
-    promotionState.position = { row, col };
-    
-    // Get the modal
-    const modal = document.getElementById('promotion-modal');
-    modal.style.display = 'flex';
-    
-    // Set the images for the pieces based on color
-    const pieceButtons = document.querySelectorAll('.promotion-piece');
-    pieceButtons.forEach(button => {
-        const piece = button.dataset.piece;
-        const cacheBuster = Date.now();
-        button.style.backgroundImage = `url('assets/${color}${piece}.svg?v=${cacheBuster}')`;
-    });
-    
-    // Return a promise that will resolve when a piece is selected
-    return new Promise(resolve => {
-        promotionCallback = resolve;
-    });
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key] ||
+        (event.key === 'Tab' ? (event.shiftKey ? -1 : 1) : 0);
+    if (!step) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const buttons = Array.from(getPromotionDialog().querySelectorAll('.promotion-choice'));
+    const current = buttons.indexOf(document.activeElement);
+    buttons[(current + step + buttons.length) % buttons.length].focus();
 }
 
 /**
- * Handle the selection of a promotion piece.
- * @param {string} pieceType - The type of piece selected.
- * @private
+ * Opens the chooser.
+ * @param {string} color - Colour of the promoting pawn ('w' or 'b').
+ * @param {(type: string) => void} onChoose - Called with 'q', 'r', 'b' or 'n'.
+ * @param {() => void} [onCancel] - Called if the player backs out.
  */
-function selectPromotionPiece(pieceType) {
-    if (!promotionState.isActive || !promotionCallback) return;
-    
-    // Hide the modal
-    const modal = document.getElementById('promotion-modal');
-    modal.style.display = 'none';
-    
-    // Reset the state
-    promotionState.isActive = false;
-    
-    // Resolve the promise with the selected piece
-    const callback = promotionCallback;
-    promotionCallback = null;
-    
-    debugLog(`Promotion piece selected: ${pieceType}`);
-    callback(pieceType);
+function showPromotionChooser(color, onChoose, onCancel) {
+    const dialog = getPromotionDialog();
+    dialog.querySelectorAll('.promotion-choice').forEach((button) => {
+        button.style.backgroundImage = `url('assets/${color}${button.dataset.piece}.svg')`;
+    });
+    promotionRequest = { onChoose, onCancel, returnFocus: document.activeElement };
+    dialog.hidden = false;
+    dialog.querySelector('.promotion-choice').focus();
 }
 
-// Export functions
+/**
+ * Closes the chooser and reports the result.
+ * @param {string|null} type - The chosen piece type, or null to cancel.
+ */
+function closePromotionChooser(type) {
+    if (!promotionRequest) return;
+    const request = promotionRequest;
+    promotionRequest = null;
+    getPromotionDialog().hidden = true;
+    if (request.returnFocus && typeof request.returnFocus.focus === 'function') {
+        request.returnFocus.focus();
+    }
+    if (type) request.onChoose(type);
+    else if (request.onCancel) request.onCancel();
+}
+
+/** @returns {boolean} True while the chooser is waiting for an answer. */
+function isPromotionChooserOpen() {
+    return promotionRequest !== null;
+}
+
 if (typeof window !== 'undefined') {
-    window.initPromotionUI = initPromotionUI;
-    window.showPromotionModal = showPromotionModal;
-} 
+    window.showPromotionChooser = showPromotionChooser;
+    window.closePromotionChooser = closePromotionChooser;
+    window.isPromotionChooserOpen = isPromotionChooserOpen;
+}
+
+// Export for Node/Jest tests (CommonJS)
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { showPromotionChooser, closePromotionChooser, isPromotionChooserOpen };
+}
