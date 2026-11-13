@@ -1,13 +1,14 @@
 const { JSDOM } = require('jsdom');
 
-const HTML = `<!DOCTYPE html><body><div id="chess-board"></div><ul id="move-history"></ul><div id="game-status"></div><button id="reset-button"></button><button id="undo-button"></button></body>`;
+const HTML = `<!DOCTYPE html><body><div id="chess-board"></div><ul id="move-history"></ul><div id="game-status"></div><button id="undo-button">Undo</button><button id="pgn-button">Copy PGN</button><button id="reset-button">New Game</button></body>`;
 
 /**
  * Loads a fresh copy of the game into a new JSDOM. Modules are reset first, so
  * every call gets its own DOM and game state.
  * @param {{ drag?: boolean, storage?: Object<string, string>, brokenStorage?: boolean }} [options]
  *   drag: also load and start drag.js. storage: values to put in localStorage before
- *   the game starts. brokenStorage: make every localStorage call throw.
+ *   the game starts. brokenStorage: make every localStorage call throw. configure:
+ *   a function that may change CONFIG before the game loads.
  */
 function loadGame(options = {}) {
   jest.resetModules();
@@ -25,7 +26,9 @@ function loadGame(options = {}) {
     ? { getItem: blocked, setItem: blocked, removeItem: blocked }
     : window.localStorage;
 
-  Object.assign(global, { CONFIG: require('../../js/config').CONFIG });
+  const config = require('../../js/config').CONFIG;
+  if (options.configure) options.configure(config);
+  Object.assign(global, { CONFIG: config });
 
   const utils = require('../../js/utils');
   const pieces = require('../../js/pieces');

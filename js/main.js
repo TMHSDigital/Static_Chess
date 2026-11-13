@@ -92,7 +92,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Initialize Game --- 
+    // Apply Flip Board setting
+    const flipToggle = document.getElementById('flip-toggle');
+    if (flipToggle) {
+        const flipBoard = readFlag(KEYS.FLIP_BOARD, DEFAULTS.FLIP_BOARD);
+        flipToggle.checked = flipBoard;
+        setBoardFlipped(flipBoard);
+        flipToggle.addEventListener('change', function() {
+            setBoardFlipped(this.checked);
+            writeSetting(KEYS.FLIP_BOARD, this.checked.toString());
+        });
+    }
+
+    // --- Initialize Game ---
     initializeGame();
     
     // --- Initialize Feature Modules ---

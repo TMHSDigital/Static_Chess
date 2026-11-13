@@ -8,6 +8,9 @@ All notable changes to this project will be documented in this file.
 - **Sound Effects**: The settings toggle now plays short synthesized tones for moves, captures, check, castling, promotion and game end
 - Undo is kept across page reloads, and the Undo button is disabled when there is nothing to undo
 - Clicking another of your own pieces switches the selection to it
+- **Copy PGN**: Copies the game to the clipboard in PGN format (downloads a file where the clipboard is unavailable)
+- **Flip board**: A setting that shows the board from Black's side; arrow-key navigation follows the screen
+- **New Game confirmation**: A game in progress needs a second click on New Game before it is discarded
 - Tests for the rules engine, undo, persistence, and mouse and touch input
 
 ### Fixed
@@ -20,6 +23,8 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - CI installs from a lockfile on Node 24 with pinned actions; the release workflow runs lint and tests first
+- Dev tooling: ESLint 10, Jest 30, jsdom 26; the ESLint config is now `eslint.config.mjs` and `package.json` no longer declares `"type": "module"`
+- `config.js` is now the single source for feature flags, setting defaults and storage keys; debug output is off unless `CONFIG.DEBUG` is set
 - Removed unused notation helpers, duplicate path and check functions, and the legacy ESLint config
 
 ## [0.1.0] - 2025-11-02

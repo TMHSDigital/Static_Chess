@@ -28,7 +28,7 @@ Static_Chess/
 │   ├── unit/            # Rules, undo, persistence, input, utilities
 │   └── integration/     # Move flow through the DOM
 ├── package.json         # Dev tooling only: lint, format and test scripts
-├── eslint.config.js     # ESLint configuration, including per-file globals
+├── eslint.config.mjs     # ESLint configuration, including per-file globals
 ├── assets/              # SVG files for chess pieces, plus screenshots/ for the README
 │   ├── wp.svg, bp.svg   # Pawns
 │   ├── wr.svg, br.svg   # Rooks

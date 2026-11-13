@@ -22,14 +22,14 @@ The app itself needs no tooling: open `index.html` or serve the folder. Node is 
 - **Scripts:**
   - `npm test` runs the Jest suite
   - `npm run coverage` runs it with a coverage report
-  - `npm run lint` runs ESLint (`eslint.config.js` is the only ESLint config)
+  - `npm run lint` runs ESLint (`eslint.config.mjs` is the only ESLint config)
   - `npm run format` checks formatting with Prettier. It is not enforced in CI yet, and much of the existing code does not pass it, so do not reformat files you are not otherwise changing.
 
 ### How the scripts fit together
 
 The files in `js/` are plain `<script>` files that share one global scope and load in the order listed in `index.html`. Two conventions follow from that:
 
-1. **Calling a function from another file needs an ESLint entry.** `eslint.config.js` lists, per file, which names from other files that file may use. A new cross-file call fails lint with `no-undef` until you add the name to the block for the calling file.
+1. **Calling a function from another file needs an ESLint entry.** `eslint.config.mjs` lists, per file, which names from other files that file may use. A new cross-file call fails lint with `no-undef` until you add the name to the block for the calling file.
 2. **Anything a test needs must be exported.** Each file ends with a small CommonJS footer (`if (typeof module !== 'undefined' && module.exports) { ... }`). Add new functions there if tests call them. Browsers ignore the footer.
 
 ### Writing tests

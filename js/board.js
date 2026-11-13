@@ -6,6 +6,7 @@ const boardElement = document.getElementById('chess-board');
 let selectedSquare = null; // { row: number, col: number } | null
 let possibleMoves = []; // Array<{ row: number, col: number }>
 let renderedState = null; // Cache of last rendered board signatures
+let boardFlipped = false; // True when the board is shown from Black's side
 
 /**
  * Creates the initial chessboard squares in the DOM.
@@ -26,9 +27,28 @@ function createBoard() {
         }
     }
 
+    if (boardFlipped) {
+        setBoardFlipped(true); // Keep the chosen orientation when the board is rebuilt
+    }
+
     // Keyboard navigation for accessibility
     boardElement.removeEventListener('keydown', handleBoardKeydown);
     boardElement.addEventListener('keydown', handleBoardKeydown);
+}
+
+/**
+ * Shows the board from White's side (default) or from Black's side.
+ * Squares keep their data-row and data-col; only their order on screen changes,
+ * so pieces, highlights and coordinate labels follow automatically.
+ * @param {boolean} flipped - True to put Black at the bottom.
+ */
+function setBoardFlipped(flipped) {
+    boardFlipped = !!flipped;
+    boardElement.classList.toggle('flipped', boardFlipped);
+    const index = (square) => Number(square.dataset.row) * 8 + Number(square.dataset.col);
+    Array.from(boardElement.querySelectorAll('.square'))
+        .sort((a, b) => (boardFlipped ? index(b) - index(a) : index(a) - index(b)))
+        .forEach(square => boardElement.appendChild(square));
 }
 
 /**
@@ -108,22 +128,25 @@ function handleBoardKeydown(event) {
         if (el) el.focus();
     };
 
+    // Arrow keys follow what is on screen, so they reverse on a flipped board
+    const step = boardFlipped ? -1 : 1;
+
     switch (event.key) {
         case 'ArrowUp':
             event.preventDefault();
-            focusSquare(row - 1, col);
+            focusSquare(row - step, col);
             break;
         case 'ArrowDown':
             event.preventDefault();
-            focusSquare(row + 1, col);
+            focusSquare(row + step, col);
             break;
         case 'ArrowLeft':
             event.preventDefault();
-            focusSquare(row, col - 1);
+            focusSquare(row, col - step);
             break;
         case 'ArrowRight':
             event.preventDefault();
-            focusSquare(row, col + 1);
+            focusSquare(row, col + step);
             break;
         case 'Enter':
         case ' ': // Space
@@ -240,6 +263,7 @@ if (typeof window !== 'undefined') {
     window.setSelectedSquare = setSelectedSquare;
     window.setPossibleMoves = setPossibleMoves;
     window.updateBoardVisuals = updateBoardVisuals;
+    window.setBoardFlipped = setBoardFlipped;
     // Expose state getters
     Object.defineProperty(window, 'selectedSquare', {
         get: function() { return selectedSquare; }
@@ -261,6 +285,7 @@ if (typeof module !== 'undefined' && module.exports) {
         clearSelectedSquare,
         setPossibleMoves,
         clearPossibleMoves,
+        setBoardFlipped,
         // Export state variables with getters for test access
         get selectedSquare() { return selectedSquare; },
         get possibleMoves() { return possibleMoves; },

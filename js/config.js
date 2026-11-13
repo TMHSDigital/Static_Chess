@@ -21,8 +21,12 @@ const CONFIG = {
         SHOW_POSSIBLE_MOVES: true,
         SHOW_LAST_MOVE: true,
         ENABLE_SOUNDS: false,
+        FLIP_BOARD: false,     // true shows the board from Black's side
         AI_DIFFICULTY: 'easy', // For the future AI opponent
     },
+
+    // How long the New Game button waits for a confirming second click (ms)
+    RESET_CONFIRM_MS: 4000,
 
     // Animation durations (ms)
     ANIMATIONS: {
@@ -49,6 +53,7 @@ const CONFIG = {
         SHOW_POSSIBLE_MOVES: 'showPossibleMoves',
         SHOW_LAST_MOVE: 'showLastMove',
         ENABLE_SOUNDS: 'enableSounds',
+        FLIP_BOARD: 'flipBoard',
     },
 
     // Debug mode: when true, debugLog() prints to the console

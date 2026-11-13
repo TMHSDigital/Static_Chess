@@ -18,6 +18,9 @@ const moveHistoryElement = document.getElementById('move-history');
 const gameStatusElement = document.getElementById('game-status');
 const resetButton = document.getElementById('reset-button');
 const undoButton = document.getElementById('undo-button');
+const pgnButton = document.getElementById('pgn-button');
+const RESET_LABEL = resetButton ? resetButton.textContent : 'New Game';
+let resetConfirmTimer = null; // Set while the New Game button is waiting for a second click
 
 /**
  * Initializes the game state, either from scratch or localStorage.
@@ -38,8 +41,14 @@ function initializeGame() {
     boardElement.addEventListener('click', handleBoardClickEvent);
 
     // Add event listener for reset button
-    resetButton.removeEventListener('click', resetGame);
-    resetButton.addEventListener('click', resetGame);
+    resetButton.removeEventListener('click', handleResetClick);
+    resetButton.addEventListener('click', handleResetClick);
+
+    // Add event listener for the PGN export button
+    if (pgnButton) {
+        pgnButton.removeEventListener('click', copyPGN);
+        pgnButton.addEventListener('click', copyPGN);
+    }
 
     // Add event listener for undo button
     if (undoButton) {
@@ -442,14 +451,11 @@ function generateLegalMovesForPiece(startRow, startCol) {
         }
 
         // Simulate castling rook move
-        let tempRook = null;
-        let tempRookStartCol = -1;
-        let tempRookEndCol = -1;
         const isSimulatedCastling = tempPiece && tempPiece.type === KING && Math.abs(move.col - startCol) === 2;
-         if (isSimulatedCastling) {
-            tempRookStartCol = move.col > startCol ? 7 : 0;
-            tempRookEndCol = move.col > startCol ? move.col - 1 : move.col + 1;
-            tempRook = tempBoard[startRow][tempRookStartCol];
+        if (isSimulatedCastling) {
+            const tempRookStartCol = move.col > startCol ? 7 : 0;
+            const tempRookEndCol = move.col > startCol ? move.col - 1 : move.col + 1;
+            const tempRook = tempBoard[startRow][tempRookStartCol];
             tempBoard[startRow][tempRookEndCol] = tempRook;
             tempBoard[startRow][tempRookStartCol] = null;
         }
@@ -848,6 +854,101 @@ function updateStatusDisplay() {
     if (undoButton) {
         undoButton.disabled = positionHistory.length === 0;
     }
+    if (pgnButton) {
+        pgnButton.disabled = moveHistory.length === 0;
+    }
+}
+
+/** Puts the New Game button back to its normal state. */
+function cancelResetConfirm() {
+    if (resetConfirmTimer !== null) {
+        clearTimeout(resetConfirmTimer);
+        resetConfirmTimer = null;
+    }
+    resetButton.textContent = RESET_LABEL;
+    resetButton.classList.remove('confirming');
+}
+
+/**
+ * Handles the New Game button. A game in progress needs a second click within
+ * a few seconds, so a mis-tap next to Undo cannot wipe it. With no moves played,
+ * or once the game is over, there is nothing to lose and it resets at once.
+ */
+function handleResetClick() {
+    const gameInProgress = moveHistory.length > 0 && !isGameOver;
+    if (gameInProgress && resetConfirmTimer === null) {
+        resetButton.textContent = 'Discard game?';
+        resetButton.classList.add('confirming');
+        resetConfirmTimer = setTimeout(cancelResetConfirm, CONFIG.RESET_CONFIRM_MS);
+        return;
+    }
+    cancelResetConfirm();
+    resetGame();
+}
+
+/**
+ * Builds the game as PGN text: the seven standard tags followed by the moves.
+ * @returns {string}
+ */
+function buildPGN() {
+    const lastMove = moveHistory[moveHistory.length - 1];
+    let result = '*'; // Game still in progress
+    if (isGameOver && lastMove) {
+        if (lastMove.isCheckmate) {
+            result = lastMove.piece.color === WHITE ? '1-0' : '0-1';
+        } else {
+            result = '1/2-1/2';
+        }
+    }
+
+    const today = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const date = `${today.getFullYear()}.${pad(today.getMonth() + 1)}.${pad(today.getDate())}`;
+    const tags = [
+        ['Event', 'Static Chess game'],
+        ['Site', '?'],
+        ['Date', date],
+        ['Round', '-'],
+        ['White', 'White'],
+        ['Black', 'Black'],
+        ['Result', result]
+    ].map(([name, value]) => `[${name} "${value}"]`);
+
+    const moves = moveHistory.map((move, index) => {
+        const san = move.notation.replace(' e.p.', ''); // Not valid in PGN
+        return index % 2 === 0 ? `${index / 2 + 1}. ${san}` : san;
+    });
+
+    return `${tags.join('\n')}\n\n${[...moves, result].join(' ')}\n`;
+}
+
+/**
+ * Copies the game to the clipboard as PGN. If the clipboard is not available
+ * (older browser, or a page opened from a file), downloads it as a file instead.
+ */
+function copyPGN() {
+    const pgn = buildPGN();
+    const flash = (text) => {
+        const original = 'Copy PGN';
+        pgnButton.textContent = text;
+        setTimeout(() => { pgnButton.textContent = original; }, 1500);
+    };
+    const download = () => {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(new Blob([pgn], { type: 'application/x-chess-pgn' }));
+        link.download = 'static-chess-game.pgn';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(link.href);
+        flash('Downloaded');
+    };
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(pgn).then(() => flash('Copied!'), download);
+    } else {
+        download();
+    }
 }
 
 /**
@@ -941,6 +1042,8 @@ if (typeof module !== 'undefined' && module.exports) {
         isStalemate,
         canCastle,
         generateNotationWithDisambiguation,
+        handleResetClick,
+        buildPGN,
         // Export state variables for test access
         get boardState() { return boardState; },
         get currentPlayer() { return currentPlayer; },

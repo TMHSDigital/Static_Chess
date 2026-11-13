@@ -157,14 +157,16 @@ That's it! No build process or dependencies are required.
 6. If a move results in check, the opponent's king will be highlighted in red
 7. A pawn that reaches the last rank becomes a queen
 8. Game ends with checkmate or stalemate
-9. Click "Undo" to take back the last move, or "New Game" to reset the board
-10. Keyboard: move between squares with the arrow keys, and press Enter or Space to select a piece or move it
-11. Toggle settings:
+9. Click "Undo" to take back the last move, or "New Game" to reset the board (a game in progress asks for a second click)
+10. Click "Copy PGN" to copy the game for an analysis board or to share it
+11. Keyboard: move between squares with the arrow keys, and press Enter or Space to select a piece or move it
+12. Toggle settings:
    - Show coordinates
    - Show possible moves
    - Highlight last move
    - Sound effects
-12. The game and its undo history are saved automatically to localStorage, so a refresh picks up where you left off
+   - Flip board (play from Black's side)
+13. The game and its undo history are saved automatically to localStorage, so a refresh picks up where you left off
 
 ---
 
@@ -218,7 +220,7 @@ Static_Chess/
 │   ├── ISSUE_TEMPLATE/  # Issue templates
 │   └── CODEOWNERS       # Code ownership rules
 ├── package.json         # Dev dependencies and scripts (lint/test only)
-├── eslint.config.js     # ESLint configuration
+├── eslint.config.mjs     # ESLint configuration
 ├── .prettierrc          # Prettier configuration
 ├── .editorconfig        # Editor configuration
 ├── .gitignore           # Git ignore rules

@@ -160,7 +160,8 @@ body {
     letter-spacing: 0.5px;
 }
 
-#undo-button {
+#undo-button,
+#pgn-button {
     padding: 12px;
     font-size: 1.1em;
     cursor: pointer;
@@ -171,16 +172,23 @@ body {
     transition: all 0.3s ease;
     font-weight: 600;
     letter-spacing: 0.5px;
-    margin-right: 8px;
 }
 
-#undo-button:hover {
+#undo-button:disabled,
+#pgn-button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+#undo-button:hover:not(:disabled),
+#pgn-button:hover:not(:disabled) {
     background-color: rgba(255,255,255,0.06);
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-#undo-button:active {
+#undo-button:active:not(:disabled),
+#pgn-button:active:not(:disabled) {
     transform: translateY(0);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
@@ -189,6 +197,13 @@ body {
     display: flex;
     gap: 8px;
     justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* New Game is waiting for a second click before discarding a game in progress */
+#reset-button.confirming,
+#reset-button.confirming:hover {
+    background-color: #c0392b;
 }
 
 #reset-button {

@@ -19,6 +19,13 @@ export default [
       'no-console': 'off'
     }
   },
+  // This config file is the only ES module in the repository
+  {
+    files: ['**/*.mjs'],
+    languageOptions: {
+      sourceType: 'module'
+    }
+  },
   // Test files
   {
     files: ['tests/**/*.js'],
@@ -118,6 +125,7 @@ export default [
         initializeGame: 'readonly',
         initDragAndDrop: 'readonly',
         initPromotionUI: 'readonly',
+        setBoardFlipped: 'readonly',
         ChessAI: 'readonly'
       }
     }
