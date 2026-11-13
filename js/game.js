@@ -118,8 +118,15 @@ function handleBoardClick(row, col) {
 
         if (isPossible) {
             makeMove(move.from.row, move.from.col, move.to.row, move.to.col);
+        } else if (clickedPiece && clickedPiece.color === currentPlayer &&
+                   (selectedSquare.row !== row || selectedSquare.col !== col)) {
+            // Clicked another of the player's own pieces: switch the selection to it
+            setSelectedSquare(row, col);
+            setPossibleMoves(generateLegalMovesForPiece(row, col));
+            updateBoardVisuals(boardState, findKingInCheck(currentPlayer));
+            return;
         }
-        // Always clear selection and possible moves after trying to move or clicking elsewhere
+        // Otherwise clear the selection (after a move, or a click elsewhere or on the same square)
         clearSelectedSquare();
         clearPossibleMoves();
         updateBoardVisuals(boardState, findKingInCheck(currentPlayer));
@@ -159,7 +166,20 @@ function makeMove(startRow, startCol, endRow, endCol) {
         promotion: null
     };
 
-    // --- Handle Special Moves --- 
+    // --- Save snapshot for undo ---
+    // Taken before anything is mutated, so undo restores the exact prior position.
+    const preMoveSnapshot = {
+        boardState: deepClone(boardState),
+        currentPlayer,
+        moveHistory: deepClone(moveHistory),
+        isGameOver,
+        kingPositions: deepClone(kingPositions),
+        currentStatus,
+        enPassantTarget: enPassantTarget ? { ...enPassantTarget } : null
+    };
+    positionHistory.push(preMoveSnapshot);
+
+    // --- Handle Special Moves ---
     let previousEnPassantTarget = enPassantTarget; // Store before modifying board
     enPassantTarget = null; // Reset en passant target by default
 
@@ -196,19 +216,7 @@ function makeMove(startRow, startCol, endRow, endCol) {
         }
     }
 
-    // --- Save snapshot for undo ---
-    const preMoveSnapshot = {
-        boardState: deepClone(boardState),
-        currentPlayer,
-        moveHistory: deepClone(moveHistory),
-        isGameOver,
-        kingPositions: deepClone(kingPositions),
-        currentStatus,
-        enPassantTarget: enPassantTarget ? { ...enPassantTarget } : null
-    };
-    positionHistory.push(preMoveSnapshot);
-
-    // --- Update Board State --- 
+    // --- Update Board State ---
     boardState[endRow][endCol] = pieceToMove;
     boardState[startRow][startCol] = null;
     pieceToMove.hasMoved = true;
@@ -387,8 +395,11 @@ function generateLegalMovesForPiece(startRow, startCol) {
         const direction = piece.color === WHITE ? -1 : 1;
         if (startRow === (enPassantTarget.row - direction)) { // Is the pawn on the correct rank?
              if (Math.abs(startCol - enPassantTarget.col) === 1) { // Is the pawn adjacent?
-                // Check if the move resolves check before adding
-                 pseudoLegalMoves.push({ row: enPassantTarget.row, col: enPassantTarget.col });
+                // There must be an enemy pawn to capture beside this pawn
+                const victim = boardState[startRow][enPassantTarget.col];
+                if (victim && victim.type === PAWN && victim.color === opponentColor) {
+                    pseudoLegalMoves.push({ row: enPassantTarget.row, col: enPassantTarget.col });
+                }
              }
         }
     }
@@ -640,11 +651,8 @@ function canCastle(playerColor, side) {
             return false;
         }
    }
-   // Special check for col 1 attack on queenside, which isn't explicitly moved *through*
-   if (side === 'queenside' && isSquareAttacked(kingRow, 1, opponentColor, boardState)) {
-        return false;
-   }
-
+   // The b-file square only has to be empty (checked above); the king never
+   // crosses it, so it may be attacked.
 
    return true;
 }

@@ -8,6 +8,7 @@
     height: 80%;
     cursor: grab;
     user-select: none;
+    touch-action: none; /* A touch that starts on a piece drags it instead of scrolling; taps still click */
     position: relative;
     transition: transform 0.15s ease;
     will-change: transform;

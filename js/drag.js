@@ -65,12 +65,8 @@ function initDragAndDrop() {
  */
 function handleDragStart(event) {
     if (!CONFIG.FEATURES.DRAG_AND_DROP) return;
-    
-    // Prevent default behavior for touch events
-    if (event.type === 'touchstart') {
-        event.preventDefault();
-    }
-    
+    if (event.type === 'mousedown' && event.button !== 0) return; // Left button only
+
     const target = event.target;
     
     // Find the piece element (could be the target itself or a parent)
@@ -101,29 +97,17 @@ function handleDragStart(event) {
         }
     }
     
-    // Select the piece and show possible moves before starting drag
-    if (typeof window.setSelectedSquare === 'function' && 
-        typeof window.generateLegalMovesForPiece === 'function' &&
-        typeof window.setPossibleMoves === 'function' &&
-        typeof window.updateBoardVisuals === 'function' &&
-        typeof window.findKingInCheck === 'function' &&
-        typeof window.currentPlayer !== 'undefined') {
-        window.setSelectedSquare(row, col);
-        const moves = window.generateLegalMovesForPiece(row, col);
-        window.setPossibleMoves(moves);
-        window.updateBoardVisuals(window.boardState, window.findKingInCheck(window.currentPlayer));
-    }
-    
     // Get start position
     const clientX = event.type === 'touchstart' ? event.touches[0].clientX : event.clientX;
     const clientY = event.type === 'touchstart' ? event.touches[0].clientY : event.clientY;
-    
+
     // Get bounding rect for initial positioning (before adding dragging class)
     const rect = pieceElement.getBoundingClientRect();
     const offsetX = clientX - rect.left - rect.width / 2;
     const offsetY = clientY - rect.top - rect.height / 2;
-    
-    // Set up drag state
+
+    // Arm a potential drag. Nothing is selected or styled yet: a press that never
+    // moves is a plain click or tap, and the board's click handler owns that.
     dragState.isDragging = true;
     dragState.piece = pieceElement;
     dragState.element = pieceElement;
@@ -131,9 +115,29 @@ function handleDragStart(event) {
     dragState.startPos = { x: clientX, y: clientY };
     dragState.currentPos = { x: clientX, y: clientY };
     dragState.offset = { x: offsetX, y: offsetY };
+    dragState.rect = rect;
     dragState.hasMoved = false;
     dragJustEnded = false;
-    
+
+    // Stop the browser starting a text selection on mouse press. This does not
+    // suppress the click event. Touch is left alone so a tap still produces a click.
+    if (event.type === 'mousedown') {
+        event.preventDefault();
+    }
+}
+
+/**
+ * Turn an armed press into a real drag: select the piece, show its moves and lift it.
+ */
+function beginDrag() {
+    const { row, col } = dragState.startSquare;
+    const pieceElement = dragState.element;
+    const rect = dragState.rect;
+
+    window.setSelectedSquare(row, col);
+    window.setPossibleMoves(window.generateLegalMovesForPiece(row, col));
+    window.updateBoardVisuals(window.boardState, window.findKingInCheck(window.currentPlayer));
+
     // Add dragging class for styling and set initial position
     pieceElement.classList.add('dragging');
     // Store original size to maintain during drag (fixed positioning can lose relative sizing)
@@ -141,11 +145,8 @@ function handleDragStart(event) {
     pieceElement.style.height = `${rect.height}px`;
     pieceElement.style.left = `${rect.left}px`;
     pieceElement.style.top = `${rect.top}px`;
-    
-    // Prevent click event from firing (we're handling via drag)
-    event.stopPropagation();
-    event.preventDefault();
-    
+
+    dragState.hasMoved = true;
     debugLog('Started dragging piece at', row, col);
 }
 
@@ -156,24 +157,25 @@ function handleDragStart(event) {
 function handleDragMove(event) {
     if (!CONFIG.FEATURES.DRAG_AND_DROP || !dragState.isDragging) return;
     
-    // Prevent default behavior for touch events
-    if (event.type === 'touchmove') {
+    // Prevent default behavior for touch events (stops the page scrolling mid-drag)
+    if (event.type === 'touchmove' && event.cancelable) {
         event.preventDefault();
     }
-    
+
     // Get current position
     const clientX = event.type === 'touchmove' ? event.touches[0].clientX : event.clientX;
     const clientY = event.type === 'touchmove' ? event.touches[0].clientY : event.clientY;
-    
+
     dragState.currentPos = { x: clientX, y: clientY };
-    
-    // Check if mouse has moved significantly (more than 5px)
-    const deltaX = Math.abs(clientX - dragState.startPos.x);
-    const deltaY = Math.abs(clientY - dragState.startPos.y);
-    if (deltaX > 5 || deltaY > 5) {
-        dragState.hasMoved = true;
+
+    // The drag only starts once the pointer has moved significantly (more than 5px)
+    if (!dragState.hasMoved) {
+        const deltaX = Math.abs(clientX - dragState.startPos.x);
+        const deltaY = Math.abs(clientY - dragState.startPos.y);
+        if (deltaX <= 5 && deltaY <= 5) return;
+        beginDrag();
     }
-    
+
     // Update the position of the dragged element (using fixed positioning with stored offset)
     dragState.element.style.left = `${clientX - dragState.offset.x}px`;
     dragState.element.style.top = `${clientY - dragState.offset.y}px`;
@@ -185,7 +187,15 @@ function handleDragMove(event) {
  */
 function handleDragEnd(event) {
     if (!CONFIG.FEATURES.DRAG_AND_DROP || !dragState.isDragging) return;
-    
+
+    // A press that never became a drag is a click or tap: leave it to the click handler
+    if (!dragState.hasMoved) {
+        dragState.isDragging = false;
+        dragState.piece = null;
+        dragState.element = null;
+        return;
+    }
+
     // Get drop position (use currentPos if event coordinates aren't available)
     const clientX = event.type === 'touchend' 
         ? (event.changedTouches[0]?.clientX || dragState.currentPos.x) 
@@ -255,26 +265,19 @@ function handleDragEnd(event) {
         } else {
             debugLog('Required functions not available for drop');
         }
-    } else if (wasDrag && !targetSquare) {
-        // Dropped outside board - ensure no selection
-        if (typeof window.clearSelectedSquare === 'function') {
-            window.clearSelectedSquare();
-        }
-        if (typeof window.clearPossibleMoves === 'function') {
-            window.clearPossibleMoves();
-        }
-        // Set flag to prevent click event
-        dragJustEnded = true;
-        setTimeout(() => { dragJustEnded = false; }, 100);
-    } else {
-        // Was just a click, not a drag - let the click handler deal with it
-        // Clear any temporary state but don't interfere with click
     }
-    
-    // Prevent click event from firing
+
+    // A drag always ends with nothing selected, whether or not it made a move
+    window.clearSelectedSquare();
+    window.clearPossibleMoves();
+    window.updateBoardVisuals(window.boardState, window.findKingInCheck(window.currentPlayer));
+
+    // Swallow the click the browser may fire after the drag
+    dragJustEnded = true;
+    setTimeout(() => { dragJustEnded = false; }, 100);
     event.stopPropagation();
-    event.preventDefault();
-    
+    if (event.cancelable) event.preventDefault();
+
     // Reset drag state
     dragState.isDragging = false;
     dragState.piece = null;
@@ -285,4 +288,9 @@ function handleDragEnd(event) {
 // Export the initialization function
 if (typeof window !== 'undefined') {
     window.initDragAndDrop = initDragAndDrop;
-} 
+}
+
+// Export for Node/Jest tests (CommonJS)
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { initDragAndDrop, handleDragStart, handleDragMove, handleDragEnd };
+}

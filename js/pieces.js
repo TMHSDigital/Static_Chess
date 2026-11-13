@@ -82,11 +82,9 @@ function isPseudoLegalMove(piece, startRow, startCol, endRow, endCol, isCapture)
             return (absRowDiff > 0 && absColDiff === 0) || (absRowDiff === 0 && absColDiff > 0) || (absRowDiff === absColDiff);
 
         case KING:
-            // Move one square in any direction
-            // Basic castling check (will need more validation in game.js)
-            if (absColDiff === 2 && absRowDiff === 0 && !piece.hasMoved) {
-                 return true; // Potential castle
-            }
+            // Move one square in any direction.
+            // Castling is not a pseudo-legal move: game.js adds it only when
+            // canCastle() allows it, and it must never count as an attack.
             return absRowDiff <= 1 && absColDiff <= 1;
 
         default:
