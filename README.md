@@ -187,9 +187,10 @@ Static_Chess/
 ├── js/                  # JavaScript logic
 │   ├── config.js        # Configuration and feature flags
 │   ├── utils.js         # Utility functions
-│   ├── pieces.js        # Piece definitions and movement rules
+│   ├── pieces.js        # Piece definitions and movement patterns
+│   ├── rules.js         # Rules of chess as pure functions (move generation, check, draws)
 │   ├── board.js         # Board rendering and interaction
-│   ├── game.js          # Core game logic
+│   ├── game.js          # The live game: state, move flow, undo, saving
 │   ├── main.js          # Application entry point
 │   ├── drag.js          # Drag and drop functionality (integrated with click flow)
 │   ├── ai.js            # AI opponent (skeleton)
@@ -236,9 +237,10 @@ The project follows a clear separation of concerns:
 - **JS files:** Game logic and behavior
   - `config.js`: Feature flags and game settings
   - `utils.js`: Helper functions like coordinate conversions
-  - `pieces.js`: Piece objects and basic movement rules
+  - `pieces.js`: Piece objects and basic movement patterns
+  - `rules.js`: Legal move generation, check, castling, en passant, promotion and draw rules, with no DOM access
   - `board.js`: DOM rendering, keyboard navigation, and diff-based updates
-  - `game.js`: Core chess logic including special moves, undo, SAN, check detection
+  - `game.js`: Game state and move flow, undo, SAN, saving, status and announcements
   - `main.js`: Bootstraps the application
   - `drag.js`: Drag and drop integrated via existing click handlers
   - `promotion.js`: Dialog for choosing the promotion piece

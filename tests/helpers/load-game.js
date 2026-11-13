@@ -33,6 +33,8 @@ function loadGame(options = {}) {
   const utils = require('../../js/utils');
   const pieces = require('../../js/pieces');
   Object.assign(global, utils, pieces);
+  const rules = require('../../js/rules');
+  Object.assign(global, rules);
 
   const board = require('../../js/board');
   Object.assign(global, {
@@ -123,7 +125,7 @@ function loadGame(options = {}) {
     notations: game.moveHistory.map((m) => m.notation),
   }));
 
-  return { window, game, board, drag, utils, pieces, promotion, play, setPosition, at, movesFrom, snapshot };
+  return { window, game, board, drag, utils, pieces, rules, promotion, play, setPosition, at, movesFrom, snapshot };
 }
 
 module.exports = { loadGame };

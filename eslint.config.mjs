@@ -66,6 +66,26 @@ export default [
       }
     }
   },
+  // rules.js - declares the rules functions, uses piece constants and helpers
+  {
+    files: ['js/rules.js'],
+    languageOptions: {
+      globals: {
+        PAWN: 'readonly',
+        ROOK: 'readonly',
+        KNIGHT: 'readonly',
+        BISHOP: 'readonly',
+        QUEEN: 'readonly',
+        KING: 'readonly',
+        WHITE: 'readonly',
+        BLACK: 'readonly',
+        Piece: 'readonly',
+        isPseudoLegalMove: 'readonly',
+        isWithinBounds: 'readonly',
+        coordsToAlgebraic: 'readonly'
+      }
+    }
+  },
   // board.js - declares selectedSquare, possibleMoves, boardElement, and board functions
   // Uses: coordsToAlgebraic, moveHistory (from game.js)
   {
@@ -98,6 +118,14 @@ export default [
         PIECE_NAMES: 'readonly',
         isWithinBounds: 'readonly',
         isPseudoLegalMove: 'readonly',
+        isPathObstructed: 'readonly',
+        isInCheck: 'readonly',
+        applyMove: 'readonly',
+        canCastleIn: 'readonly',
+        legalMovesFrom: 'readonly',
+        allLegalMoves: 'readonly',
+        positionKey: 'readonly',
+        hasInsufficientMaterial: 'readonly',
         coordsToAlgebraic: 'readonly',
         deepClone: 'readonly',
         playSound: 'readonly',

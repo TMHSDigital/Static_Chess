@@ -1,5 +1,6 @@
 /**
- * @fileoverview Manages the core chess game logic, state, and rules.
+ * @fileoverview The live game: its state, the flow of a move, undo, saving and
+ * the page updates that follow. The rules of chess themselves are in rules.js.
  */
 
 let boardState = getInitialPieces();
@@ -167,8 +168,15 @@ function handleBoardClick(row, col) {
     }
 }
 
+/** @returns {object} The live game as a position for the functions in rules.js. */
+function livePosition() {
+    return { board: boardState, kingPositions, enPassantTarget };
+}
+
 /**
- * Executes a move, updates the board state, and checks game status.
+ * Plays a move in the live game: applies it, records it, works out whether the
+ * game has ended, and then updates the page. The move is not checked for
+ * legality; callers pick it from generateLegalMovesForPiece.
  * @param {number} startRow
  * @param {number} startCol
  * @param {number} endRow
@@ -176,117 +184,38 @@ function handleBoardClick(row, col) {
  * @param {string} [promotionType] - Piece a pawn reaching the last rank becomes; queen by default.
  */
 function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
-    const pieceToMove = boardState[startRow][startCol];
-    if (!pieceToMove) return; // Should not happen if logic is correct
-
-    const capturedPiece = boardState[endRow][endCol];
-    const move = {
-        from: { row: startRow, col: startCol },
-        to: { row: endRow, col: endCol },
-        piece: pieceToMove,
-        captured: capturedPiece,
-        notation: "", // Will be generated later
-        isCheck: false,
-        isCheckmate: false,
-        isStalemate: false,
-        isCastling: false,
-        isEnPassant: false,
-        promotion: null
-    };
+    if (!boardState[startRow][startCol]) return; // Should not happen if logic is correct
 
     // --- Save snapshot for undo ---
-    // Taken before anything is mutated, so undo restores the exact prior position.
-    const preMoveSnapshot = {
-        boardState: deepClone(boardState),
-        currentPlayer,
-        isGameOver,
-        kingPositions: deepClone(kingPositions),
-        currentStatus,
-        enPassantTarget: enPassantTarget ? { ...enPassantTarget } : null,
-        halfmoveClock
-    };
-    positionHistory.push(preMoveSnapshot);
+    // applyMove builds a new position and leaves the old one untouched, so the
+    // snapshot can keep the current objects as they are.
+    const before = { boardState, currentPlayer, isGameOver, kingPositions, currentStatus, enPassantTarget, halfmoveClock };
+    positionHistory.push(before);
 
-    // --- Handle Special Moves ---
-    let previousEnPassantTarget = enPassantTarget; // Store before modifying board
-    enPassantTarget = null; // Reset en passant target by default
-
-    // Pawn Double Move (Set En Passant Target)
-    if (pieceToMove.type === PAWN && Math.abs(endRow - startRow) === 2) {
-        enPassantTarget = { row: (startRow + endRow) / 2, col: startCol };
-        debugLog("En passant target set:", enPassantTarget);
-    }
-
-    // En Passant Capture
-    if (pieceToMove.type === PAWN && previousEnPassantTarget &&
-        endRow === previousEnPassantTarget.row && endCol === previousEnPassantTarget.col &&
-        !capturedPiece) { // Capture must be on empty square for en passant
-
-        const capturedPawnRow = startRow; // Pawn being captured is on same row
-        const capturedPawnCol = endCol;
-        move.captured = boardState[capturedPawnRow][capturedPawnCol]; // Record captured pawn
-        boardState[capturedPawnRow][capturedPawnCol] = null; // Remove captured pawn
-        move.isEnPassant = true;
-        debugLog("En passant capture executed.");
-    }
-
-    // Castling
-    if (pieceToMove.type === KING && Math.abs(endCol - startCol) === 2) {
-        move.isCastling = true;
-        const rookStartCol = endCol > startCol ? 7 : 0;
-        const rookEndCol = endCol > startCol ? endCol - 1 : endCol + 1;
-        const rook = boardState[startRow][rookStartCol];
-        if (rook && rook.type === ROOK) {
-            boardState[startRow][rookEndCol] = rook;
-            boardState[startRow][rookStartCol] = null;
-            rook.hasMoved = true;
-            debugLog("Castling executed.");
-        }
-    }
-
-    // --- Update Board State ---
-    boardState[endRow][endCol] = pieceToMove;
-    boardState[startRow][startCol] = null;
-    pieceToMove.hasMoved = true;
-
-    // Update King Position if moved
-    if (pieceToMove.type === KING) {
-        kingPositions[pieceToMove.color] = { row: endRow, col: endCol };
-    }
-
-    // Pawn Promotion
-    if (pieceToMove.type === PAWN && (endRow === 0 || endRow === 7)) {
-        const promotedPieceType = [QUEEN, ROOK, BISHOP, KNIGHT].includes(promotionType) ? promotionType : QUEEN;
-        boardState[endRow][endCol] = new Piece(promotedPieceType, pieceToMove.color);
-        boardState[endRow][endCol].hasMoved = true; // Promoted piece counts as moved
-        move.promotion = promotedPieceType;
-        debugLog("Pawn promoted to", promotedPieceType);
-    }
-
-    // Fifty-move rule counter
-    halfmoveClock = (pieceToMove.type === PAWN || move.captured) ? 0 : halfmoveClock + 1;
-
-    // --- Post-Move Updates --- 
+    // --- Apply the move ---
+    const result = applyMove(livePosition(), { row: startRow, col: startCol }, { row: endRow, col: endCol }, promotionType);
+    const move = { ...result.move, notation: '', isCheck: false, isCheckmate: false, isStalemate: false };
+    boardState = result.position.board;
+    kingPositions = result.position.kingPositions;
+    enPassantTarget = result.position.enPassantTarget;
+    halfmoveClock = (move.piece.type === PAWN || move.captured) ? 0 : halfmoveClock + 1; // Fifty-move rule counter
     switchPlayer();
-    move.notation = generateNotationWithDisambiguation(move, preMoveSnapshot.boardState); // Generate notation using pre-move state
+    move.notation = generateNotationWithDisambiguation(move, before.boardState);
     moveHistory.push(move);
 
-    // Check for check, checkmate, stalemate
+    // --- Has the game ended? ---
     const opponentKingInCheck = findKingInCheck(currentPlayer);
     if (opponentKingInCheck) {
         move.isCheck = true;
-        debugLog(currentPlayer, "king is in check.");
         if (isCheckmate(currentPlayer)) {
             move.isCheckmate = true;
             isGameOver = true;
             currentStatus = `Checkmate! ${currentPlayer === WHITE ? 'Black' : 'White'} wins.`;
-            debugLog("Checkmate!");
         }
     } else if (isStalemate(currentPlayer)) {
         move.isStalemate = true;
         isGameOver = true;
         currentStatus = "Stalemate! Game is a draw.";
-        debugLog("Stalemate!");
     }
     if (!isGameOver) {
         const drawReason = findDrawReason();
@@ -294,20 +223,29 @@ function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
             move.isDraw = true;
             isGameOver = true;
             currentStatus = `Draw by ${drawReason}.`;
-            debugLog(currentStatus);
         }
     }
-
-    // --- Update UI --- 
-    renderPieces(boardState, { row: endRow, col: endCol });
     if (!isGameOver) {
         currentStatus = `${currentPlayer === WHITE ? 'White' : 'Black'}'s turn`;
     }
+    debugLog(move.notation, '-', currentStatus);
+
+    showMoveResult(move, opponentKingInCheck);
+    saveGameState();
+}
+
+/**
+ * Brings the page up to date after a move: pieces, status, move list,
+ * highlights, the screen reader announcement and the sound.
+ * @param {object} move - The move just played.
+ * @param {{row: number, col: number}|null} kingInCheck - Square of a checked king, if any.
+ */
+function showMoveResult(move, kingInCheck) {
+    renderPieces(boardState, move.to);
     updateStatusDisplay();
     updateMoveHistoryDisplay();
-    updateBoardVisuals(boardState, opponentKingInCheck);
+    updateBoardVisuals(boardState, kingInCheck);
     announce(describeMove(move));
-    // Sounds
     try {
         if (isGameOver) {
             playSound('game_end');
@@ -317,13 +255,12 @@ function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
             playSound('promote');
         } else if (move.captured) {
             playSound('capture');
-        } else if (move.isCheck || opponentKingInCheck) {
+        } else if (move.isCheck) {
             playSound('check');
         } else {
             playSound('move');
         }
-    } catch (_) { /* ignore sound errors */ }
-    saveGameState(); // Save state after successful move
+    } catch { /* ignore sound errors */ }
 }
 
 /**
@@ -364,40 +301,6 @@ function cancelPendingPromotion() {
 
 // --- Draw detection ---
 
-/**
- * A key that is equal for two positions exactly when they count as the same
- * position for the repetition rule: same placement, side to move, castling
- * rights and en passant possibility.
- */
-function positionKey(board, player, epTarget) {
-    let key = player;
-    for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-            const piece = board[r][c];
-            key += piece ? piece.color + piece.type : '-';
-        }
-    }
-    for (const color of [WHITE, BLACK]) {
-        const row = color === WHITE ? 7 : 0;
-        const king = board[row][4];
-        const kingReady = !!king && king.type === KING && king.color === color && !king.hasMoved;
-        for (const col of [7, 0]) {
-            const rook = board[row][col];
-            key += kingReady && rook && rook.type === ROOK && rook.color === color && !rook.hasMoved ? '1' : '0';
-        }
-    }
-    // The en passant square only matters if a pawn is placed to capture on it
-    if (epTarget) {
-        const pawnRow = epTarget.row + (player === WHITE ? 1 : -1);
-        const canCapture = [epTarget.col - 1, epTarget.col + 1].some((col) => {
-            const piece = isWithinBounds(pawnRow, col) ? board[pawnRow][col] : null;
-            return !!piece && piece.type === PAWN && piece.color === player;
-        });
-        if (canCapture) key += coordsToAlgebraic(epTarget.row, epTarget.col);
-    }
-    return key;
-}
-
 /** @returns {boolean} True if the current position has now occurred three times. */
 function isThreefoldRepetition() {
     const current = positionKey(boardState, currentPlayer, enPassantTarget);
@@ -415,26 +318,9 @@ function isThreefoldRepetition() {
     return false;
 }
 
-/**
- * @returns {boolean} True if neither side can possibly give checkmate: bare
- * kings, a single bishop or knight, or only bishops that all stand on one colour.
- */
-function hasInsufficientMaterial(board = boardState) {
-    const others = [];
-    for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-            const piece = board[r][c];
-            if (piece && piece.type !== KING) others.push({ type: piece.type, shade: (r + c) % 2 });
-        }
-    }
-    if (others.length === 0) return true;
-    if (others.length === 1) return others[0].type === BISHOP || others[0].type === KNIGHT;
-    return others.every(p => p.type === BISHOP && p.shade === others[0].shade);
-}
-
 /** @returns {string|null} Why the current position is drawn, or null if it is not. */
 function findDrawReason() {
-    if (hasInsufficientMaterial()) return 'insufficient material';
+    if (hasInsufficientMaterial(boardState)) return 'insufficient material';
     if (isThreefoldRepetition()) return 'threefold repetition';
     if (halfmoveClock >= 100) return 'the fifty-move rule';
     return null;
@@ -447,303 +333,64 @@ function switchPlayer() {
     currentPlayer = (currentPlayer === WHITE) ? BLACK : WHITE;
 }
 
+// --- Rules, asked of the live game ---
+// The rules themselves live in rules.js and work on any position. These are
+// the same questions put to the game on the board.
+
 /**
- * Generates all legal moves for the current player.
- * @param {string} playerColor - The color of the player whose moves to generate.
- * @returns {Array<{from: {row, col}, to: {row, col}}>}
+ * @param {string} playerColor
+ * @returns {Array<{from: {row, col}, to: {row, col}}>} Every legal move for that colour.
  */
 function generateAllLegalMoves(playerColor) {
-    let allMoves = [];
-    for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-            const piece = boardState[r][c];
-            if (piece && piece.color === playerColor) {
-                const pieceMoves = generateLegalMovesForPiece(r, c);
-                allMoves = allMoves.concat(pieceMoves.map(to => ({ from: { row: r, col: c }, to })));
-            }
-        }
-    }
-    return allMoves;
+    return allLegalMoves(livePosition(), playerColor);
 }
 
 /**
- * Generates legal moves for a specific piece at given coordinates.
- * Considers board state, obstacles, and checks.
  * @param {number} startRow
  * @param {number} startCol
- * @returns {Array<{row: number, col: number}>} Array of valid destination squares.
+ * @returns {Array<{row: number, col: number}>} Squares the piece there can legally move to.
  */
 function generateLegalMovesForPiece(startRow, startCol) {
-    const piece = boardState[startRow][startCol];
-    if (!piece) return [];
-
-    let pseudoLegalMoves = []; // Moves valid based on piece movement rules only
-    const playerColor = piece.color;
-    const opponentColor = playerColor === WHITE ? BLACK : WHITE;
-
-    // 1. Generate pseudo-legal moves: the piece's movement pattern, with
-    // blocked paths removed. isPseudoLegalMove already keeps pawns from moving
-    // straight onto a piece or diagonally onto an empty square.
-
-    for (let endRow = 0; endRow < 8; endRow++) {
-        for (let endCol = 0; endCol < 8; endCol++) {
-            const targetSquare = boardState[endRow][endCol];
-            const isCapture = targetSquare !== null && targetSquare.color === opponentColor;
-
-            // Basic check: Can't capture own piece
-            if (targetSquare && targetSquare.color === playerColor) continue;
-
-            if (isPseudoLegalMove(piece, startRow, startCol, endRow, endCol, isCapture)) {
-                // Check for obstructions for sliding pieces
-                if ([ROOK, BISHOP, QUEEN].includes(piece.type)) {
-                    if (isPathObstructed(startRow, startCol, endRow, endCol)) {
-                        continue;
-                    }
-                }
-                // A pawn's double move needs the square it passes over to be empty
-                if (piece.type === PAWN && Math.abs(endRow - startRow) === 2 && !isCapture) {
-                    const intermediateRow = (startRow + endRow) / 2;
-                    if (boardState[intermediateRow][startCol] !== null) {
-                         continue; // Path blocked for double move
-                    }
-                }
-                pseudoLegalMoves.push({ row: endRow, col: endCol });
-            }
-        }
-    }
-
-    // En passant lands on an empty square, so it is not covered above
-    if (piece.type === PAWN && enPassantTarget) {
-        const direction = piece.color === WHITE ? -1 : 1;
-        if (startRow === (enPassantTarget.row - direction)) { // Is the pawn on the correct rank?
-             if (Math.abs(startCol - enPassantTarget.col) === 1) { // Is the pawn adjacent?
-                // There must be an enemy pawn to capture beside this pawn
-                const victim = boardState[startRow][enPassantTarget.col];
-                if (victim && victim.type === PAWN && victim.color === opponentColor) {
-                    pseudoLegalMoves.push({ row: enPassantTarget.row, col: enPassantTarget.col });
-                }
-             }
-        }
-    }
-
-    // Add Castling moves explicitly if valid
-    if (piece.type === KING && !piece.hasMoved) {
-        // Kingside
-        if (canCastle(playerColor, 'kingside')) {
-            pseudoLegalMoves.push({ row: startRow, col: startCol + 2 });
-        }
-        // Queenside
-        if (canCastle(playerColor, 'queenside')) {
-            pseudoLegalMoves.push({ row: startRow, col: startCol - 2 });
-        }
-    }
-
-
-    // 2. Filter out moves that leave the king in check
-    const legalMoves = pseudoLegalMoves.filter(move => {
-        // --- Simulation --- 
-        // Temporarily make the move on a deep copy of the board
-        // to see if the player's own king would be in check.
-        const tempBoard = boardState.map(row => row.map(cell => cell ? { ...cell } : null));
-        const tempPiece = tempBoard[startRow][startCol];
-        const tempCaptured = tempBoard[move.row][move.col];
-
-        // Simulate en passant capture removal
-        const isSimulatedEnPassant = tempPiece && tempPiece.type === PAWN && enPassantTarget &&
-                                     move.row === enPassantTarget.row && move.col === enPassantTarget.col &&
-                                     !tempCaptured;
-        if (isSimulatedEnPassant) {
-            const capturedPawnRow = startRow;
-            const capturedPawnCol = move.col;
-            tempBoard[capturedPawnRow][capturedPawnCol] = null;
-        }
-
-        // Simulate castling rook move
-        const isSimulatedCastling = tempPiece && tempPiece.type === KING && Math.abs(move.col - startCol) === 2;
-        if (isSimulatedCastling) {
-            const tempRookStartCol = move.col > startCol ? 7 : 0;
-            const tempRookEndCol = move.col > startCol ? move.col - 1 : move.col + 1;
-            const tempRook = tempBoard[startRow][tempRookStartCol];
-            tempBoard[startRow][tempRookEndCol] = tempRook;
-            tempBoard[startRow][tempRookStartCol] = null;
-        }
-
-        tempBoard[move.row][move.col] = tempPiece;
-        tempBoard[startRow][startCol] = null;
-
-        // Temporarily update king position if king moved
-        const originalKingPos = { ...kingPositions[playerColor] };
-        const simulatedKingPositions = { ...kingPositions, [playerColor]: originalKingPos };
-        if (tempPiece && tempPiece.type === KING) {
-            simulatedKingPositions[playerColor] = { row: move.row, col: move.col };
-        }
-
-        // Check if the king is now in check after the simulated move
-        const kingInCheck = isKingInCheck(playerColor, tempBoard, simulatedKingPositions);
-
-        // If the king is NOT in check after this move, it's a legal move.
-        return !kingInCheck;
-    });
-
-    return legalMoves;
+    return legalMovesFrom(livePosition(), startRow, startCol);
 }
 
 /**
- * Checks if a path between two squares is obstructed for sliding pieces.
- * Assumes the move is purely horizontal, vertical, or diagonal.
- * @param {number} startRow
- * @param {number} startCol
- * @param {number} endRow
- * @param {number} endCol
- * @param {Array<Array<Piece|null>>} [board] - Board to check; defaults to the live board.
- * @returns {boolean} True if the path is obstructed.
- */
-function isPathObstructed(startRow, startCol, endRow, endCol, board = boardState) {
-    const rowStep = Math.sign(endRow - startRow);
-    const colStep = Math.sign(endCol - startCol);
-    let currentRow = startRow + rowStep;
-    let currentCol = startCol + colStep;
-
-    while (currentRow !== endRow || currentCol !== endCol) {
-        if (!isWithinBounds(currentRow, currentCol)) break; // Should not happen for valid moves
-        if (board[currentRow][currentCol] !== null) {
-            return true; // Path is blocked
-        }
-        currentRow += rowStep;
-        currentCol += colStep;
-    }
-    return false;
-}
-
-/**
- * Checks if a square is attacked by the opponent.
- * @param {number} targetRow
- * @param {number} targetCol
- * @param {string} attackerColor - The color of the attacking player.
- * @param {Array<Array<Piece|null>>} currentBoardState - The board state to check against.
- * @returns {boolean}
- */
-function isSquareAttacked(targetRow, targetCol, attackerColor, currentBoardState) {
-    for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-            const piece = currentBoardState[r][c];
-            if (piece && piece.color === attackerColor) {
-                // Check if this piece can attack the target square
-                // Need to consider captures for pawns specifically
-                const isCaptureAttempt = true; // Assume any move to target is potential capture
-                if (isPseudoLegalMove(piece, r, c, targetRow, targetCol, isCaptureAttempt)) {
-                    // Check for obstructions for sliding pieces
-                    if ([ROOK, BISHOP, QUEEN].includes(piece.type)) {
-                        if (!isPathObstructed(r, c, targetRow, targetCol, currentBoardState)) {
-                            return true;
-                        }
-                    } else {
-                        // For non-sliding pieces, pseudo-legal check is enough
-                        return true;
-                    }
-                }
-            }
-        }
-    }
-    return false;
-}
-
-/**
- * Finds the coordinates of the player's king if it's in check.
- * @param {string} playerColor - The color of the king to check.
- * @returns {{row: number, col: number} | null} Coordinates if in check, else null.
+ * @param {string} playerColor
+ * @returns {{row: number, col: number} | null} The king's square if it is in check, else null.
  */
 function findKingInCheck(playerColor) {
-    if (!isKingInCheck(playerColor, boardState)) {
-        return null;
-    }
-    return kingPositions[playerColor];
+    return isInCheck(livePosition(), playerColor) ? kingPositions[playerColor] : null;
 }
 
 /**
- * Checks if the specified player's king is currently in check.
- * @param {string} playerColor - The color of the king to check.
- * @param {Array<Array<Piece|null>>} currentBoardState - The board state to check.
- * @param {object} [kPos] - King positions to use; defaults to the live ones (pass others for simulations).
- * @returns {boolean}
+ * @param {string} playerColor
+ * @param {Array<Array<Piece|null>>} [board] - Defaults to the live board.
+ * @param {object} [kPos] - King positions that go with the board.
+ * @returns {boolean} True if that colour's king is in check.
  */
-function isKingInCheck(playerColor, currentBoardState, kPos = kingPositions) {
-    const kingPos = kPos[playerColor];
-    const opponentColor = playerColor === WHITE ? BLACK : WHITE;
-    return isSquareAttacked(kingPos.row, kingPos.col, opponentColor, currentBoardState);
+function isKingInCheck(playerColor, board = boardState, kPos = kingPositions) {
+    return isInCheck({ board, kingPositions: kPos }, playerColor);
 }
 
-/**
- * Checks if the current player is in checkmate.
- * Assumes the player is already in check.
- * @param {string} playerColor - The player potentially checkmated.
- * @returns {boolean}
- */
+/** @returns {boolean} True if the player is in check and has no legal move. */
 function isCheckmate(playerColor) {
-    if (!isKingInCheck(playerColor, boardState)) {
-        return false; // Not in check, so cannot be checkmate
-    }
-    // If there are no legal moves, it's checkmate
-    return generateAllLegalMoves(playerColor).length === 0;
+    const position = livePosition();
+    return isInCheck(position, playerColor) && allLegalMoves(position, playerColor).length === 0;
 }
 
-/**
- * Checks if the current player is in stalemate.
- * Assumes the player is NOT in check.
- * @param {string} playerColor - The player potentially stalemated.
- * @returns {boolean}
- */
+/** @returns {boolean} True if the player is not in check and has no legal move. */
 function isStalemate(playerColor) {
-    if (isKingInCheck(playerColor, boardState)) {
-        return false; // If in check, it's checkmate or playable, not stalemate
-    }
-    // If not in check, but no legal moves, it's stalemate
-    return generateAllLegalMoves(playerColor).length === 0;
+    const position = livePosition();
+    return !isInCheck(position, playerColor) && allLegalMoves(position, playerColor).length === 0;
 }
 
 /**
-* Checks if castling is legal.
-* @param {string} playerColor
-* @param {'kingside' | 'queenside'} side
-* @returns {boolean}
-*/
+ * @param {string} playerColor
+ * @param {'kingside' | 'queenside'} side
+ * @returns {boolean} True if that castling move is legal right now.
+ */
 function canCastle(playerColor, side) {
-   const kingRow = playerColor === WHITE ? 7 : 0;
-   const kingCol = 4;
-   const king = boardState[kingRow][kingCol];
-
-   if (!king || king.type !== KING || king.hasMoved || isKingInCheck(playerColor, boardState)) {
-       return false;
-   }
-
-   const rookCol = side === 'kingside' ? 7 : 0;
-   const rook = boardState[kingRow][rookCol];
-
-   if (!rook || rook.type !== ROOK || rook.hasMoved) {
-       return false;
-   }
-
-   // Check path clear
-   const pathCols = side === 'kingside' ? [5, 6] : [1, 2, 3];
-   for (const col of pathCols) {
-       if (boardState[kingRow][col] !== null) {
-           return false; // Path obstructed
-       }
-   }
-
-   // Check squares king moves through are not attacked
-   const checkCols = side === 'kingside' ? [kingCol, 5, 6] : [kingCol, 3, 2]; // Check king's current, intermediate, and final square
-   const opponentColor = playerColor === WHITE ? BLACK : WHITE;
-   for (const col of checkCols) {
-        // Only need to check intermediate and final square attack if path is clear
-        if (col !== kingCol && isSquareAttacked(kingRow, col, opponentColor, boardState)) {
-            return false;
-        }
-   }
-   // The b-file square only has to be empty (checked above); the king never
-   // crosses it, so it may be attacked.
-
-   return true;
+    return canCastleIn(livePosition(), playerColor, side);
 }
 
 
@@ -1189,6 +836,7 @@ if (typeof module !== 'undefined' && module.exports) {
         initializeGame,
         handleBoardClick,
         makeMove,
+        livePosition,
         resetGame,
         generateLegalMovesForPiece,
         generateAllLegalMoves,

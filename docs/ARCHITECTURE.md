@@ -16,9 +16,10 @@ Static_Chess/
 ├── js/                  # JavaScript logic
 │   ├── config.js        # Game configuration and feature flags
 │   ├── utils.js         # Utility functions
-│   ├── pieces.js        # Piece definitions and movement rules
+│   ├── pieces.js        # Piece definitions and movement patterns
+│   ├── rules.js         # The rules of chess as pure functions of a position
 │   ├── board.js         # Board rendering and interaction
-│   ├── game.js          # Core game logic
+│   ├── game.js          # The live game: state, move flow, undo, saving, page updates
 │   ├── main.js          # Application entry point
 │   ├── drag.js          # Drag and drop functionality (integrated via click flow)
 │   ├── ai.js            # Skeleton for AI opponent (not loaded by index.html)
@@ -53,27 +54,33 @@ Static_Chess/
    - Initializes settings and event listeners
    - Calls `initializeGame()` from game.js
 
-2. **game.js**: Core game logic
-   - Manages game state, turn management, move validation
+2. **game.js**: The live game
+   - Holds the game state (board, side to move, history, undo stack)
+   - `makeMove()` applies a move through `rules.js`, records it, detects the end of the game, then calls `showMoveResult()` for the page updates
    - Delegates rendering to board.js
-   - Uses piece movement rules from pieces.js
 
-3. **board.js**: UI representation of the chess board
+3. **rules.js**: The rules of chess
+   - Pure functions of a position `{ board, kingPositions, enPassantTarget }`; no DOM, storage or sound
+   - `legalMovesFrom`, `allLegalMoves`, `canCastleIn`, `isInCheck`, `positionKey`, `hasInsufficientMaterial`
+   - `applyMove(position, from, to, promotion)` returns a new position and a move record; it never changes the position it is given, which is what lets undo keep old boards and a search try moves on copies
+   - Checked against published perft counts in `tests/unit/rules.test.js`
+
+4. **board.js**: UI representation of the chess board
    - Renders the board and pieces
    - Handles interactions (clicks, keyboard navigation, drags)
    - Diff-based rendering updates only changed squares
    - Updates visual state (highlighting, animations, ARIA labels)
 
-4. **pieces.js**: Chess piece definitions
+5. **pieces.js**: Chess piece definitions
    - Defines piece types and their basic movement patterns
    - Provides functions for initial board setup
 
-5. **utils.js**: Helper functions
+6. **utils.js**: Helper functions
    - Coordinate conversions (algebraic notation)
    - Deep cloning, sound playback, debug logging
    - `saveToLocalStorage` / `loadFromLocalStorage` helpers (not used yet; `game.js` and `main.js` guard their own storage calls)
 
-6. **config.js**: Centralized configuration
+7. **config.js**: Centralized configuration
    - Feature flags (see the table below)
    - Default values for the settings toggles (`DEFAULT_SETTINGS`)
    - The `localStorage` keys (`STORAGE_KEYS`), animation timing and sound definitions
@@ -96,7 +103,7 @@ Everything is kept in `localStorage` under the keys in `CONFIG.STORAGE_KEYS`: `c
 
 1. User interacts with the board (clicks a square)
 2. `board.js` captures the event and calls the appropriate handler in `game.js`
-3. `game.js` validates the move using rules from `pieces.js`
+3. `game.js` validates the move using `rules.js` (which builds on the movement patterns in `pieces.js`)
 4. If valid, `game.js` updates the game state and calls `renderPieces()` in `board.js`
 5. `board.js` updates the visual representation
 
@@ -179,7 +186,7 @@ To implement the AI opponent:
    - `_minimax` returns 0
    - The position evaluation only counts material
 
-Move generation in `game.js` reads the live board, so a search cannot yet try moves on a copy. That has to change first (pass the board and king positions in as arguments).
+Move generation and `applyMove()` in `rules.js` take a position as an argument, so a search can try moves on copies without touching the live game.
 
 The skeleton already includes:
 - AI configuration with difficulty levels
@@ -218,7 +225,7 @@ Sound effects are feature-flagged and user-toggleable:
 
 Undo is implemented using a pre-move snapshot stack:
 
-1. At the start of `makeMove()`, before anything changes, `game.js` pushes a snapshot of the board, side to move, king positions, en passant target and half-move clock to `positionHistory`
+1. At the start of `makeMove()`, `game.js` pushes the current board, side to move, king positions, en passant target and half-move clock to `positionHistory`. No copy is needed, because `applyMove()` builds a new position instead of changing the old one
 2. `undoLastMove()` restores the previous snapshot, removes the last move from the move list and rerenders
 3. The stack is saved with the game, so Undo still works after a reload
 4. `index.html` includes an Undo button, which is disabled when there is nothing to undo
