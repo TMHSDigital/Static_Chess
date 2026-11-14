@@ -43,6 +43,7 @@
     --border-radius: 6px;
     --radius-lg: 8px;
     --shadow-card: 0 6px 16px rgba(0, 0, 0, 0.2);
+    --shadow-dialog: 0 5px 15px rgba(0, 0, 0, 0.5);
     /* Controls */
     --control-height: 44px; /* Smallest comfortable touch target */
     --focus-ring: #ffffff;
@@ -436,7 +437,8 @@ body.coords-visible {
     letter-spacing: 0.5px;
 }
 
-/* Pawn promotion chooser */
+/* Dialogs: the pawn promotion chooser and the box for pasting a game share
+   the dimmed backdrop and the panel */
 .promotion-backdrop {
     position: fixed;
     inset: 0;
@@ -452,27 +454,35 @@ body.coords-visible {
 }
 
 .promotion-panel {
+    box-sizing: border-box;
+    max-width: calc(100vw - 2 * var(--space-4)); /* Never wider than a small phone */
     background-color: var(--panel-bg);
+    color: var(--text-color);
     padding: 20px;
-    border-radius: var(--border-radius);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-dialog);
     text-align: center;
 }
 
 .promotion-panel h3 {
-    color: var(--text-color);
-    margin: 0 0 15px;
+    margin: 0 0 var(--space-3);
+    font-size: 1.1rem;
+    font-weight: 600;
 }
 
 .promotion-choices {
     display: flex;
     justify-content: center;
-    gap: 12px;
+    gap: var(--space-3);
 }
 
+/* 64px squares that shrink together when the screen is narrower than four of them */
 .promotion-choice {
     width: 64px;
-    height: 64px;
+    flex: 0 1 64px;
+    min-width: 0;
+    aspect-ratio: 1;
     padding: 0;
     background-color: var(--light-square);
     background-size: 85%;
@@ -486,6 +496,9 @@ body.coords-visible {
 .promotion-choice:hover,
 .promotion-choice:focus-visible {
     border-color: var(--accent-color);
+}
+
+.promotion-choice:focus-visible {
     outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
 }
@@ -732,27 +745,33 @@ body.coords-visible {
 
 /* The dialog for pasting a game */
 .import-panel {
-    width: min(92vw, 460px);
-    box-sizing: border-box;
-    color: var(--text-color);
+    width: 460px;
+    text-align: left;
 }
 
 .import-panel textarea {
+    display: block;
     width: 100%;
     box-sizing: border-box;
-    padding: 8px;
-    background-color: var(--main-bg);
+    padding: var(--space-2);
+    background-color: var(--inset-bg);
     color: var(--text-color);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--control-border);
     border-radius: var(--border-radius);
     font-family: ui-monospace, Consolas, monospace;
-    font-size: 0.9rem;
+    font-size: 1rem; /* Smaller text makes phones zoom in on focus */
     resize: vertical;
 }
 
+/* Keeps its line when empty, so the buttons do not jump when an error appears */
 .import-error {
-    min-height: 1.2em;
-    margin: 8px 0;
+    min-height: 1.3em;
+    margin: var(--space-2) 0 var(--space-3);
     color: var(--danger-text);
     font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.import-panel .buttons-row {
+    justify-content: flex-end;
 }
