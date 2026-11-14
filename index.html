@@ -50,7 +50,7 @@
                     </div>
                 </div>
                 <div id="game-status" class="game-status">White's turn</div>
-                <button id="live-button" class="live-button" hidden>Back to game</button>
+                <button id="live-button" class="btn live-button" hidden>Back to game</button>
                 <div id="announcer" class="visually-hidden" role="status" aria-live="polite"></div>
                 <div class="settings-container">
                     <div class="toggle-container" id="opponent-setting">
@@ -88,21 +88,25 @@
                             </select>
                         </div>
                         <div class="toggle-container">
-                            <span class="toggle-label">Show coordinates</span>
+                            <label class="toggle-label" for="coords-toggle">Show coordinates</label>
                             <label class="switch">
                                 <input type="checkbox" id="coords-toggle" />
                                 <span class="slider"></span>
                             </label>
                         </div>
                         <div class="toggle-container">
-                            <span class="toggle-label">Show possible moves</span>
+                            <label class="toggle-label" for="possible-moves-toggle"
+                                >Show possible moves</label
+                            >
                             <label class="switch">
                                 <input type="checkbox" id="possible-moves-toggle" checked />
                                 <span class="slider"></span>
                             </label>
                         </div>
                         <div class="toggle-container">
-                            <span class="toggle-label">Highlight last move</span>
+                            <label class="toggle-label" for="last-move-toggle"
+                                >Highlight last move</label
+                            >
                             <label class="switch">
                                 <input type="checkbox" id="last-move-toggle" checked />
                                 <!-- Default to checked -->
@@ -110,14 +114,14 @@
                             </label>
                         </div>
                         <div class="toggle-container">
-                            <span class="toggle-label">Sound effects</span>
+                            <label class="toggle-label" for="sound-toggle">Sound effects</label>
                             <label class="switch">
                                 <input type="checkbox" id="sound-toggle" />
                                 <span class="slider"></span>
                             </label>
                         </div>
                         <div class="toggle-container">
-                            <span class="toggle-label">Flip board</span>
+                            <label class="toggle-label" for="flip-toggle">Flip board</label>
                             <label class="switch">
                                 <input type="checkbox" id="flip-toggle" />
                                 <span class="slider"></span>
@@ -126,14 +130,22 @@
                     </details>
                 </div>
                 <div class="buttons-row">
-                    <button id="undo-button" aria-label="Undo last move">Undo</button>
-                    <button id="hint-button" aria-label="Show a suggested move">Hint</button>
-                    <button id="draw-button">Offer draw</button>
-                    <button id="resign-button">Resign</button>
-                    <button id="pgn-button" aria-label="Copy the game as PGN">Copy PGN</button>
-                    <button id="fen-button" aria-label="Copy the position as FEN">Copy FEN</button>
-                    <button id="import-button" aria-label="Load a game from PGN">Load PGN</button>
-                    <button id="reset-button">New Game</button>
+                    <button id="undo-button" class="btn" aria-label="Undo last move">Undo</button>
+                    <button id="hint-button" class="btn" aria-label="Show a suggested move">
+                        Hint
+                    </button>
+                    <button id="draw-button" class="btn">Offer draw</button>
+                    <button id="resign-button" class="btn">Resign</button>
+                    <button id="pgn-button" class="btn" aria-label="Copy the game as PGN">
+                        Copy PGN
+                    </button>
+                    <button id="fen-button" class="btn" aria-label="Copy the position as FEN">
+                        Copy FEN
+                    </button>
+                    <button id="import-button" class="btn" aria-label="Load a game from PGN">
+                        Load PGN
+                    </button>
+                    <button id="reset-button" class="btn btn-primary">New Game</button>
                 </div>
             </div>
         </div>
@@ -155,8 +167,8 @@
                 ></textarea>
                 <p id="import-error" class="import-error" role="alert"></p>
                 <div class="buttons-row">
-                    <button id="import-cancel">Cancel</button>
-                    <button id="import-load">Load game</button>
+                    <button id="import-cancel" class="btn">Cancel</button>
+                    <button id="import-load" class="btn btn-primary">Load game</button>
                 </div>
             </div>
         </div>

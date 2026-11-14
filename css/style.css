@@ -42,8 +42,9 @@
     --border-radius: 6px;
     --radius-lg: 8px;
     --shadow-card: 0 6px 16px rgba(0, 0, 0, 0.2);
-    --shadow-raised: 0 4px 8px rgba(0, 0, 0, 0.2);
-    --shadow-pressed: 0 2px 4px rgba(0, 0, 0, 0.2);
+    /* Controls */
+    --control-height: 44px; /* Smallest comfortable touch target */
+    --focus-ring: #ffffff;
     --show-coords: none; /* 'block' to show coordinates, 'none' to hide */
     --show-possible-moves: block; /* Default to show */
     --show-last-move: block; /* Default to show */
@@ -196,59 +197,49 @@ body {
     letter-spacing: 0.5px;
 }
 
-#undo-button,
-#draw-button,
-#hint-button,
-#resign-button,
-#pgn-button,
-#fen-button,
-#import-button,
-.import-panel button {
-    padding: 8px 12px;
-    font-size: 1em;
+/* Buttons: one shape, three roles. Plain for most actions, primary for the
+   one that starts something, and red while waiting for a confirming click. */
+.btn {
+    min-height: var(--control-height);
+    padding: 0 14px;
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
     cursor: pointer;
     background-color: transparent;
     color: var(--text-color);
     border: 1px solid var(--control-border);
     border-radius: var(--border-radius);
-    transition: all 0.3s ease;
-    font-weight: 600;
-    letter-spacing: 0.5px;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease;
 }
 
-#undo-button:disabled,
-#draw-button:disabled,
-#hint-button:disabled,
-#resign-button:disabled,
-#pgn-button:disabled,
-#fen-button:disabled,
-#import-button:disabled {
-    opacity: 0.4;
+.btn:hover:not(:disabled) {
+    background-color: var(--hover-bg);
+}
+
+.btn:disabled {
+    opacity: 0.45;
     cursor: default;
 }
 
-#undo-button:hover:not(:disabled),
-#draw-button:hover:not(:disabled),
-#hint-button:hover:not(:disabled),
-#resign-button:hover:not(:disabled),
-#pgn-button:hover:not(:disabled),
-#fen-button:hover:not(:disabled),
-#import-button:hover:not(:disabled),
-.import-panel button:hover {
-    background-color: var(--hover-bg);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-raised);
+.btn-primary {
+    background-color: var(--accent-fill);
+    border-color: var(--accent-fill);
+    color: var(--on-accent);
 }
 
-#undo-button:active:not(:disabled),
-#draw-button:active:not(:disabled),
-#hint-button:active:not(:disabled),
-#resign-button:active:not(:disabled),
-#pgn-button:active:not(:disabled),
-#fen-button:active:not(:disabled),
-#import-button:active:not(:disabled) {
-    transform: translateY(0);
-    box-shadow: var(--shadow-pressed);
+.btn-primary:hover:not(:disabled) {
+    background-color: var(--accent-fill-hover);
+    border-color: var(--accent-fill-hover);
+}
+
+.btn.confirming,
+.btn.confirming:hover:not(:disabled) {
+    background-color: var(--danger-fill);
+    border-color: var(--danger-fill);
+    color: var(--on-accent);
 }
 
 .buttons-row {
@@ -258,37 +249,15 @@ body {
     flex-wrap: wrap;
 }
 
-/* New Game is waiting for a second click before discarding a game in progress */
-#reset-button.confirming,
-#resign-button.confirming,
-#resign-button.confirming:hover:not(:disabled),
-#reset-button.confirming:hover {
-    background-color: var(--danger-fill);
-    color: var(--on-accent);
-}
-
-#reset-button {
-    padding: 8px 12px;
-    font-size: 1em;
-    cursor: pointer;
-    background-color: var(--accent-fill);
-    color: var(--on-accent);
-    border: none;
-    border-radius: var(--border-radius);
-    transition: all 0.3s ease;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-}
-
-#reset-button:hover {
-    background-color: var(--accent-fill-hover);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-raised);
-}
-
-#reset-button:active {
-    transform: translateY(0);
-    box-shadow: var(--shadow-pressed);
+/* One keyboard focus ring for every control off the board */
+.btn:focus-visible,
+.toggle-container select:focus-visible,
+.more-settings summary:focus-visible,
+.switch input:focus-visible + .slider,
+.move-history li button.move:focus-visible,
+.import-panel textarea:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
 }
 
 /* Responsive adjustments */
@@ -340,7 +309,8 @@ body {
     position: relative;
     display: inline-block;
     width: 44px;
-    height: 24px;
+    height: var(--control-height);
+    flex-shrink: 0;
 }
 
 .switch input {
@@ -352,12 +322,12 @@ body {
 .slider {
     position: absolute;
     cursor: pointer;
-    top: 0;
+    top: 10px;
     left: 0;
     right: 0;
-    bottom: 0;
+    bottom: 10px;
     background-color: var(--control-border);
-    transition: 0.4s;
+    transition: background-color 0.2s ease;
     border-radius: 24px;
 }
 
@@ -369,7 +339,7 @@ body {
     left: 3px;
     bottom: 3px;
     background-color: var(--on-accent);
-    transition: 0.4s;
+    transition: transform 0.2s ease;
     border-radius: 50%;
 }
 
@@ -452,7 +422,7 @@ body.coords-visible {
 .promotion-choice:hover,
 .promotion-choice:focus-visible {
     border-color: var(--accent-color);
-    outline: 2px solid var(--text-color);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
 }
 
@@ -491,19 +461,15 @@ body.coords-visible {
 }
 
 .toggle-container select {
-    background-color: var(--main-bg);
+    min-height: var(--control-height);
+    background-color: var(--panel-bg);
     color: var(--text-color);
-    border: 1px solid var(--accent-color);
+    border: 1px solid var(--control-border);
     border-radius: var(--border-radius);
-    padding: 4px 8px;
+    padding: 0 8px;
     font: inherit;
     font-size: 0.9rem;
     cursor: pointer;
-}
-
-.toggle-container select:focus-visible {
-    outline: 2px solid var(--text-color);
-    outline-offset: 2px;
 }
 
 /* Moves in the list are buttons: a click shows the position after the move */
@@ -527,11 +493,6 @@ body.coords-visible {
     background-color: var(--hover-bg);
 }
 
-.move-history li button.move:focus-visible {
-    outline: 2px solid var(--text-color);
-    outline-offset: 1px;
-}
-
 /* The move whose position is on the board */
 .move-history li button.move[aria-current='true'] {
     background-color: var(--accent-fill);
@@ -543,22 +504,11 @@ body.coords-visible {
     display: block;
     width: 100%;
     margin: -9px 0 12px;
-    padding: 4px;
-    background-color: transparent;
-    color: var(--text-color);
-    border: 1px solid var(--accent-color);
-    border-radius: var(--border-radius);
-    font: inherit;
-    font-weight: 600;
-    cursor: pointer;
+    border-color: var(--accent-color);
 }
 
 .live-button[hidden] {
     display: none;
-}
-
-.live-button:hover {
-    background-color: var(--hover-bg);
 }
 
 /* Captured pieces and the material lead, one row per side */
@@ -611,6 +561,7 @@ body:has(.chess-board.flipped) .captured-pieces {
     --control-border: #8a857b;
     --muted-text: #666666;
     --danger-text: #b3261e;
+    --focus-ring: #1a1a1a;
     --hover-bg: rgba(0, 0, 0, 0.06);
 }
 
@@ -629,6 +580,7 @@ body:has(.chess-board.flipped) .captured-pieces {
         --control-border: #8a857b;
         --muted-text: #666666;
         --danger-text: #b3261e;
+        --focus-ring: #1a1a1a;
         --hover-bg: rgba(0, 0, 0, 0.06);
     }
 }
@@ -639,17 +591,13 @@ body:has(.chess-board.flipped) .captured-pieces {
     text-align: center;
     font-size: 0.9rem;
     font-weight: 600;
-    padding: 4px;
+    min-height: var(--control-height);
+    line-height: var(--control-height);
     border-radius: var(--radius-sm);
 }
 
 .more-settings summary:hover {
     background-color: var(--hover-bg);
-}
-
-.more-settings summary:focus-visible {
-    outline: 2px solid var(--text-color);
-    outline-offset: 2px;
 }
 
 /* One row per side: what it has captured, and its clock when the game has one */
@@ -713,19 +661,9 @@ body:has(.chess-board.flipped) .captured-pieces {
     resize: vertical;
 }
 
-.import-panel textarea:focus-visible {
-    outline: 2px solid var(--accent-color);
-}
-
 .import-error {
     min-height: 1.2em;
     margin: 8px 0;
     color: var(--danger-text);
     font-size: 0.9rem;
-}
-
-#import-load.confirming,
-#import-load.confirming:hover {
-    background-color: var(--danger-fill);
-    color: var(--on-accent);
 }
