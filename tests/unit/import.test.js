@@ -140,6 +140,24 @@ describe('the Load PGN dialog', () => {
     expect(notations(g)).toEqual(['e4', 'e5']);
   });
 
+  test('validates an invalid PGN before asking to discard a game', () => {
+    const g = loadGame();
+    g.play('d2d4');
+    el(g, 'import-button').click();
+    el(g, 'import-text').value = '1. e4 e5 2. Qh7';
+    el(g, 'import-load').click();
+    expect(el(g, 'import-error').textContent).toContain('Move 2. Qh7 cannot be played.');
+    expect(el(g, 'import-load').textContent).toBe('Load game');
+    expect(notations(g)).toEqual(['d4']);
+    expect(el(g, 'import-dialog').hidden).toBe(false);
+    el(g, 'import-text').value = '1. e4 e5';
+    el(g, 'import-load').click();
+    expect(el(g, 'import-load').textContent).toBe('Discard current game?');
+    expect(notations(g)).toEqual(['d4']);
+    el(g, 'import-load').click();
+    expect(notations(g)).toEqual(['e4', 'e5']);
+  });
+
   test('shows the error and stays open', () => {
     const g = loadGame();
     el(g, 'import-button').click();
