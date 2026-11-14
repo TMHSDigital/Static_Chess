@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Captured pieces**: The pieces each side has taken are shown with the material lead
+- **Game review**: Click a move in the list, or use the arrow keys, Home and End there, to see the position after it; "Back to game" returns to the live position and nothing in the game is changed
+- **Resign and draw by agreement**: Resign needs a second click; with two players a draw is offered and then accepted, and the computer accepts unless it is ahead. Undo reopens a game ended this way
+- The result is stored with the game, and the PGN says when a game ended by resignation or agreement
+
+### Changed
+
+- The side panel may be taller than the board (up to the window height), and its buttons are slightly smaller, to make room for the new controls
+
 ## [0.2.0] - 2026-11-13
 
 ### Added

@@ -24,6 +24,16 @@ const PIECE_NAMES = {
     [KING]: 'king',
 };
 
+// Conventional point values, used to say who is ahead in material
+const PIECE_POINTS = {
+    [PAWN]: 1,
+    [KNIGHT]: 3,
+    [BISHOP]: 3,
+    [ROOK]: 5,
+    [QUEEN]: 9,
+    [KING]: 0,
+};
+
 /**
  * Represents a chess piece.
  * @param {string} type - Piece type (e.g., PAWN, ROOK).
@@ -150,6 +160,7 @@ if (typeof module !== 'undefined' && module.exports) {
         WHITE,
         BLACK,
         PIECE_NAMES,
+        PIECE_POINTS,
         Piece,
         isPseudoLegalMove,
         getInitialPieces,

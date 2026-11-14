@@ -23,7 +23,22 @@
                 <ul id="move-history" class="move-history">
                     <!-- Move history will be populated by JavaScript -->
                 </ul>
+                <div class="captured-pieces" id="captured-pieces">
+                    <div
+                        class="captured-row"
+                        id="captured-by-black"
+                        role="img"
+                        aria-label="Black has captured nothing."
+                    ></div>
+                    <div
+                        class="captured-row"
+                        id="captured-by-white"
+                        role="img"
+                        aria-label="White has captured nothing."
+                    ></div>
+                </div>
                 <div id="game-status" class="game-status">White's turn</div>
+                <button id="live-button" class="live-button" hidden>Back to game</button>
                 <div id="announcer" class="visually-hidden" role="status" aria-live="polite"></div>
                 <div class="settings-container">
                     <div class="toggle-container" id="opponent-setting">
@@ -81,6 +96,8 @@
                 </div>
                 <div class="buttons-row">
                     <button id="undo-button" aria-label="Undo last move">Undo</button>
+                    <button id="draw-button">Offer draw</button>
+                    <button id="resign-button">Resign</button>
                     <button id="pgn-button" aria-label="Copy the game as PGN">Copy PGN</button>
                     <button id="reset-button">New Game</button>
                 </div>

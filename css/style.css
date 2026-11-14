@@ -72,7 +72,9 @@ body {
     border-radius: var(--border-radius);
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
     height: fit-content;
-    max-height: calc(var(--board-size) + 24px);
+    /* May be taller than the board, but never taller than the window */
+    max-height: max(calc(var(--board-size) + 24px), calc(100vh - 120px));
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
 }
@@ -91,8 +93,9 @@ body {
 .move-history {
     list-style: none;
     padding: 0;
-    margin: 15px 0;
-    height: calc(var(--board-size) - 220px);
+    margin: 10px 0;
+    height: calc(var(--board-size) - 330px);
+    min-height: 72px;
     overflow-y: auto;
     border: 1px solid #444;
     border-radius: var(--border-radius);
@@ -164,9 +167,11 @@ body {
 }
 
 #undo-button,
+#draw-button,
+#resign-button,
 #pgn-button {
-    padding: 12px;
-    font-size: 1.1em;
+    padding: 8px 12px;
+    font-size: 1em;
     cursor: pointer;
     background-color: transparent;
     color: var(--text-color);
@@ -178,12 +183,16 @@ body {
 }
 
 #undo-button:disabled,
+#draw-button:disabled,
+#resign-button:disabled,
 #pgn-button:disabled {
     opacity: 0.4;
     cursor: default;
 }
 
 #undo-button:hover:not(:disabled),
+#draw-button:hover:not(:disabled),
+#resign-button:hover:not(:disabled),
 #pgn-button:hover:not(:disabled) {
     background-color: rgba(255, 255, 255, 0.06);
     transform: translateY(-2px);
@@ -191,6 +200,8 @@ body {
 }
 
 #undo-button:active:not(:disabled),
+#draw-button:active:not(:disabled),
+#resign-button:active:not(:disabled),
 #pgn-button:active:not(:disabled) {
     transform: translateY(0);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -205,13 +216,15 @@ body {
 
 /* New Game is waiting for a second click before discarding a game in progress */
 #reset-button.confirming,
+#resign-button.confirming,
+#resign-button.confirming:hover:not(:disabled),
 #reset-button.confirming:hover {
     background-color: #c0392b;
 }
 
 #reset-button {
-    padding: 12px;
-    font-size: 1.1em;
+    padding: 8px 12px;
+    font-size: 1em;
     cursor: pointer;
     background-color: var(--accent-color);
     color: white;
@@ -445,4 +458,94 @@ body.coords-visible {
 .toggle-container select:focus-visible {
     outline: 2px solid var(--text-color);
     outline-offset: 2px;
+}
+
+/* Moves in the list are buttons: a click shows the position after the move */
+.move-history li button.move {
+    background: none;
+    border: none;
+    border-radius: 4px;
+    padding: 2px 4px;
+    color: inherit;
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.move-history li button.move:disabled {
+    cursor: default;
+}
+
+.move-history li button.move:hover:not(:disabled),
+.move-history li button.move:focus-visible {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.move-history li button.move:focus-visible {
+    outline: 2px solid var(--text-color);
+    outline-offset: 1px;
+}
+
+/* The move whose position is on the board */
+.move-history li button.move[aria-current='true'] {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+/* Shown while an earlier position is on the board */
+.live-button {
+    display: block;
+    width: 100%;
+    margin: -9px 0 12px;
+    padding: 4px;
+    background-color: transparent;
+    color: var(--text-color);
+    border: 1px solid var(--accent-color);
+    border-radius: var(--border-radius);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.live-button[hidden] {
+    display: none;
+}
+
+.live-button:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Captured pieces and the material lead, one row per side */
+.captured-pieces {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 8px;
+}
+
+/* Each row sits on its own side's end, also when the board is flipped */
+body:has(.chess-board.flipped) .captured-pieces {
+    flex-direction: column-reverse;
+}
+
+.captured-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    min-height: 22px;
+}
+
+.captured-piece {
+    width: 20px;
+    height: 20px;
+    margin-right: -4px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.material-lead {
+    margin-left: 10px;
+    font-size: 0.85rem;
+    color: #aaa;
 }

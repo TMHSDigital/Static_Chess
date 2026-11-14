@@ -16,9 +16,21 @@ let currentStatus = "White's turn";
 let enPassantTarget = null; // Stores coords {row, col} of square vulnerable to en passant, or null
 let positionHistory = []; // Undo stack: one pre-move snapshot per move played
 let halfmoveClock = 0; // Half-moves since the last pawn move or capture (fifty-move rule)
+let gameResult = null; // '1-0', '0-1' or '1/2-1/2' once the game is over, else null
+let endedWithoutMove = false; // True when the game ended by resignation or agreement, not by a move
+let drawOffered = false; // Two-player game: a draw offer is waiting for the other side
+let viewPly = null; // Number of moves played in the position being looked at; null shows the live game
 
 const moveHistoryElement = document.getElementById('move-history');
 const gameStatusElement = document.getElementById('game-status');
+const liveButton = document.getElementById('live-button');
+const resignButton = document.getElementById('resign-button');
+const drawButton = document.getElementById('draw-button');
+const capturedRows = {
+    [WHITE]: document.getElementById('captured-by-white'),
+    [BLACK]: document.getElementById('captured-by-black'),
+};
+const pendingConfirms = new Map(); // Buttons waiting for a confirming second click
 let announcerElement = document.getElementById('announcer'); // Live region read out by screen readers
 const resetButton = document.getElementById('reset-button');
 const undoButton = document.getElementById('undo-button');
@@ -32,6 +44,7 @@ let humanColor = WHITE; // The side the person plays when there is a computer op
 let aiRequestId = 0; // Goes up whenever a pending computer move must be dropped
 let aiThinking = false;
 let aiWorker = null; // The Web Worker, or false once it has proved unavailable
+const AI_DRAW_MARGIN = 50; // The computer agrees to a draw unless it is at least half a pawn ahead
 
 /**
  * Initializes the game state, either from scratch or localStorage.
@@ -47,6 +60,24 @@ function initializeGame() {
     updateStatusDisplay();
     updateMoveHistoryDisplay();
     refreshBoardVisuals();
+
+    // The move list: click or use the arrow keys to look at earlier positions
+    moveHistoryElement.removeEventListener('click', handleMoveListClick);
+    moveHistoryElement.addEventListener('click', handleMoveListClick);
+    moveHistoryElement.removeEventListener('keydown', handleMoveListKeydown);
+    moveHistoryElement.addEventListener('keydown', handleMoveListKeydown);
+    if (liveButton) {
+        liveButton.removeEventListener('click', returnToLiveGame);
+        liveButton.addEventListener('click', returnToLiveGame);
+    }
+    if (resignButton) {
+        resignButton.removeEventListener('click', handleResignClick);
+        resignButton.addEventListener('click', handleResignClick);
+    }
+    if (drawButton) {
+        drawButton.removeEventListener('click', handleDrawClick);
+        drawButton.addEventListener('click', handleDrawClick);
+    }
 
     // Add event listener for board clicks (delegated)
     boardElement.removeEventListener('click', handleBoardClickEvent);
@@ -114,6 +145,11 @@ function resetGame() {
     enPassantTarget = null;
     positionHistory = [];
     halfmoveClock = 0;
+    gameResult = null;
+    endedWithoutMove = false;
+    drawOffered = false;
+    viewPly = null;
+    cancelConfirms();
     cancelPendingPromotion();
     clearSelectedSquare();
     clearPossibleMoves();
@@ -187,8 +223,101 @@ function playChosenMove(from, to) {
  * Redraws the highlights: selection, legal targets, the last move and a king in check.
  * @param {{row: number, col: number}|null} [kingInCheck] - Pass it when already known.
  */
-function refreshBoardVisuals(kingInCheck = findKingInCheck(currentPlayer)) {
-    updateBoardVisuals(boardState, kingInCheck, moveHistory[moveHistory.length - 1] || null);
+function refreshBoardVisuals(kingInCheck) {
+    const shown = shownPosition();
+    if (kingInCheck === undefined || viewPly !== null) {
+        kingInCheck = isInCheck(shown, shown.player) ? shown.kingPositions[shown.player] : null;
+    }
+    updateBoardVisuals(shown.board, kingInCheck, moveHistory[shown.ply - 1] || null);
+}
+
+/**
+ * The position on screen: the live game, or an earlier position while the
+ * player is looking back through the move list.
+ * @returns {{board: Array, kingPositions: object, player: string, ply: number}}
+ */
+function shownPosition() {
+    if (viewPly === null) {
+        return { board: boardState, kingPositions, player: currentPlayer, ply: moveHistory.length };
+    }
+    const past = positionHistory[viewPly]; // The snapshot taken before move number viewPly + 1
+    return {
+        board: past.boardState,
+        kingPositions: past.kingPositions,
+        player: past.currentPlayer,
+        ply: viewPly,
+    };
+}
+
+/**
+ * Shows the position after a number of moves without changing the game. The
+ * board is locked meanwhile; showing the last position returns to the game.
+ * @param {number} ply - Moves played in the position to show; 0 is the starting position.
+ */
+function viewMove(ply) {
+    // Saves from older versions can have a move list without the positions behind it
+    if (positionHistory.length !== moveHistory.length) return;
+    const wanted = Math.max(0, Math.min(moveHistory.length, ply));
+    viewPly = wanted === moveHistory.length ? null : wanted;
+    cancelPendingPromotion();
+    clearSelectedSquare();
+    clearPossibleMoves();
+    redraw();
+    if (viewPly === null) {
+        announce(`Back to the game. ${currentStatus}`);
+    } else {
+        announce(
+            viewPly === 0 ? 'Viewing the starting position.' : `Viewing ${moveLabel(viewPly)}.`
+        );
+    }
+}
+
+/** Shows the live game again. */
+function returnToLiveGame() {
+    viewMove(moveHistory.length);
+}
+
+/** @returns {string} A move with its number, such as "12. Nf3" or "12... Nf6". */
+function moveLabel(ply) {
+    const dots = ply % 2 === 1 ? '.' : '...';
+    return `${Math.ceil(ply / 2)}${dots} ${moveHistory[ply - 1].notation}`;
+}
+
+/** Redraws everything that depends on the position on screen. */
+function redraw() {
+    renderPieces(shownPosition().board);
+    updateStatusDisplay();
+    updateMoveHistoryDisplay();
+    refreshBoardVisuals();
+}
+
+/** A click on a move in the list shows the position after it. */
+function handleMoveListClick(event) {
+    const entry = event.target.closest ? event.target.closest('button[data-ply]') : null;
+    if (!entry) return;
+    viewMove(Number(entry.dataset.ply));
+    focusCurrentMove();
+}
+
+/** Left and Right step through the game from the move list; Home and End jump to its ends. */
+function handleMoveListKeydown(event) {
+    const shown = shownPosition().ply;
+    const targets = {
+        ArrowLeft: shown - 1,
+        ArrowRight: shown + 1,
+        Home: 0,
+        End: moveHistory.length,
+    };
+    if (!(event.key in targets)) return;
+    event.preventDefault();
+    viewMove(targets[event.key]);
+    focusCurrentMove();
+}
+
+/** The list is rebuilt on every change, so focus has to be put back by hand. */
+function focusCurrentMove() {
+    const entry = moveHistoryElement.querySelector('button[tabindex="0"]');
+    if (entry) entry.focus();
 }
 
 /** @returns {object} The live game as a position for the functions in rules.js. */
@@ -208,6 +337,9 @@ function livePosition() {
  */
 function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
     if (!boardState[startRow][startCol]) return; // Should not happen if logic is correct
+    viewPly = null; // A move (for example the computer's reply) brings the live game back
+    drawOffered = false; // Playing on declines a draw offer
+    cancelConfirms();
 
     // --- Save snapshot for undo ---
     // applyMove builds a new position and leaves the old one untouched, so the
@@ -252,11 +384,13 @@ function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
         if (isCheckmate(currentPlayer)) {
             move.isCheckmate = true;
             isGameOver = true;
+            gameResult = currentPlayer === WHITE ? '0-1' : '1-0';
             currentStatus = `Checkmate! ${currentPlayer === WHITE ? 'Black' : 'White'} wins.`;
         }
     } else if (isStalemate(currentPlayer)) {
         move.isStalemate = true;
         isGameOver = true;
+        gameResult = '1/2-1/2';
         currentStatus = 'Stalemate! Game is a draw.';
     }
     if (!isGameOver) {
@@ -264,6 +398,7 @@ function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
         if (drawReason) {
             move.isDraw = true;
             isGameOver = true;
+            gameResult = '1/2-1/2';
             currentStatus = `Draw by ${drawReason}.`;
         }
     }
@@ -312,9 +447,17 @@ function showMoveResult(move, kingInCheck) {
  * Undo the last move and restore previous game state
  */
 function undoLastMove() {
-    if (positionHistory.length === 0 || (isGameOver && moveHistory.length === 0)) return;
+    const reopen = endedWithoutMove; // A resignation or agreed draw is taken back on its own
+    if (!reopen && (positionHistory.length === 0 || (isGameOver && moveHistory.length === 0))) {
+        return;
+    }
     cancelPendingPromotion();
     cancelAIMove();
+    cancelConfirms();
+    viewPly = null;
+    drawOffered = false;
+    gameResult = null;
+    endedWithoutMove = false;
     const takeBack = () => {
         const snapshot = positionHistory.pop();
         boardState = snapshot.boardState;
@@ -326,10 +469,15 @@ function undoLastMove() {
         enPassantTarget = snapshot.enPassantTarget;
         halfmoveClock = snapshot.halfmoveClock || 0;
     };
-    takeBack();
-    // Against the computer, also take back its reply so it is the player's turn again
-    if (currentPlayer === computerColor() && positionHistory.length > 0) {
+    if (reopen) {
+        isGameOver = false;
+        currentStatus = `${currentPlayer === WHITE ? 'White' : 'Black'}'s turn`;
+    } else {
         takeBack();
+        // Against the computer, also take back its reply so it is the player's turn again
+        if (currentPlayer === computerColor() && positionHistory.length > 0) {
+            takeBack();
+        }
     }
 
     clearSelectedSquare();
@@ -338,9 +486,124 @@ function undoLastMove() {
     updateStatusDisplay();
     updateMoveHistoryDisplay();
     refreshBoardVisuals();
-    announce(`Move taken back. ${currentStatus}`);
+    announce(reopen ? `Game reopened. ${currentStatus}` : `Move taken back. ${currentStatus}`);
     saveGameState();
-    requestAIMove(); // Only happens when the computer's first move was taken back
+    requestAIMove(); // The computer's first move was taken back, or the game was reopened on its turn
+}
+
+// --- Ending the game without a move ---
+
+/**
+ * Asks for a confirming second click on a button, so a mis-tap cannot end the
+ * game. The first click changes the label for a few seconds.
+ * @param {HTMLElement} button
+ * @param {string} question - Label shown while waiting.
+ * @returns {boolean} True on the confirming click.
+ */
+function confirmSecondClick(button, question) {
+    if (pendingConfirms.has(button)) {
+        cancelConfirm(button);
+        return true;
+    }
+    pendingConfirms.set(button, {
+        label: button.textContent,
+        timer: setTimeout(() => cancelConfirm(button), CONFIG.RESET_CONFIRM_MS),
+    });
+    button.textContent = question;
+    button.classList.add('confirming');
+    return false;
+}
+
+/** Puts a button waiting for confirmation back to normal. */
+function cancelConfirm(button) {
+    const pending = pendingConfirms.get(button);
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    pendingConfirms.delete(button);
+    button.textContent = pending.label;
+    button.classList.remove('confirming');
+}
+
+/** Drops every confirmation that is waiting; used whenever the game moves on. */
+function cancelConfirms() {
+    for (const button of Array.from(pendingConfirms.keys())) cancelConfirm(button);
+}
+
+/**
+ * Ends the game with a result that no move produced. Undo reopens it.
+ * @param {string} result - '1-0', '0-1' or '1/2-1/2'.
+ * @param {string} status - What the status line says.
+ */
+function endGameWithoutMove(result, status) {
+    cancelPendingPromotion();
+    cancelAIMove();
+    cancelConfirms();
+    isGameOver = true;
+    gameResult = result;
+    endedWithoutMove = true;
+    drawOffered = false;
+    viewPly = null;
+    currentStatus = status;
+    clearSelectedSquare();
+    clearPossibleMoves();
+    redraw();
+    announce(currentStatus);
+    try {
+        playSound('game_end');
+    } catch {
+        /* ignore sound errors */
+    }
+    saveGameState();
+}
+
+/** @returns {boolean} True while a game with at least one move is still being played. */
+function isGameInProgress() {
+    return moveHistory.length > 0 && !isGameOver;
+}
+
+/**
+ * Resigns the game. Against the computer it is the person who resigns; with
+ * two players it is the side to move.
+ */
+function resign() {
+    if (!isGameInProgress()) return;
+    const loser = computerColor() ? humanColor : currentPlayer;
+    endGameWithoutMove(
+        loser === WHITE ? '0-1' : '1-0',
+        loser === WHITE ? 'White resigned. Black wins.' : 'Black resigned. White wins.'
+    );
+}
+
+/** Handles the Resign button, which needs a confirming second click. */
+function handleResignClick() {
+    if (!isGameInProgress()) return;
+    if (confirmSecondClick(resignButton, 'Resign?')) resign();
+}
+
+/**
+ * Handles the draw button. With two players the first click offers a draw and
+ * a second one, by the other side, accepts it; playing a move declines. The
+ * computer answers at once: it agrees unless it thinks it is ahead.
+ */
+function handleDrawClick() {
+    if (!isGameInProgress()) return;
+    const computer = computerColor();
+    if (computer) {
+        if (evaluatePosition(livePosition(), computer) < AI_DRAW_MARGIN) {
+            endGameWithoutMove('1/2-1/2', 'Draw by agreement.');
+        } else {
+            announce('The computer declines the draw.');
+            gameStatusElement.textContent = `The computer declines the draw. ${currentStatus}`;
+        }
+        return;
+    }
+    if (drawOffered) {
+        endGameWithoutMove('1/2-1/2', 'Draw by agreement.');
+        return;
+    }
+    drawOffered = true;
+    updateStatusDisplay();
+    announce(`${currentPlayer === WHITE ? 'White' : 'Black'} offers a draw.`);
 }
 
 /** @returns {boolean} True while the promotion chooser is waiting for an answer. */
@@ -363,7 +626,9 @@ function computerColor() {
 
 /** @returns {boolean} True while the player cannot move: game over, chooser open, or the computer's turn. */
 function isBoardLocked() {
-    return isGameOver || isPromotionPending() || currentPlayer === computerColor();
+    return (
+        isGameOver || viewPly !== null || isPromotionPending() || currentPlayer === computerColor()
+    );
 }
 
 /**
@@ -375,6 +640,8 @@ function isBoardLocked() {
 function setOpponent(level, color = WHITE) {
     opponentLevel = Object.prototype.hasOwnProperty.call(AI_LEVELS, level) ? level : null;
     humanColor = color === BLACK ? BLACK : WHITE;
+    drawOffered = false;
+    cancelConfirms();
     cancelAIMove();
     clearSelectedSquare();
     clearPossibleMoves();
@@ -564,6 +831,8 @@ function saveGameState() {
         currentStatus: currentStatus,
         enPassantTarget: enPassantTarget,
         halfmoveClock: halfmoveClock,
+        gameResult: gameResult,
+        endedWithoutMove: endedWithoutMove,
         positionHistory: positionHistory, // Undo stack, so Undo still works after a reload
     };
     try {
@@ -676,11 +945,23 @@ function validateSavedGame(saved) {
         }
     }
 
+    // Saves from before results were stored: work the result out from the last move
+    const over = !!saved.isGameOver;
+    let result = null;
+    if (over) {
+        const last = history[history.length - 1];
+        if (['1-0', '0-1', '1/2-1/2'].includes(saved.gameResult)) result = saved.gameResult;
+        else if (last && last.isCheckmate) result = saved.currentPlayer === WHITE ? '0-1' : '1-0';
+        else result = '1/2-1/2';
+    }
+
     return {
+        gameResult: result,
+        endedWithoutMove: over && saved.endedWithoutMove === true,
         boardState: saved.boardState,
         currentPlayer: saved.currentPlayer,
         moveHistory: history,
-        isGameOver: !!saved.isGameOver,
+        isGameOver: over,
         kingPositions: findKingPositions(saved.boardState),
         currentStatus:
             typeof saved.currentStatus === 'string' ? saved.currentStatus : 'Game loaded',
@@ -718,6 +999,8 @@ function loadGameState() {
     enPassantTarget = state.enPassantTarget;
     halfmoveClock = state.halfmoveClock;
     positionHistory = state.positionHistory;
+    gameResult = state.gameResult;
+    endedWithoutMove = state.endedWithoutMove;
     return true;
 }
 
@@ -728,51 +1011,106 @@ function loadGameState() {
  */
 function updateMoveHistoryDisplay() {
     moveHistoryElement.innerHTML = ''; // Clear existing
-    let listItems = {}; // Store list items by turn number
+    const shownPly = shownPosition().ply;
+    const canView = positionHistory.length === moveHistory.length;
+    let listItem = null;
+    let current = null; // The entry for the position on screen
 
     moveHistory.forEach((move, index) => {
-        const turnNumber = Math.floor(index / 2) + 1;
-        const isWhiteMove = index % 2 === 0;
-
-        let listItem;
-        if (!listItems[turnNumber]) {
-            // Create new list item for the turn
+        const ply = index + 1;
+        if (index % 2 === 0) {
+            // White's move starts a new row
             listItem = document.createElement('li');
             const turnSpan = document.createElement('span');
             turnSpan.classList.add('turn-number');
-            turnSpan.textContent = `${turnNumber}.`;
-
-            const whiteMoveSpan = document.createElement('span');
-            whiteMoveSpan.classList.add('move', 'white-move');
-
-            const blackMoveSpan = document.createElement('span');
-            blackMoveSpan.classList.add('move', 'black-move');
-
+            turnSpan.textContent = `${index / 2 + 1}.`;
             listItem.appendChild(turnSpan);
-            listItem.appendChild(whiteMoveSpan);
-            listItem.appendChild(blackMoveSpan);
-
             moveHistoryElement.appendChild(listItem);
-            listItems[turnNumber] = listItem; // Store reference
-        } else {
-            listItem = listItems[turnNumber];
         }
 
-        // Populate the correct move span
-        if (isWhiteMove) {
-            listItem.querySelector('.white-move').textContent = move.notation;
-        } else {
-            listItem.querySelector('.black-move').textContent = move.notation;
+        // Each move is a button that shows the position after it. Only one is
+        // in the tab order; the arrow keys step between them.
+        const entry = document.createElement('button');
+        entry.type = 'button';
+        entry.classList.add('move', index % 2 === 0 ? 'white-move' : 'black-move');
+        entry.textContent = move.notation;
+        entry.dataset.ply = ply;
+        entry.tabIndex = -1;
+        entry.disabled = !canView;
+        if (ply === shownPly) {
+            entry.setAttribute('aria-current', 'true');
+            current = entry;
         }
+        listItem.appendChild(entry);
     });
 
-    // Highlight the last list item
+    const tabStop = current || moveHistoryElement.querySelector('button[data-ply]');
+    if (tabStop) tabStop.tabIndex = 0;
+
+    // Highlight the row of the last move played
     if (moveHistoryElement.lastElementChild) {
         moveHistoryElement.lastElementChild.classList.add('last-move-entry');
     }
 
-    // Scroll to bottom
-    moveHistoryElement.scrollTop = moveHistoryElement.scrollHeight;
+    if (viewPly === null) {
+        moveHistoryElement.scrollTop = moveHistoryElement.scrollHeight; // Follow the game
+    } else if (current && typeof current.scrollIntoView === 'function') {
+        current.scrollIntoView({ block: 'nearest' });
+    }
+
+    updateCapturedDisplay(); // Follows the same position as the list
+}
+
+/**
+ * Lists what each side has captured up to the position on screen, and how far
+ * ahead in material the leading side is.
+ */
+function updateCapturedDisplay() {
+    const shown = shownPosition();
+    const taken = { [WHITE]: [], [BLACK]: [] }; // Keyed by the side that made the captures
+    for (const move of moveHistory.slice(0, shown.ply)) {
+        if (move.captured && move.piece) taken[move.piece.color].push(move.captured.type);
+    }
+    // The lead is counted on the board, so promotions are included
+    let lead = 0;
+    for (const row of shown.board) {
+        for (const piece of row) {
+            if (piece) lead += (piece.color === WHITE ? 1 : -1) * PIECE_POINTS[piece.type];
+        }
+    }
+
+    const order = [PAWN, KNIGHT, BISHOP, ROOK, QUEEN];
+    for (const color of [WHITE, BLACK]) {
+        const rowElement = capturedRows[color];
+        if (!rowElement) continue;
+        const side = color === WHITE ? 'White' : 'Black';
+        const ahead = color === WHITE ? lead : -lead;
+        const types = taken[color].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+
+        rowElement.innerHTML = '';
+        for (const type of types) {
+            const icon = document.createElement('span');
+            icon.classList.add('captured-piece');
+            icon.style.backgroundImage = `url('assets/${opponentOf(color)}${type}.svg')`;
+            rowElement.appendChild(icon);
+        }
+        if (ahead > 0) {
+            const leadElement = document.createElement('span');
+            leadElement.classList.add('material-lead');
+            leadElement.textContent = `+${ahead}`;
+            rowElement.appendChild(leadElement);
+        }
+
+        const counts = order
+            .map((type) => [type, types.filter((t) => t === type).length])
+            .filter(([, count]) => count > 0)
+            .map(([type, count]) =>
+                count === 1 ? PIECE_NAMES[type] : `${count} ${PIECE_NAMES[type]}s`
+            );
+        let label = `${side} has captured ${counts.length ? counts.join(', ') : 'nothing'}.`;
+        if (ahead > 0) label += ` ${side} is ahead by ${ahead}.`;
+        rowElement.setAttribute('aria-label', label);
+    }
 }
 
 /**
@@ -818,15 +1156,33 @@ function describeMove(move) {
  * Updates the game status message in the DOM.
  */
 function updateStatusDisplay() {
-    gameStatusElement.textContent = aiThinking
-        ? `${currentStatus} (computer is thinking)`
-        : currentStatus;
-    // Undo is only available while there is a move to take back
+    if (viewPly !== null) {
+        gameStatusElement.textContent =
+            viewPly === 0 ? 'Viewing the starting position' : `Viewing ${moveLabel(viewPly)}`;
+    } else if (aiThinking) {
+        gameStatusElement.textContent = `${currentStatus} (computer is thinking)`;
+    } else if (drawOffered) {
+        gameStatusElement.textContent = `${currentStatus} (draw offered)`;
+    } else {
+        gameStatusElement.textContent = currentStatus;
+    }
+    if (liveButton) {
+        liveButton.hidden = viewPly === null;
+    }
+    // Undo is only available while there is a move, or a resignation or agreed draw, to take back
     if (undoButton) {
-        undoButton.disabled = positionHistory.length === 0;
+        undoButton.disabled = positionHistory.length === 0 && !endedWithoutMove;
     }
     if (pgnButton) {
         pgnButton.disabled = moveHistory.length === 0;
+    }
+    if (resignButton) {
+        resignButton.disabled = !isGameInProgress();
+    }
+    if (drawButton) {
+        drawButton.disabled = !isGameInProgress();
+        drawButton.textContent = drawOffered ? 'Accept draw?' : 'Offer draw';
+        drawButton.classList.toggle('confirming', drawOffered);
     }
 }
 
@@ -863,15 +1219,7 @@ function handleResetClick() {
  * @returns {string}
  */
 function buildPGN() {
-    const lastMove = moveHistory[moveHistory.length - 1];
-    let result = '*'; // Game still in progress
-    if (isGameOver && lastMove) {
-        if (lastMove.isCheckmate) {
-            result = lastMove.piece.color === WHITE ? '1-0' : '0-1';
-        } else {
-            result = '1/2-1/2';
-        }
-    }
+    const result = (isGameOver && gameResult) || '*'; // "*" marks a game still in progress
 
     const today = new Date();
     const pad = (n) => String(n).padStart(2, '0');
@@ -891,7 +1239,10 @@ function buildPGN() {
         return index % 2 === 0 ? `${index / 2 + 1}. ${san}` : san;
     });
 
-    return `${tags.join('\n')}\n\n${[...moves, result].join(' ')}\n`;
+    // A resignation or agreed draw is not visible in the moves, so say it in a comment
+    const ending = endedWithoutMove ? [`{${currentStatus.replace(/[{}]/g, '')}}`] : [];
+
+    return `${tags.join('\n')}\n\n${[...moves, ...ending, result].join(' ')}\n`;
 }
 
 /**
@@ -1011,6 +1362,17 @@ if (typeof module !== 'undefined' && module.exports) {
         handleResetClick,
         buildPGN,
         hasInsufficientMaterial,
+        viewMove,
+        returnToLiveGame,
+        resign,
+        handleResignClick,
+        handleDrawClick,
+        get gameResult() {
+            return gameResult;
+        },
+        get viewPly() {
+            return viewPly;
+        },
         // Export state variables for test access
         get boardState() {
             return boardState;

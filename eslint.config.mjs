@@ -30,6 +30,7 @@ const appGlobals = {
     'WHITE',
     'BLACK',
     'PIECE_NAMES',
+    'PIECE_POINTS',
     'Piece',
     'isPseudoLegalMove',
     'getInitialPieces',
@@ -47,7 +48,7 @@ const appGlobals = {
     'hasInsufficientMaterial',
   ]),
   // ai.js
-  ...shared(['AI_LEVELS', 'chooseAIMove']),
+  ...shared(['AI_LEVELS', 'chooseAIMove', 'evaluatePosition']),
   // board.js
   ...shared([
     'boardElement',
