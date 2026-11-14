@@ -599,3 +599,43 @@ body:has(.chess-board.flipped) .captured-pieces {
     outline: 2px solid var(--text-color);
     outline-offset: 2px;
 }
+
+/* One row per side: what it has captured, and its clock when the game has one */
+.side-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.side-row .captured-row {
+    flex: 1;
+}
+
+.clock {
+    padding: 1px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.clock[hidden] {
+    display: none;
+}
+
+/* The side to move */
+.clock.running {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+}
+
+/* Under twenty seconds */
+.clock.low {
+    border-color: #c0392b;
+}
+
+.clock.low.running {
+    background-color: #c0392b;
+}

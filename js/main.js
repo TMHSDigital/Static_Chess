@@ -145,6 +145,32 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Apply the clock setting. It takes effect from the next new game.
+    const clockSelect = document.getElementById('clock-select');
+    if (clockSelect) {
+        const clockSetting = document.getElementById('clock-setting');
+        if (!CONFIG.FEATURES.GAME_TIMER) {
+            if (clockSetting) clockSetting.hidden = true;
+        } else {
+            const controls = CONFIG.TIME_CONTROLS;
+            for (const [key, control] of Object.entries(controls)) {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = control.label;
+                clockSelect.appendChild(option);
+            }
+            const savedControl = readSetting(KEYS.TIME_CONTROL);
+            clockSelect.value = Object.prototype.hasOwnProperty.call(controls, savedControl)
+                ? savedControl
+                : DEFAULTS.TIME_CONTROL;
+            setTimeControl(clockSelect.value);
+            clockSelect.addEventListener('change', () => {
+                writeSetting(KEYS.TIME_CONTROL, clockSelect.value);
+                setTimeControl(clockSelect.value);
+            });
+        }
+    }
+
     // Apply the opponent settings
     const opponentSelect = document.getElementById('opponent-select');
     const sideSelect = document.getElementById('side-select');

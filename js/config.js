@@ -11,7 +11,21 @@ const CONFIG = {
         SOUND_EFFECTS: false, // Runtime state: set from the "Sound effects" toggle at startup
         AI_OPPONENT: true, // Offer a computer opponent in the settings (ai.js)
         PROMOTION_UI: true, // Ask which piece a pawn promotes to (off: always a queen)
+        GAME_TIMER: true, // Offer a chess clock in the settings
     },
+
+    // Clock settings on offer: minutes each, plus seconds added after every move
+    TIME_CONTROLS: {
+        off: { label: 'No clock' },
+        '1+0': { label: '1 minute', minutes: 1, increment: 0 },
+        '3+2': { label: '3 min + 2 s', minutes: 3, increment: 2 },
+        '5+0': { label: '5 minutes', minutes: 5, increment: 0 },
+        '10+0': { label: '10 minutes', minutes: 10, increment: 0 },
+        '15+10': { label: '15 min + 10 s', minutes: 15, increment: 10 },
+    },
+
+    // How often a running clock is redrawn and checked (ms)
+    CLOCK_TICK_MS: 200,
 
     // Defaults for the settings panel, used until the player changes a toggle
     DEFAULT_SETTINGS: {
@@ -22,6 +36,7 @@ const CONFIG = {
         FLIP_BOARD: false, // true shows the board from Black's side
         OPPONENT: 'human', // 'human' for two players, or 'easy', 'medium', 'hard' for the computer
         PLAYER_SIDE: 'w', // The side the person plays against the computer: 'w' or 'b'
+        TIME_CONTROL: 'off', // A key of TIME_CONTROLS
         BOARD_THEME: 'classic', // A key of BOARD_THEMES
         PAGE_THEME: 'dark', // 'dark', 'light', or 'auto' to follow the system setting
     },
@@ -122,6 +137,7 @@ const CONFIG = {
         FLIP_BOARD: 'flipBoard',
         OPPONENT: 'opponent',
         PLAYER_SIDE: 'playerSide',
+        TIME_CONTROL: 'timeControl',
         BOARD_THEME: 'boardTheme',
         PAGE_THEME: 'pageTheme',
     },

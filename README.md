@@ -308,7 +308,6 @@ See the [Development Roadmap](docs/ROADMAP.md) for a detailed plan of upcoming f
 <br>
 
 - **Stronger Computer Opponent:** Deeper search and a better evaluation
-- **Game Timer:** Optional chess clock functionality
 - **Sound Effects:** Recorded sounds as an alternative to the built-in synthesized tones
 - **Multiple Saved Games:** Save and load multiple games
 - **Full SAN Implementation:** Complete algebraic notation with full disambiguation

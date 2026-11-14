@@ -31,6 +31,16 @@ const capturedRows = {
     [BLACK]: document.getElementById('captured-by-black'),
 };
 const pendingConfirms = new Map(); // Buttons waiting for a confirming second click
+const clockElements = {
+    [WHITE]: document.getElementById('clock-white'),
+    [BLACK]: document.getElementById('clock-black'),
+};
+let chosenTimeControl = null; // Key of CONFIG.TIME_CONTROLS for the next game; null for no clock
+// The clock of the game being played, or null: { control, base, increment,
+// remaining: {w, b} } in milliseconds, and turnStartedAt, the time the side to
+// move was put on the clock (null while no clock is running)
+let clock = null;
+let clockTimer = null; // Interval that redraws a running clock
 const hintButton = document.getElementById('hint-button');
 let hintMove = null; // The move the engine suggested for the current position, if asked
 let hintPending = false; // True while the engine is working out a hint
@@ -85,6 +95,10 @@ function initializeGame() {
         hintButton.removeEventListener('click', requestHint);
         hintButton.addEventListener('click', requestHint);
     }
+    // Keep the clock times when the page is closed in the middle of a turn
+    window.removeEventListener('pagehide', saveGameInProgress);
+    window.addEventListener('pagehide', saveGameInProgress);
+    runClockTimer();
 
     // Add event listener for board clicks (delegated)
     boardElement.removeEventListener('click', handleBoardClickEvent);
@@ -156,6 +170,8 @@ function resetGame() {
     endedWithoutMove = false;
     drawOffered = false;
     viewPly = null;
+    clock = newClock();
+    runClockTimer();
     cancelConfirms();
     cancelPendingPromotion();
     clearSelectedSquare();
@@ -349,6 +365,11 @@ function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
     drawOffered = false; // Playing on declines a draw offer
     clearHint();
     cancelConfirms();
+    // The mover's clock stops and gains the increment. White's first move is not timed.
+    if (clock && clock.turnStartedAt !== null) {
+        clock.remaining[currentPlayer] = clockRemaining(currentPlayer) + clock.increment;
+        clock.turnStartedAt = null;
+    }
 
     // --- Save snapshot for undo ---
     // applyMove builds a new position and leaves the old one untouched, so the
@@ -415,6 +436,8 @@ function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
         currentStatus = `${currentPlayer === WHITE ? 'White' : 'Black'}'s turn`;
     }
     debugLog(move.notation, '-', currentStatus);
+    if (clock && !isGameOver) clock.turnStartedAt = Date.now(); // The other side is on the clock
+    runClockTimer();
 
     showMoveResult(move, opponentKingInCheck);
     saveGameState();
@@ -456,6 +479,7 @@ function showMoveResult(move, kingInCheck) {
  * Undo the last move and restore previous game state
  */
 function undoLastMove() {
+    if (clock) return; // No taking moves back on the clock
     const reopen = endedWithoutMove; // A resignation or agreed draw is taken back on its own
     if (!reopen && (positionHistory.length === 0 || (isGameOver && moveHistory.length === 0))) {
         return;
@@ -547,6 +571,11 @@ function endGameWithoutMove(result, status) {
     cancelPendingPromotion();
     cancelAIMove();
     cancelConfirms();
+    if (clock && clock.turnStartedAt !== null) {
+        clock.remaining[currentPlayer] = clockRemaining(currentPlayer); // Stop the clock
+        clock.turnStartedAt = null;
+    }
+    runClockTimer();
     isGameOver = true;
     gameResult = result;
     endedWithoutMove = true;
@@ -742,6 +771,128 @@ function askEngine(position, color, level, onMove) {
     return id;
 }
 
+// --- Clock ---
+
+/**
+ * Chooses the clock for the next game. A game that has not started yet takes
+ * it at once; a game in progress keeps the clock it started with.
+ * @param {string} key - A key of CONFIG.TIME_CONTROLS; anything without minutes means no clock.
+ */
+function setTimeControl(key) {
+    const known = Object.prototype.hasOwnProperty.call(CONFIG.TIME_CONTROLS, key);
+    chosenTimeControl =
+        CONFIG.FEATURES.GAME_TIMER && known && CONFIG.TIME_CONTROLS[key].minutes ? key : null;
+    if (moveHistory.length === 0 && !isGameOver) {
+        clock = newClock();
+        updateStatusDisplay();
+    }
+}
+
+/** @returns {object|null} A full clock for the chosen time control, or null without one. */
+function newClock() {
+    if (!chosenTimeControl) return null;
+    const control = CONFIG.TIME_CONTROLS[chosenTimeControl];
+    const base = control.minutes * 60000;
+    return {
+        control: chosenTimeControl,
+        base,
+        increment: (control.increment || 0) * 1000,
+        remaining: { [WHITE]: base, [BLACK]: base },
+        turnStartedAt: null,
+    };
+}
+
+/** @returns {number} Milliseconds a side has left right now; never below zero. */
+function clockRemaining(color) {
+    if (!clock) return 0;
+    const running = clock.turnStartedAt !== null && color === currentPlayer;
+    const used = running ? Date.now() - clock.turnStartedAt : 0;
+    return Math.max(0, clock.remaining[color] - used);
+}
+
+/** @returns {string} A time as "m:ss", with tenths of a second in the last ten seconds. */
+function formatClock(ms) {
+    if (ms < 10000) return `0:0${Math.floor(ms / 1000)}.${Math.floor((ms % 1000) / 100)}`;
+    const seconds = Math.ceil(ms / 1000);
+    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
+/** Shows both clocks, or hides them in a game without one. */
+function updateClockDisplay() {
+    for (const color of [WHITE, BLACK]) {
+        const element = clockElements[color];
+        if (!element) continue;
+        element.hidden = !clock;
+        if (!clock) continue;
+        const left = clockRemaining(color);
+        const running = clock.turnStartedAt !== null && color === currentPlayer;
+        element.textContent = formatClock(left);
+        element.classList.toggle('running', running);
+        element.classList.toggle('low', left < 20000);
+        // A timer is not read out on every change; the label is there when asked for
+        element.setAttribute(
+            'aria-label',
+            `${color === WHITE ? 'White' : 'Black'} clock: ${formatClock(left)}`
+        );
+    }
+}
+
+/** Runs the ticking while a clock is running, and stops it otherwise. */
+function runClockTimer() {
+    const shouldRun = !!clock && clock.turnStartedAt !== null && !isGameOver;
+    if (shouldRun && clockTimer === null) {
+        clockTimer = setInterval(tickClock, CONFIG.CLOCK_TICK_MS);
+    } else if (!shouldRun && clockTimer !== null) {
+        clearInterval(clockTimer);
+        clockTimer = null;
+    }
+}
+
+/** Redraws the running clock and ends the game when it reaches zero. */
+function tickClock() {
+    if (!clock || clock.turnStartedAt === null || isGameOver) {
+        runClockTimer();
+        return;
+    }
+    if (clockRemaining(currentPlayer) > 0) {
+        updateClockDisplay();
+        return;
+    }
+    const loser = currentPlayer;
+    const winner = opponentOf(loser);
+    const name = (color) => (color === WHITE ? 'White' : 'Black');
+    if (canDeliverMate(boardState, winner)) {
+        endGameWithoutMove(
+            winner === WHITE ? '1-0' : '0-1',
+            `${name(loser)} ran out of time. ${name(winner)} wins.`
+        );
+    } else {
+        endGameWithoutMove(
+            '1/2-1/2',
+            `${name(loser)} ran out of time, but ${name(winner)} cannot checkmate. Draw.`
+        );
+    }
+}
+
+/**
+ * @returns {boolean} False if that side could never checkmate: a lone king, or
+ * a king with a single bishop or knight.
+ */
+function canDeliverMate(board, color) {
+    const others = [];
+    for (const row of board) {
+        for (const piece of row) {
+            if (piece && piece.color === color && piece.type !== KING) others.push(piece.type);
+        }
+    }
+    return !(others.length === 0 || (others.length === 1 && [BISHOP, KNIGHT].includes(others[0])));
+}
+
+/** Saves a game that has started; used when the page is being closed. */
+function saveGameInProgress() {
+    if (moveHistory.length > 0) saveGameState();
+}
+
 // --- Hint ---
 
 /**
@@ -904,6 +1055,14 @@ function saveGameState() {
         halfmoveClock: halfmoveClock,
         gameResult: gameResult,
         endedWithoutMove: endedWithoutMove,
+        // Times as of now. After a reload the side to move gets back on the clock.
+        clock: clock && {
+            control: clock.control,
+            base: clock.base,
+            increment: clock.increment,
+            remaining: { [WHITE]: clockRemaining(WHITE), [BLACK]: clockRemaining(BLACK) },
+            running: clock.turnStartedAt !== null,
+        },
         positionHistory: positionHistory, // Undo stack, so Undo still works after a reload
     };
     try {
@@ -1026,7 +1185,27 @@ function validateSavedGame(saved) {
         else result = '1/2-1/2';
     }
 
+    // The clock is optional; a damaged one is dropped and the game goes on without
+    let savedClock = null;
+    const c = saved.clock;
+    const isTime = (value) => Number.isFinite(value) && value >= 0;
+    if (
+        c &&
+        typeof c === 'object' &&
+        c.remaining &&
+        [c.base, c.increment, c.remaining[WHITE], c.remaining[BLACK]].every(isTime)
+    ) {
+        savedClock = {
+            control: typeof c.control === 'string' ? c.control : '',
+            base: c.base,
+            increment: c.increment,
+            remaining: { [WHITE]: c.remaining[WHITE], [BLACK]: c.remaining[BLACK] },
+            turnStartedAt: c.running === true && !over ? Date.now() : null,
+        };
+    }
+
     return {
+        clock: savedClock,
         gameResult: result,
         endedWithoutMove: over && saved.endedWithoutMove === true,
         boardState: saved.boardState,
@@ -1072,6 +1251,7 @@ function loadGameState() {
     positionHistory = state.positionHistory;
     gameResult = state.gameResult;
     endedWithoutMove = state.endedWithoutMove;
+    clock = state.clock;
     return true;
 }
 
@@ -1242,8 +1422,9 @@ function updateStatusDisplay() {
     }
     // Undo is only available while there is a move, or a resignation or agreed draw, to take back
     if (undoButton) {
-        undoButton.disabled = positionHistory.length === 0 && !endedWithoutMove;
+        undoButton.disabled = !!clock || (positionHistory.length === 0 && !endedWithoutMove);
     }
+    updateClockDisplay();
     if (pgnButton) {
         pgnButton.disabled = moveHistory.length === 0;
     }
@@ -1307,6 +1488,7 @@ function buildPGN() {
         ['White', computerColor() === WHITE ? `Computer (${opponentLevel})` : 'White'],
         ['Black', computerColor() === BLACK ? `Computer (${opponentLevel})` : 'Black'],
         ['Result', result],
+        ...(clock ? [['TimeControl', `${clock.base / 1000}+${clock.increment / 1000}`]] : []),
     ].map(([name, value]) => `[${name} "${value}"]`);
 
     const moves = moveHistory.map((move, index) => {
@@ -1440,6 +1622,13 @@ if (typeof module !== 'undefined' && module.exports) {
         viewMove,
         returnToLiveGame,
         requestHint,
+        setTimeControl,
+        clockRemaining,
+        formatClock,
+        saveGameState,
+        get clock() {
+            return clock;
+        },
         get hintMove() {
             return hintMove;
         },

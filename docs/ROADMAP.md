@@ -45,8 +45,8 @@ Features are prioritized as follows:
 | --------------------------- | ---------- | ------------ | --------------------------------------------------------------- | ------------------------ |
 | **Sound Effects**           | Low        | None         | Add audio feedback for moves and events                         | Done (synthesized tones) |
 | **Advanced Draw Detection** | Medium     | None         | Insufficient material, threefold repetition and fifty-move rule | ✅ Completed             |
-| **Game Timer**              | Medium     | None         | Optional chess clock functionality                              | Planned                  |
-| **Theme Customization**     | Medium     | None         | Allow customization of board colors and styles                  | Planned                  |
+| **Game Timer**              | Medium     | None         | Optional chess clock functionality                              | ✅ Completed             |
+| **Theme Customization**     | Medium     | None         | Allow customization of board colors and styles                  | ✅ Completed             |
 
 ### Tier 3: Advanced Features
 
@@ -73,12 +73,12 @@ This is a rough guideline for feature implementation:
 - [x] **Sound Effects** _(synthesized tones; no audio assets needed)_
 - [x] **SAN Disambiguation (basic)**
 - [x] **Advanced Draw Detection**
-- [ ] **Game Timer**
+- [x] **Game Timer**
 
 ### Phase 3: Advanced Features (3-6 months)
 
 - [ ] **Multiple Saved Games**
-- [ ] **Theme Customization**
+- [x] **Theme Customization**
 - [x] **AI Opponent (basic)**
 - [ ] **Game Import/Export**
 
@@ -108,8 +108,6 @@ The following files provide a foundation for implementing the planned features:
 - **js/promotion.js**: Pawn promotion chooser (complete and enabled)
 - **js/rules.js**: The rules as pure functions, usable on board copies
 - **js/ai.js**: Computer opponent (complete and enabled)
-
-The game timer has no flag or code yet.
 
 ## Contribution Guidelines
 

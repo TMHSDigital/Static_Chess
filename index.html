@@ -24,18 +24,24 @@
                     <!-- Move history will be populated by JavaScript -->
                 </ul>
                 <div class="captured-pieces" id="captured-pieces">
-                    <div
-                        class="captured-row"
-                        id="captured-by-black"
-                        role="img"
-                        aria-label="Black has captured nothing."
-                    ></div>
-                    <div
-                        class="captured-row"
-                        id="captured-by-white"
-                        role="img"
-                        aria-label="White has captured nothing."
-                    ></div>
+                    <div class="side-row">
+                        <div
+                            class="captured-row"
+                            id="captured-by-black"
+                            role="img"
+                            aria-label="Black has captured nothing."
+                        ></div>
+                        <span class="clock" id="clock-black" role="timer" hidden></span>
+                    </div>
+                    <div class="side-row">
+                        <div
+                            class="captured-row"
+                            id="captured-by-white"
+                            role="img"
+                            aria-label="White has captured nothing."
+                        ></div>
+                        <span class="clock" id="clock-white" role="timer" hidden></span>
+                    </div>
                 </div>
                 <div id="game-status" class="game-status">White's turn</div>
                 <button id="live-button" class="live-button" hidden>Back to game</button>
@@ -56,6 +62,10 @@
                             <option value="w">White</option>
                             <option value="b">Black</option>
                         </select>
+                    </div>
+                    <div class="toggle-container" id="clock-setting">
+                        <label class="toggle-label" for="clock-select">Clock</label>
+                        <select id="clock-select" title="Applies from the next new game"></select>
                     </div>
                     <details class="more-settings" id="more-settings">
                         <summary>Settings</summary>

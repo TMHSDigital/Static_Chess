@@ -76,6 +76,7 @@ const appGlobals = {
     'refreshBoardVisuals',
     'isBoardLocked',
     'setOpponent',
+    'setTimeControl',
   ]),
   ...shared(['boardState', 'currentPlayer'], 'writable'),
 };

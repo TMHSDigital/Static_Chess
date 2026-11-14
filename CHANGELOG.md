@@ -10,11 +10,17 @@ All notable changes to this project will be documented in this file.
 - **Game review**: Click a move in the list, or use the arrow keys, Home and End there, to see the position after it; "Back to game" returns to the live position and nothing in the game is changed
 - **Resign and draw by agreement**: Resign needs a second click; with two players a draw is offered and then accepted, and the computer accepts unless it is ahead. Undo reopens a game ended this way
 - **Hint**: Marks the move the engine would play for the side to move, without playing it
+- **Chess clock**: An optional clock with five time controls, chosen under "Clock" for the next new game. Running out of time loses (or draws if the opponent cannot checkmate); Undo is off in timed games; the times survive a reload and the PGN names the time control
 - **Themes**: Four board colour schemes (classic, green, blue, high contrast) and a light page theme that can also follow the system setting
 - The result is stored with the game, and the PGN says when a game ended by resignation or agreement
 
+### Fixed
+
+- On narrow screens the side panel was wider than the screen and its edges were cut off
+
 ### Changed
 
+- The display settings are folded under "Settings"; the opponent and side selectors stay in view
 - The side panel may be taller than the board (up to the window height), and its buttons are slightly smaller, to make room for the new controls
 
 ## [0.2.0] - 2026-11-13
