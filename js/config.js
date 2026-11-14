@@ -22,6 +22,53 @@ const CONFIG = {
         FLIP_BOARD: false, // true shows the board from Black's side
         OPPONENT: 'human', // 'human' for two players, or 'easy', 'medium', 'hard' for the computer
         PLAYER_SIDE: 'w', // The side the person plays against the computer: 'w' or 'b'
+        BOARD_THEME: 'classic', // A key of BOARD_THEMES
+        PAGE_THEME: 'dark', // 'dark', 'light', or 'auto' to follow the system setting
+    },
+
+    // Board colour schemes. Each sets the square colours and the highlight
+    // colours that have to stay visible on them (CSS custom properties).
+    BOARD_THEMES: {
+        classic: {
+            label: 'Classic',
+            colors: {
+                '--light-square': '#f0d9b5',
+                '--dark-square': '#b58863',
+                '--selected-square': 'rgba(255, 255, 0, 0.3)',
+                '--possible-move-square': 'rgba(20, 150, 20, 0.3)',
+                '--check-square': 'rgba(220, 20, 20, 0.4)',
+            },
+        },
+        green: {
+            label: 'Green',
+            colors: {
+                '--light-square': '#eeeed2',
+                '--dark-square': '#769656',
+                '--selected-square': 'rgba(255, 255, 0, 0.4)',
+                '--possible-move-square': 'rgba(0, 0, 0, 0.22)',
+                '--check-square': 'rgba(220, 20, 20, 0.5)',
+            },
+        },
+        blue: {
+            label: 'Blue',
+            colors: {
+                '--light-square': '#dee3e6',
+                '--dark-square': '#8ca2ad',
+                '--selected-square': 'rgba(255, 255, 0, 0.35)',
+                '--possible-move-square': 'rgba(20, 120, 20, 0.35)',
+                '--check-square': 'rgba(220, 20, 20, 0.45)',
+            },
+        },
+        contrast: {
+            label: 'High contrast',
+            colors: {
+                '--light-square': '#ffffff',
+                '--dark-square': '#6b6b6b',
+                '--selected-square': 'rgba(255, 220, 0, 0.55)',
+                '--possible-move-square': 'rgba(0, 90, 255, 0.4)',
+                '--check-square': 'rgba(255, 0, 0, 0.6)',
+            },
+        },
     },
 
     // Shortest time between the player's move and the computer's reply (ms)
@@ -75,6 +122,8 @@ const CONFIG = {
         FLIP_BOARD: 'flipBoard',
         OPPONENT: 'opponent',
         PLAYER_SIDE: 'playerSide',
+        BOARD_THEME: 'boardTheme',
+        PAGE_THEME: 'pageTheme',
     },
 
     // Debug mode: when true, debugLog() prints to the console

@@ -168,7 +168,7 @@ That's it! No build process or dependencies are required.
     - The pieces each side has captured, and the material lead, are shown under the Move History
 11. Keyboard: Tab to the board, move between squares with the arrow keys, and press Enter or Space to select a piece or move it
 12. To play against the computer, pick a level under "Opponent" and a side under "Play as" (use "Flip board" to sit behind the black pieces). Undo then takes back your move and the computer's reply
-13. Toggle settings:
+13. Open "Settings" to choose a board theme and a dark or light page, and to toggle:
     - Show coordinates
     - Show possible moves
     - Highlight last move

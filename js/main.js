@@ -104,6 +104,47 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Apply the board theme. The saved theme is applied even without the selector.
+    const boardThemes = CONFIG.BOARD_THEMES;
+    const applyBoardTheme = (name) => {
+        const theme = boardThemes[name] || boardThemes[DEFAULTS.BOARD_THEME];
+        for (const [property, value] of Object.entries(theme.colors)) {
+            rootStyle.setProperty(property, value);
+        }
+    };
+    const knownTheme = (name) => Object.prototype.hasOwnProperty.call(boardThemes, name);
+    const savedBoardTheme = readSetting(KEYS.BOARD_THEME);
+    const boardTheme = knownTheme(savedBoardTheme) ? savedBoardTheme : DEFAULTS.BOARD_THEME;
+    applyBoardTheme(boardTheme);
+    const boardThemeSelect = document.getElementById('board-theme-select');
+    if (boardThemeSelect) {
+        for (const [name, theme] of Object.entries(boardThemes)) {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = theme.label;
+            boardThemeSelect.appendChild(option);
+        }
+        boardThemeSelect.value = boardTheme;
+        boardThemeSelect.addEventListener('change', () => {
+            applyBoardTheme(boardThemeSelect.value);
+            writeSetting(KEYS.BOARD_THEME, boardThemeSelect.value);
+        });
+    }
+
+    // Apply the page theme: dark, light, or whichever the system asks for
+    const pageThemes = ['dark', 'light', 'auto'];
+    const savedPageTheme = readSetting(KEYS.PAGE_THEME);
+    const pageTheme = pageThemes.includes(savedPageTheme) ? savedPageTheme : DEFAULTS.PAGE_THEME;
+    document.documentElement.dataset.theme = pageTheme;
+    const pageThemeSelect = document.getElementById('page-theme-select');
+    if (pageThemeSelect) {
+        pageThemeSelect.value = pageTheme;
+        pageThemeSelect.addEventListener('change', () => {
+            document.documentElement.dataset.theme = pageThemeSelect.value;
+            writeSetting(KEYS.PAGE_THEME, pageThemeSelect.value);
+        });
+    }
+
     // Apply the opponent settings
     const opponentSelect = document.getElementById('opponent-select');
     const sideSelect = document.getElementById('side-select');

@@ -57,42 +57,57 @@
                             <option value="b">Black</option>
                         </select>
                     </div>
-                    <div class="toggle-container">
-                        <span class="toggle-label">Show coordinates</span>
-                        <label class="switch">
-                            <input type="checkbox" id="coords-toggle" />
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="toggle-container">
-                        <span class="toggle-label">Show possible moves</span>
-                        <label class="switch">
-                            <input type="checkbox" id="possible-moves-toggle" checked />
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="toggle-container">
-                        <span class="toggle-label">Highlight last move</span>
-                        <label class="switch">
-                            <input type="checkbox" id="last-move-toggle" checked />
-                            <!-- Default to checked -->
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="toggle-container">
-                        <span class="toggle-label">Sound effects</span>
-                        <label class="switch">
-                            <input type="checkbox" id="sound-toggle" />
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="toggle-container">
-                        <span class="toggle-label">Flip board</span>
-                        <label class="switch">
-                            <input type="checkbox" id="flip-toggle" />
-                            <span class="slider"></span>
-                        </label>
-                    </div>
+                    <details class="more-settings" id="more-settings">
+                        <summary>Settings</summary>
+                        <div class="toggle-container">
+                            <label class="toggle-label" for="board-theme-select">Board theme</label>
+                            <select id="board-theme-select"></select>
+                        </div>
+                        <div class="toggle-container">
+                            <label class="toggle-label" for="page-theme-select">Page theme</label>
+                            <select id="page-theme-select">
+                                <option value="dark">Dark</option>
+                                <option value="light">Light</option>
+                                <option value="auto">Match system</option>
+                            </select>
+                        </div>
+                        <div class="toggle-container">
+                            <span class="toggle-label">Show coordinates</span>
+                            <label class="switch">
+                                <input type="checkbox" id="coords-toggle" />
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-container">
+                            <span class="toggle-label">Show possible moves</span>
+                            <label class="switch">
+                                <input type="checkbox" id="possible-moves-toggle" checked />
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-container">
+                            <span class="toggle-label">Highlight last move</span>
+                            <label class="switch">
+                                <input type="checkbox" id="last-move-toggle" checked />
+                                <!-- Default to checked -->
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-container">
+                            <span class="toggle-label">Sound effects</span>
+                            <label class="switch">
+                                <input type="checkbox" id="sound-toggle" />
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-container">
+                            <span class="toggle-label">Flip board</span>
+                            <label class="switch">
+                                <input type="checkbox" id="flip-toggle" />
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </details>
                 </div>
                 <div class="buttons-row">
                     <button id="undo-button" aria-label="Undo last move">Undo</button>
