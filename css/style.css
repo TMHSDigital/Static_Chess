@@ -1,8 +1,6 @@
 :root {
-    --board-size: min(
-        80vh,
-        580px
-    ); /* Change to use viewport height instead of width for better scaling */
+    /* As big as the window allows once the status line and the two player bars are counted */
+    --board-size: clamp(240px, calc(100vh - 250px), 580px);
     --light-square: #f0d9b5;
     --dark-square: #b58863;
     --selected-square: rgba(255, 255, 0, 0.3);
@@ -31,6 +29,9 @@
     --danger-fill: #c0392b;
     --danger-text: #ef8a7a;
     --hint-square: #e6a23c;
+    /* The two sides, for the dots beside their names */
+    --piece-white: #ffffff;
+    --piece-black: #1a1a1a;
     --hover-bg: rgba(255, 255, 255, 0.08);
     /* Scales */
     --space-1: 4px;
@@ -83,10 +84,40 @@ body {
     background-color: var(--frame-bg);
     padding: 12px;
     border-radius: var(--radius-lg);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-    max-height: 90vh; /* Ensure it doesn't exceed viewport height */
+    box-shadow: var(--shadow-card);
     display: flex;
     flex-direction: column;
+    gap: var(--space-2);
+    align-self: flex-start; /* Hugs the board instead of stretching to the panel's height */
+}
+
+/* Top to bottom: title and status, Black's bar, the board, White's bar */
+.board-header {
+    order: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.side-black {
+    order: 1;
+}
+
+.chess-board {
+    order: 2;
+}
+
+.side-white {
+    order: 3;
+}
+
+/* Each bar stays on its own side's end when the board is flipped */
+.board-container:has(.chess-board.flipped) .side-black {
+    order: 3;
+}
+
+.board-container:has(.chess-board.flipped) .side-white {
+    order: 1;
 }
 
 .chess-board {
@@ -186,15 +217,19 @@ body {
     font-weight: bold;
 }
 
+/* Whose turn it is, or how the game ended: the first thing to read, right above the board */
 .game-status {
-    margin-top: auto;
-    padding: 12px;
-    font-weight: bold;
+    min-height: var(--control-height);
+    box-sizing: border-box;
+    padding: 10px var(--space-3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+    font-weight: 700;
     text-align: center;
     background-color: var(--inset-bg);
     border-radius: var(--border-radius);
-    margin-bottom: 15px;
-    letter-spacing: 0.5px;
 }
 
 /* Buttons: one shape, three roles. Plain for most actions, primary for the
@@ -275,10 +310,6 @@ body {
         flex-direction: column;
         align-items: center;
         margin-top: 10px;
-    }
-
-    .board-container {
-        max-height: none; /* Remove height constraint on mobile */
     }
 
     .game-info {
@@ -363,13 +394,13 @@ body.coords-visible {
     margin-bottom: 15px;
 }
 
+/* A small wordmark; the status below it is what gets read during a game */
 .game-title {
     color: var(--accent-color);
-    font-size: 1.7rem;
-    font-weight: 500;
-    text-align: center;
-    margin: 0 0 15px 0;
-    letter-spacing: 1px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: 0.5px;
 }
 
 /* Pawn promotion chooser */
@@ -503,7 +534,7 @@ body.coords-visible {
 .live-button {
     display: block;
     width: 100%;
-    margin: -9px 0 12px;
+    margin: 0 0 12px;
     border-color: var(--accent-color);
 }
 
@@ -511,30 +542,30 @@ body.coords-visible {
     display: none;
 }
 
-/* Captured pieces and the material lead, one row per side */
+/* The wrapper only groups the two player bars; they lay out in the board card */
 .captured-pieces {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    margin-bottom: 8px;
+    display: contents;
 }
 
-/* Each row sits on its own side's end, also when the board is flipped */
-body:has(.chess-board.flipped) .captured-pieces {
-    flex-direction: column-reverse;
-}
-
+/* What a side has captured, on a chip in the board's light colour so that
+   pieces of either colour show on any page theme */
 .captured-row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    min-height: 22px;
+    min-height: 26px;
+}
+
+.captured-row:not(:empty) {
+    padding: 1px var(--space-2) 1px var(--space-1);
+    background-color: var(--light-square);
+    border-radius: var(--radius-sm);
 }
 
 .captured-piece {
-    width: 20px;
-    height: 20px;
-    margin-right: -4px;
+    width: 22px;
+    height: 22px;
+    margin-right: -5px;
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
@@ -543,7 +574,8 @@ body:has(.chess-board.flipped) .captured-pieces {
 .material-lead {
     margin-left: 10px;
     font-size: 0.85rem;
-    color: var(--muted-text);
+    font-weight: 600;
+    color: var(--piece-black);
 }
 
 /* Light page theme: chosen in the settings, or taken from the system when set to match it */
@@ -600,22 +632,44 @@ body:has(.chess-board.flipped) .captured-pieces {
     background-color: var(--hover-bg);
 }
 
-/* One row per side: what it has captured, and its clock when the game has one */
+/* One bar per side: its name, what it has captured, and its clock when the game has one */
 .side-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    gap: var(--space-2);
+    min-height: 34px;
 }
 
-.side-row .captured-row {
-    flex: 1;
+.side-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.side-name::before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid var(--control-border);
+}
+
+.side-white .side-name::before {
+    background-color: var(--piece-white);
+}
+
+.side-black .side-name::before {
+    background-color: var(--piece-black);
 }
 
 .clock {
-    padding: 1px 8px;
-    border: 1px solid var(--border-color);
+    margin-left: auto; /* Always at the right end of the bar */
+    padding: 3px 10px;
+    border: 1px solid var(--control-border);
     border-radius: var(--radius-sm);
+    font-size: 1.05rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
