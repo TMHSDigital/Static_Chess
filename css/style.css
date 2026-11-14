@@ -6,6 +6,7 @@
     --selected-square: rgba(255, 255, 0, 0.3);
     --possible-move-square: rgba(20, 150, 20, 0.3);
     --check-square: rgba(220, 20, 20, 0.4);
+    --last-move-square: rgba(50, 120, 190, 0.42);
     --info-panel-width: 360px;
     /* Surfaces: the page, the cards on it, the wells inside a card, the card around the board */
     --main-bg: #1a1a1a;

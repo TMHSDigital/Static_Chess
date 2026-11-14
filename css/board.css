@@ -155,23 +155,8 @@
     background-color: var(--possible-move-square);
     border-radius: 50%;
     pointer-events: none;
-    animation: pulse 2s infinite;
+    opacity: 0.8;
     display: var(--show-possible-moves);
-}
-
-@keyframes pulse {
-    0% {
-        transform: scale(0.95);
-        opacity: 0.6;
-    }
-    50% {
-        transform: scale(1.05);
-        opacity: 0.8;
-    }
-    100% {
-        transform: scale(0.95);
-        opacity: 0.6;
-    }
 }
 
 .square.possible-move.light::after {
@@ -197,46 +182,19 @@
     }
 }
 
-/* Last move indication - using corner markers */
+/* Last move: a tint over the square it left and the square it reached. It sits
+   under the piece, and uses ::before only, so the move dot and the rank number
+   (both ::after) still show on these squares. */
 .square.last-move-from::before,
-.square.last-move-to::before,
-.square.last-move-from::after,
-.square.last-move-to::after {
+.square.last-move-to::before {
     content: '';
     position: absolute;
-    width: 12%;
-    height: 12%;
-    background-color: rgba(70, 130, 180, 0.5); /* Steel Blue - more transparent */
-    z-index: 1;
+    inset: 0;
+    z-index: 0;
+    padding: 0;
+    border-radius: 0;
+    background-color: var(--last-move-square);
     display: var(--show-last-move); /* Control visibility */
-}
-
-/* Top-left corner */
-.square.last-move-from::before {
-    top: 0;
-    left: 0;
-    border-bottom-right-radius: 5px;
-}
-
-/* Bottom-right corner */
-.square.last-move-from::after {
-    bottom: 0;
-    right: 0;
-    border-top-left-radius: 5px;
-}
-
-/* Top-right corner */
-.square.last-move-to::before {
-    top: 0;
-    right: 0;
-    border-bottom-left-radius: 5px;
-}
-
-/* Bottom-left corner */
-.square.last-move-to::after {
-    bottom: 0;
-    left: 0;
-    border-top-right-radius: 5px;
 }
 
 /* The move suggested by the Hint button */
