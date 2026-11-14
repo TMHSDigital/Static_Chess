@@ -9,14 +9,41 @@
     --possible-move-square: rgba(20, 150, 20, 0.3);
     --check-square: rgba(220, 20, 20, 0.4);
     --info-panel-width: 320px;
+    /* Surfaces: the page, the cards on it, the wells inside a card, the card around the board */
     --main-bg: #1a1a1a;
     --panel-bg: #282828;
+    --frame-bg: #222222;
+    --inset-bg: #1f1f1f;
+    --backdrop: rgba(0, 0, 0, 0.7);
+    /* Text */
     --text-color: #e0e0e0;
-    --accent-color: #4c8c8e;
-    --border-radius: 6px;
-    --border-color: #444;
     --muted-text: #aaa;
+    /* Accent: -color for text and lines, -fill behind --on-accent text */
+    --accent-color: #6aaeb0;
+    --accent-fill: #357375;
+    --accent-fill-hover: #2c6466;
+    --accent-tint: rgba(106, 174, 176, 0.15);
+    --on-accent: #ffffff;
+    /* Lines: dividers, and the edges of things you can press */
+    --border-color: #444;
+    --control-border: #7a7a7a;
+    /* Destructive and error */
+    --danger-fill: #c0392b;
+    --danger-text: #ef8a7a;
+    --hint-square: #e6a23c;
     --hover-bg: rgba(255, 255, 255, 0.08);
+    /* Scales */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --radius-sm: 4px;
+    --border-radius: 6px;
+    --radius-lg: 8px;
+    --shadow-card: 0 6px 16px rgba(0, 0, 0, 0.2);
+    --shadow-raised: 0 4px 8px rgba(0, 0, 0, 0.2);
+    --shadow-pressed: 0 2px 4px rgba(0, 0, 0, 0.2);
     --show-coords: none; /* 'block' to show coordinates, 'none' to hide */
     --show-possible-moves: block; /* Default to show */
     --show-last-move: block; /* Default to show */
@@ -52,9 +79,9 @@ body {
 }
 
 .board-container {
-    background-color: #222;
+    background-color: var(--frame-bg);
     padding: 12px;
-    border-radius: 8px;
+    border-radius: var(--radius-lg);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
     max-height: 90vh; /* Ensure it doesn't exceed viewport height */
     display: flex;
@@ -62,7 +89,7 @@ body {
 }
 
 .chess-board {
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-card);
     border-radius: 2px;
     overflow: hidden;
     aspect-ratio: 1 / 1; /* Maintain square aspect ratio */
@@ -73,7 +100,7 @@ body {
     background-color: var(--panel-bg);
     padding: 20px;
     border-radius: var(--border-radius);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-card);
     height: fit-content;
     /* May be taller than the board, but never taller than the window */
     max-height: max(calc(var(--board-size) + 24px), calc(100vh - 120px));
@@ -102,7 +129,7 @@ body {
     overflow-y: auto;
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
-    background-color: rgba(0, 0, 0, 0.15);
+    background-color: var(--inset-bg);
     scrollbar-width: thin;
     scrollbar-color: var(--accent-color) var(--border-color);
 }
@@ -113,12 +140,12 @@ body {
 
 .move-history::-webkit-scrollbar-track {
     background: var(--border-color);
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
 }
 
 .move-history::-webkit-scrollbar-thumb {
     background-color: var(--accent-color);
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
 }
 
 .move-history li {
@@ -154,7 +181,7 @@ body {
 
 /* Style the last move entry differently */
 .move-history li.last-move-entry {
-    background-color: rgba(76, 140, 142, 0.15);
+    background-color: var(--accent-tint);
     font-weight: bold;
 }
 
@@ -163,7 +190,7 @@ body {
     padding: 12px;
     font-weight: bold;
     text-align: center;
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: var(--inset-bg);
     border-radius: var(--border-radius);
     margin-bottom: 15px;
     letter-spacing: 0.5px;
@@ -182,7 +209,7 @@ body {
     cursor: pointer;
     background-color: transparent;
     color: var(--text-color);
-    border: 1px solid #555;
+    border: 1px solid var(--control-border);
     border-radius: var(--border-radius);
     transition: all 0.3s ease;
     font-weight: 600;
@@ -210,7 +237,7 @@ body {
 .import-panel button:hover {
     background-color: var(--hover-bg);
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-raised);
 }
 
 #undo-button:active:not(:disabled),
@@ -221,7 +248,7 @@ body {
 #fen-button:active:not(:disabled),
 #import-button:active:not(:disabled) {
     transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-pressed);
 }
 
 .buttons-row {
@@ -236,15 +263,16 @@ body {
 #resign-button.confirming,
 #resign-button.confirming:hover:not(:disabled),
 #reset-button.confirming:hover {
-    background-color: #c0392b;
+    background-color: var(--danger-fill);
+    color: var(--on-accent);
 }
 
 #reset-button {
     padding: 8px 12px;
     font-size: 1em;
     cursor: pointer;
-    background-color: var(--accent-color);
-    color: white;
+    background-color: var(--accent-fill);
+    color: var(--on-accent);
     border: none;
     border-radius: var(--border-radius);
     transition: all 0.3s ease;
@@ -253,14 +281,14 @@ body {
 }
 
 #reset-button:hover {
-    background-color: #75b9bb;
+    background-color: var(--accent-fill-hover);
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-raised);
 }
 
 #reset-button:active {
     transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-pressed);
 }
 
 /* Responsive adjustments */
@@ -328,7 +356,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #555;
+    background-color: var(--control-border);
     transition: 0.4s;
     border-radius: 24px;
 }
@@ -340,13 +368,13 @@ body {
     width: 18px;
     left: 3px;
     bottom: 3px;
-    background-color: white;
+    background-color: var(--on-accent);
     transition: 0.4s;
     border-radius: 50%;
 }
 
 input:checked + .slider {
-    background-color: var(--accent-color);
+    background-color: var(--accent-fill);
 }
 
 input:checked + .slider:before {
@@ -359,7 +387,7 @@ body.coords-visible {
 
 /* Settings Container */
 .settings-container {
-    background-color: rgba(0, 0, 0, 0.1);
+    background-color: var(--inset-bg);
     padding: 12px;
     border-radius: var(--border-radius);
     margin-bottom: 15px;
@@ -378,7 +406,7 @@ body.coords-visible {
 .promotion-backdrop {
     position: fixed;
     inset: 0;
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: var(--backdrop);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -482,7 +510,7 @@ body.coords-visible {
 .move-history li button.move {
     background: none;
     border: none;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     padding: 2px 4px;
     color: inherit;
     font: inherit;
@@ -506,8 +534,8 @@ body.coords-visible {
 
 /* The move whose position is on the board */
 .move-history li button.move[aria-current='true'] {
-    background-color: var(--accent-color);
-    color: white;
+    background-color: var(--accent-fill);
+    color: var(--on-accent);
 }
 
 /* Shown while an earlier position is on the board */
@@ -572,10 +600,17 @@ body:has(.chess-board.flipped) .captured-pieces {
 :root[data-theme='light'] {
     --main-bg: #f2f0eb;
     --panel-bg: #ffffff;
+    --frame-bg: #ffffff;
+    --inset-bg: #f4f2ee;
     --text-color: #222222;
     --accent-color: #2f6f71;
+    --accent-fill: #2f6f71;
+    --accent-fill-hover: #275d5f;
+    --accent-tint: rgba(47, 111, 113, 0.12);
     --border-color: #cfcac0;
+    --control-border: #8a857b;
     --muted-text: #666666;
+    --danger-text: #b3261e;
     --hover-bg: rgba(0, 0, 0, 0.06);
 }
 
@@ -583,10 +618,17 @@ body:has(.chess-board.flipped) .captured-pieces {
     :root[data-theme='auto'] {
         --main-bg: #f2f0eb;
         --panel-bg: #ffffff;
+        --frame-bg: #ffffff;
+        --inset-bg: #f4f2ee;
         --text-color: #222222;
         --accent-color: #2f6f71;
+        --accent-fill: #2f6f71;
+        --accent-fill-hover: #275d5f;
+        --accent-tint: rgba(47, 111, 113, 0.12);
         --border-color: #cfcac0;
+        --control-border: #8a857b;
         --muted-text: #666666;
+        --danger-text: #b3261e;
         --hover-bg: rgba(0, 0, 0, 0.06);
     }
 }
@@ -598,7 +640,7 @@ body:has(.chess-board.flipped) .captured-pieces {
     font-size: 0.9rem;
     font-weight: 600;
     padding: 4px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
 }
 
 .more-settings summary:hover {
@@ -625,7 +667,7 @@ body:has(.chess-board.flipped) .captured-pieces {
 .clock {
     padding: 1px 8px;
     border: 1px solid var(--border-color);
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
@@ -636,18 +678,19 @@ body:has(.chess-board.flipped) .captured-pieces {
 
 /* The side to move */
 .clock.running {
-    background-color: var(--accent-color);
-    border-color: var(--accent-color);
-    color: white;
+    background-color: var(--accent-fill);
+    border-color: var(--accent-fill);
+    color: var(--on-accent);
 }
 
 /* Under twenty seconds */
 .clock.low {
-    border-color: #c0392b;
+    border-color: var(--danger-text);
 }
 
 .clock.low.running {
-    background-color: #c0392b;
+    background-color: var(--danger-fill);
+    border-color: var(--danger-fill);
 }
 
 /* The dialog for pasting a game */
@@ -677,12 +720,12 @@ body:has(.chess-board.flipped) .captured-pieces {
 .import-error {
     min-height: 1.2em;
     margin: 8px 0;
-    color: #e06c5a;
+    color: var(--danger-text);
     font-size: 0.9rem;
 }
 
 #import-load.confirming,
 #import-load.confirming:hover {
-    background-color: #c0392b;
-    color: white;
+    background-color: var(--danger-fill);
+    color: var(--on-accent);
 }
