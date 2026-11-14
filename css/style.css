@@ -6,7 +6,7 @@
     --selected-square: rgba(255, 255, 0, 0.3);
     --possible-move-square: rgba(20, 150, 20, 0.3);
     --check-square: rgba(220, 20, 20, 0.4);
-    --info-panel-width: 320px;
+    --info-panel-width: 360px;
     /* Surfaces: the page, the cards on it, the wells inside a card, the card around the board */
     --main-bg: #1a1a1a;
     --panel-bg: #282828;
@@ -127,37 +127,46 @@ body {
     aspect-ratio: 1 / 1; /* Maintain square aspect ratio */
 }
 
+/* The side panel: the move list on top, then groups of controls split by thin rules.
+   It is as tall as the board card; the move list takes whatever height is left. */
 .game-info {
     width: var(--info-panel-width);
+    box-sizing: border-box;
     background-color: var(--panel-bg);
     padding: 20px;
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-card);
-    height: fit-content;
-    /* May be taller than the board, but never taller than the window */
-    max-height: max(calc(var(--board-size) + 24px), calc(100vh - 120px));
-    overflow-y: auto;
     display: flex;
     flex-direction: column;
+    gap: var(--space-4);
+}
+
+.panel-group {
+    border-top: 1px solid var(--border-color);
+    padding-top: var(--space-4);
+}
+
+.moves-group {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-top: none;
+    padding-top: 0;
 }
 
 .game-info h2 {
-    margin-top: 0;
-    text-align: center;
-    border-bottom: 1px solid var(--accent-color);
-    padding-bottom: 10px;
-    color: var(--accent-color);
-    font-size: 1.6rem;
-    font-weight: 500;
-    letter-spacing: 1px;
+    margin: 0 0 var(--space-2);
+    font-size: 1rem;
+    font-weight: 600;
 }
 
 .move-history {
     list-style: none;
     padding: 0;
-    margin: 10px 0;
-    height: calc(var(--board-size) - 330px);
-    min-height: 72px;
+    margin: 0;
+    flex: 1 1 0; /* Long games scroll inside the list instead of stretching the panel */
+    min-height: 168px;
     overflow-y: auto;
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
@@ -180,8 +189,18 @@ body {
     border-radius: var(--radius-sm);
 }
 
+/* Before the first move */
+.move-history:empty::before {
+    content: 'No moves yet';
+    display: block;
+    padding: var(--space-4);
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--muted-text);
+}
+
 .move-history li {
-    padding: 8px 10px;
+    padding: 3px 10px;
     border-bottom: 1px solid var(--border-color);
     transition: background-color 0.2s ease;
     display: grid; /* Use grid for column layout */
@@ -279,9 +298,24 @@ body {
 
 .buttons-row {
     display: flex;
-    gap: 8px;
+    gap: var(--space-2);
     justify-content: center;
     flex-wrap: wrap;
+}
+
+/* Related actions in even columns */
+.button-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2);
+}
+
+.button-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.button-grid-3 .btn {
+    padding: 0 6px;
 }
 
 /* One keyboard focus ring for every control off the board */
@@ -314,25 +348,25 @@ body {
 
     .game-info {
         width: calc(var(--board-size) + 24px);
-        box-sizing: border-box; /* Its padding used to push it wider than the screen */
-        max-height: none;
     }
 
     .move-history {
+        flex: none;
         height: 180px;
     }
 }
 
-/* Toggle Switch */
+/* A setting: its label on the left, its control on the right */
 .toggle-container {
     display: flex;
     align-items: center;
-    justify-content: center;
-    margin: 10px 0;
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-height: var(--control-height);
 }
 
 .toggle-label {
-    margin-right: 10px;
+    flex: 1;
     font-size: 0.9rem;
 }
 
@@ -386,12 +420,11 @@ body.coords-visible {
     --show-coords: block;
 }
 
-/* Settings Container */
+/* What the next game will be, and the button that starts it */
 .settings-container {
-    background-color: var(--inset-bg);
-    padding: 12px;
-    border-radius: var(--border-radius);
-    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
 }
 
 /* A small wordmark; the status below it is what gets read during a game */
@@ -498,6 +531,8 @@ body.coords-visible {
     border: 1px solid var(--control-border);
     border-radius: var(--border-radius);
     padding: 0 8px;
+    width: 170px;
+    max-width: 60%;
     font: inherit;
     font-size: 0.9rem;
     cursor: pointer;
@@ -508,6 +543,7 @@ body.coords-visible {
     background: none;
     border: none;
     border-radius: var(--radius-sm);
+    min-height: 30px;
     padding: 2px 4px;
     color: inherit;
     font: inherit;
@@ -534,7 +570,7 @@ body.coords-visible {
 .live-button {
     display: block;
     width: 100%;
-    margin: 0 0 12px;
+    margin-top: var(--space-2);
     border-color: var(--accent-color);
 }
 
@@ -620,7 +656,6 @@ body.coords-visible {
 /* The display settings fold away; who you play stays in view */
 .more-settings summary {
     cursor: pointer;
-    text-align: center;
     font-size: 0.9rem;
     font-weight: 600;
     min-height: var(--control-height);

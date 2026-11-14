@@ -51,13 +51,21 @@
                 </div>
             </div>
             <div class="game-info">
-                <h2>Move History</h2>
-                <ul id="move-history" class="move-history">
-                    <!-- Move history will be populated by JavaScript -->
-                </ul>
-                <button id="live-button" class="btn live-button" hidden>Back to game</button>
+                <section class="panel-group moves-group" aria-labelledby="moves-title">
+                    <h2 id="moves-title">Move History</h2>
+                    <ul id="move-history" class="move-history"></ul>
+                    <button id="live-button" class="btn live-button" hidden>Back to game</button>
+                </section>
                 <div id="announcer" class="visually-hidden" role="status" aria-live="polite"></div>
-                <div class="settings-container">
+                <div class="panel-group button-grid" role="group" aria-label="This game">
+                    <button id="undo-button" class="btn" aria-label="Undo last move">Undo</button>
+                    <button id="hint-button" class="btn" aria-label="Show a suggested move">
+                        Hint
+                    </button>
+                    <button id="draw-button" class="btn">Offer draw</button>
+                    <button id="resign-button" class="btn">Resign</button>
+                </div>
+                <div class="panel-group settings-container" role="group" aria-label="New game">
                     <div class="toggle-container" id="opponent-setting">
                         <label class="toggle-label" for="opponent-select">Opponent</label>
                         <select id="opponent-select">
@@ -78,69 +86,13 @@
                         <label class="toggle-label" for="clock-select">Clock</label>
                         <select id="clock-select" title="Applies from the next new game"></select>
                     </div>
-                    <details class="more-settings" id="more-settings">
-                        <summary>Settings</summary>
-                        <div class="toggle-container">
-                            <label class="toggle-label" for="board-theme-select">Board theme</label>
-                            <select id="board-theme-select"></select>
-                        </div>
-                        <div class="toggle-container">
-                            <label class="toggle-label" for="page-theme-select">Page theme</label>
-                            <select id="page-theme-select">
-                                <option value="dark">Dark</option>
-                                <option value="light">Light</option>
-                                <option value="auto">Match system</option>
-                            </select>
-                        </div>
-                        <div class="toggle-container">
-                            <label class="toggle-label" for="coords-toggle">Show coordinates</label>
-                            <label class="switch">
-                                <input type="checkbox" id="coords-toggle" />
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                        <div class="toggle-container">
-                            <label class="toggle-label" for="possible-moves-toggle"
-                                >Show possible moves</label
-                            >
-                            <label class="switch">
-                                <input type="checkbox" id="possible-moves-toggle" checked />
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                        <div class="toggle-container">
-                            <label class="toggle-label" for="last-move-toggle"
-                                >Highlight last move</label
-                            >
-                            <label class="switch">
-                                <input type="checkbox" id="last-move-toggle" checked />
-                                <!-- Default to checked -->
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                        <div class="toggle-container">
-                            <label class="toggle-label" for="sound-toggle">Sound effects</label>
-                            <label class="switch">
-                                <input type="checkbox" id="sound-toggle" />
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                        <div class="toggle-container">
-                            <label class="toggle-label" for="flip-toggle">Flip board</label>
-                            <label class="switch">
-                                <input type="checkbox" id="flip-toggle" />
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                    </details>
+                    <button id="reset-button" class="btn btn-primary">New Game</button>
                 </div>
-                <div class="buttons-row">
-                    <button id="undo-button" class="btn" aria-label="Undo last move">Undo</button>
-                    <button id="hint-button" class="btn" aria-label="Show a suggested move">
-                        Hint
-                    </button>
-                    <button id="draw-button" class="btn">Offer draw</button>
-                    <button id="resign-button" class="btn">Resign</button>
+                <div
+                    class="panel-group button-grid button-grid-3"
+                    role="group"
+                    aria-label="Copy or load a game"
+                >
                     <button id="pgn-button" class="btn" aria-label="Copy the game as PGN">
                         Copy PGN
                     </button>
@@ -150,8 +102,61 @@
                     <button id="import-button" class="btn" aria-label="Load a game from PGN">
                         Load PGN
                     </button>
-                    <button id="reset-button" class="btn btn-primary">New Game</button>
                 </div>
+                <details class="panel-group more-settings" id="more-settings">
+                    <summary>Settings</summary>
+                    <div class="toggle-container">
+                        <label class="toggle-label" for="board-theme-select">Board theme</label>
+                        <select id="board-theme-select"></select>
+                    </div>
+                    <div class="toggle-container">
+                        <label class="toggle-label" for="page-theme-select">Page theme</label>
+                        <select id="page-theme-select">
+                            <option value="dark">Dark</option>
+                            <option value="light">Light</option>
+                            <option value="auto">Match system</option>
+                        </select>
+                    </div>
+                    <div class="toggle-container">
+                        <label class="toggle-label" for="coords-toggle">Show coordinates</label>
+                        <label class="switch">
+                            <input type="checkbox" id="coords-toggle" />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="toggle-container">
+                        <label class="toggle-label" for="possible-moves-toggle"
+                            >Show possible moves</label
+                        >
+                        <label class="switch">
+                            <input type="checkbox" id="possible-moves-toggle" checked />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="toggle-container">
+                        <label class="toggle-label" for="last-move-toggle"
+                            >Highlight last move</label
+                        >
+                        <label class="switch">
+                            <input type="checkbox" id="last-move-toggle" checked />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="toggle-container">
+                        <label class="toggle-label" for="sound-toggle">Sound effects</label>
+                        <label class="switch">
+                            <input type="checkbox" id="sound-toggle" />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="toggle-container">
+                        <label class="toggle-label" for="flip-toggle">Flip board</label>
+                        <label class="switch">
+                            <input type="checkbox" id="flip-toggle" />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </details>
             </div>
         </div>
 
