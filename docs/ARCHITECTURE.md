@@ -176,6 +176,10 @@ The implementation includes:
 1. `chooseAIMove(position, color, level)` in `ai.js` picks a move. It uses only `rules.js`, so it has no DOM access
    - `easy` plays a random legal move
    - `medium` and `hard` run a negamax search with alpha-beta pruning, 2 and 3 half-moves deep, followed by a captures-only (quiescence) search so an exchange is counted to its end
+   - In the Web Worker, `hard` then keeps searching one half-move deeper at a time for about a second (`timeMs`), keeping the result of the last depth it finished. On the page's own thread (no worker) it stays at its fixed depth
+   - A pawn reaching the last rank is searched as four moves, one per piece it can become
+   - `game.js` passes the positions the game has been through (`seen`); when the engine is better it avoids going back to one, so it does not shuffle into a draw by repetition
+   - In the endgame the evaluation wants the king in the centre, and a clearly winning side is rewarded for driving the other king to the edge and bringing its own king up
    - `evaluatePosition()` counts material, plus small bonuses for central minor pieces, advanced pawns and a king kept at home
    - Moves within a few hundredths of a pawn of the best are treated as equal and one is picked at random; a forced mate always takes the quickest line
 2. `setOpponent(level, humanColor)` in `game.js` turns the opponent on or off. `main.js` calls it from the "Opponent" and "Play as" selectors, which are saved like the other settings
@@ -184,7 +188,7 @@ The implementation includes:
 5. While it is the computer's turn `isBoardLocked()` is true: clicks and drags are ignored and the status line says the computer is thinking
 6. Undo takes back the computer's reply together with the player's move
 
-To make it stronger, raise the `depth` values in `AI_LEVELS`; each extra half-move costs roughly an order of magnitude in time, so move generation in `rules.js` would need to get faster first.
+To make it stronger, the limit is speed: each extra half-move costs roughly an order of magnitude in time, and a second buys `hard` only about one half-move beyond its fixed depth. Faster move generation in `rules.js` (it copies the board for every move tried) and a transposition table are the next steps; raising `depth` or `timeMs` in `AI_LEVELS` only trades time for strength.
 
 ### 3. Promotion Choice UI
 

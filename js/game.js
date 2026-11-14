@@ -772,9 +772,14 @@ function requestAIMove() {
  */
 function askEngine(position, color, level, onMove) {
     const id = ++aiRequestId;
+    // The positions the game has been through, so the engine can avoid repeating them
+    const seen = positionHistory.map((past) =>
+        positionKey(past.boardState, past.currentPlayer, past.enPassantTarget)
+    );
     const thinkHere = () =>
         setTimeout(() => {
-            if (id === aiRequestId) onMove(chooseAIMove(position, color, level));
+            if (id !== aiRequestId) return;
+            onMove(chooseAIMove(position, color, level, Math.random, { seen }));
         }, 0);
 
     const worker = getAIWorker();
@@ -790,7 +795,7 @@ function askEngine(position, color, level, onMove) {
         aiWorker = false; // Do not try the worker again
         thinkHere();
     };
-    worker.postMessage({ id, position, color, level });
+    worker.postMessage({ id, position, color, level, seen });
     return id;
 }
 

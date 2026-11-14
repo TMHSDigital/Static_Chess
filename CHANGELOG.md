@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 - **Offline and installable**: After one visit the game opens and plays without a connection, and browsers offer to install it as an app. The page has a real icon
 - **Load PGN**: Paste a game to load it; every move is checked first and a move that cannot be played is named, leaving the current game untouched
 - **Copy FEN**: Copies the position on the board, also while looking back through the move list
+- **Stronger computer opponent**: The hard level thinks for about a second, looking deeper when it can; the engine considers promoting to a knight, rook or bishop, plays won endings such as king and rook against king to mate, and avoids repeating positions when it is ahead
 - **Themes**: Four board colour schemes (classic, green, blue, high contrast) and a light page theme that can also follow the system setting
 - The result is stored with the game, and the PGN says when a game ended by resignation or agreement
 

@@ -308,7 +308,7 @@ See the [Development Roadmap](docs/ROADMAP.md) for a detailed plan of upcoming f
 <summary><b>Planned Features</b></summary>
 <br>
 
-- **Stronger Computer Opponent:** Deeper search and a better evaluation
+- **Stronger Computer Opponent:** Faster move generation and a transposition table, to search deeper in the same time
 - **Sound Effects:** Recorded sounds as an alternative to the built-in synthesized tones
 - **Multiple Saved Games:** Save and load multiple games
 - **Full SAN Implementation:** Complete algebraic notation with full disambiguation
