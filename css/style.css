@@ -173,7 +173,10 @@ body {
 #draw-button,
 #hint-button,
 #resign-button,
-#pgn-button {
+#pgn-button,
+#fen-button,
+#import-button,
+.import-panel button {
     padding: 8px 12px;
     font-size: 1em;
     cursor: pointer;
@@ -190,7 +193,9 @@ body {
 #draw-button:disabled,
 #hint-button:disabled,
 #resign-button:disabled,
-#pgn-button:disabled {
+#pgn-button:disabled,
+#fen-button:disabled,
+#import-button:disabled {
     opacity: 0.4;
     cursor: default;
 }
@@ -199,7 +204,10 @@ body {
 #draw-button:hover:not(:disabled),
 #hint-button:hover:not(:disabled),
 #resign-button:hover:not(:disabled),
-#pgn-button:hover:not(:disabled) {
+#pgn-button:hover:not(:disabled),
+#fen-button:hover:not(:disabled),
+#import-button:hover:not(:disabled),
+.import-panel button:hover {
     background-color: var(--hover-bg);
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
@@ -209,7 +217,9 @@ body {
 #draw-button:active:not(:disabled),
 #hint-button:active:not(:disabled),
 #resign-button:active:not(:disabled),
-#pgn-button:active:not(:disabled) {
+#pgn-button:active:not(:disabled),
+#fen-button:active:not(:disabled),
+#import-button:active:not(:disabled) {
     transform: translateY(0);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
@@ -638,4 +648,41 @@ body:has(.chess-board.flipped) .captured-pieces {
 
 .clock.low.running {
     background-color: #c0392b;
+}
+
+/* The dialog for pasting a game */
+.import-panel {
+    width: min(92vw, 460px);
+    box-sizing: border-box;
+    color: var(--text-color);
+}
+
+.import-panel textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px;
+    background-color: var(--main-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 0.9rem;
+    resize: vertical;
+}
+
+.import-panel textarea:focus-visible {
+    outline: 2px solid var(--accent-color);
+}
+
+.import-error {
+    min-height: 1.2em;
+    margin: 8px 0;
+    color: #e06c5a;
+    font-size: 0.9rem;
+}
+
+#import-load.confirming,
+#import-load.confirming:hover {
+    background-color: #c0392b;
+    color: white;
 }

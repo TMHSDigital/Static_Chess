@@ -131,7 +131,32 @@
                     <button id="draw-button">Offer draw</button>
                     <button id="resign-button">Resign</button>
                     <button id="pgn-button" aria-label="Copy the game as PGN">Copy PGN</button>
+                    <button id="fen-button" aria-label="Copy the position as FEN">Copy FEN</button>
+                    <button id="import-button" aria-label="Load a game from PGN">Load PGN</button>
                     <button id="reset-button">New Game</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="import-dialog" class="promotion-backdrop" hidden>
+            <div
+                class="promotion-panel import-panel"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="import-title"
+            >
+                <h3 id="import-title">Load a game</h3>
+                <textarea
+                    id="import-text"
+                    rows="8"
+                    spellcheck="false"
+                    aria-label="Game in PGN format"
+                    placeholder="Paste a game in PGN format, for example: 1. e4 e5 2. Nf3 Nc6"
+                ></textarea>
+                <p id="import-error" class="import-error" role="alert"></p>
+                <div class="buttons-row">
+                    <button id="import-cancel">Cancel</button>
+                    <button id="import-load">Load game</button>
                 </div>
             </div>
         </div>

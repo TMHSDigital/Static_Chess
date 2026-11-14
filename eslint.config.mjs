@@ -46,6 +46,8 @@ const appGlobals = {
     'allLegalMoves',
     'positionKey',
     'hasInsufficientMaterial',
+    'findSANMove',
+    'positionToFEN',
   ]),
   // ai.js
   ...shared(['AI_LEVELS', 'chooseAIMove', 'evaluatePosition']),

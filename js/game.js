@@ -48,6 +48,14 @@ let announcerElement = document.getElementById('announcer'); // Live region read
 const resetButton = document.getElementById('reset-button');
 const undoButton = document.getElementById('undo-button');
 const pgnButton = document.getElementById('pgn-button');
+const fenButton = document.getElementById('fen-button');
+const importButton = document.getElementById('import-button');
+const importDialog = document.getElementById('import-dialog');
+const importText = document.getElementById('import-text');
+const importError = document.getElementById('import-error');
+const importLoadButton = document.getElementById('import-load');
+const importCancelButton = document.getElementById('import-cancel');
+let replaying = false; // True while a loaded game's moves are being played in
 const RESET_LABEL = resetButton ? resetButton.textContent : 'New Game';
 let resetConfirmTimer = null; // Set while the New Game button is waiting for a second click
 
@@ -112,6 +120,20 @@ function initializeGame() {
     if (pgnButton) {
         pgnButton.removeEventListener('click', copyPGN);
         pgnButton.addEventListener('click', copyPGN);
+    }
+    if (fenButton) {
+        fenButton.removeEventListener('click', copyFEN);
+        fenButton.addEventListener('click', copyFEN);
+    }
+    if (importButton && importDialog) {
+        importButton.removeEventListener('click', openImportDialog);
+        importButton.addEventListener('click', openImportDialog);
+        importLoadButton.removeEventListener('click', handleImportLoad);
+        importLoadButton.addEventListener('click', handleImportLoad);
+        importCancelButton.removeEventListener('click', closeImportDialog);
+        importCancelButton.addEventListener('click', closeImportDialog);
+        importDialog.removeEventListener('keydown', handleImportKeydown);
+        importDialog.addEventListener('keydown', handleImportKeydown);
     }
 
     // Add event listener for undo button
@@ -451,6 +473,7 @@ function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
  * @param {{row: number, col: number}|null} kingInCheck - Square of a checked king, if any.
  */
 function showMoveResult(move, kingInCheck) {
+    if (replaying) return; // The page is redrawn once, after the last move
     renderPieces(boardState, move.to);
     updateStatusDisplay();
     updateMoveHistoryDisplay();
@@ -715,7 +738,7 @@ function getAIWorker() {
  */
 function requestAIMove() {
     const color = computerColor();
-    if (!color || isGameOver || currentPlayer !== color) return;
+    if (replaying || !color || isGameOver || currentPlayer !== color) return;
 
     const started = Date.now();
     aiThinking = true;
@@ -1043,6 +1066,7 @@ const SAVED_GAME_VERSION = 1;
  * Saves the current game state to localStorage.
  */
 function saveGameState() {
+    if (replaying) return;
     const gameState = {
         version: SAVED_GAME_VERSION,
         boardState: boardState,
@@ -1507,18 +1531,51 @@ function buildPGN() {
  * (older browser, or a page opened from a file), downloads it as a file instead.
  */
 function copyPGN() {
-    const pgn = buildPGN();
-    const flash = (text) => {
-        const original = 'Copy PGN';
-        pgnButton.textContent = text;
+    copyOrDownload(buildPGN(), pgnButton, 'Copy PGN', 'static-chess-game.pgn');
+}
+
+/**
+ * Copies the position on the board to the clipboard as FEN, for an analysis
+ * board. While an earlier move is being viewed, it is that position.
+ */
+function copyFEN() {
+    copyOrDownload(buildFEN(), fenButton, 'Copy FEN', 'static-chess-position.fen');
+}
+
+/** @returns {string} The position on screen in Forsyth-Edwards Notation. */
+function buildFEN() {
+    const shown = shownPosition();
+    const past = viewPly === null ? null : positionHistory[viewPly];
+    return positionToFEN(
+        {
+            board: shown.board,
+            enPassantTarget: past ? past.enPassantTarget : enPassantTarget,
+        },
+        shown.player,
+        past ? past.halfmoveClock || 0 : halfmoveClock,
+        Math.floor(shown.ply / 2) + 1
+    );
+}
+
+/**
+ * Copies text to the clipboard and says so on the button. Where the clipboard
+ * is not available, the text is downloaded as a file instead.
+ * @param {string} text
+ * @param {HTMLElement} button - The button that was pressed.
+ * @param {string} label - The button's normal label, put back after the notice.
+ * @param {string} filename - Name of the file if it has to be downloaded.
+ */
+function copyOrDownload(text, button, label, filename) {
+    const flash = (notice) => {
+        button.textContent = notice;
         setTimeout(() => {
-            pgnButton.textContent = original;
+            button.textContent = label;
         }, 1500);
     };
     const download = () => {
         const link = document.createElement('a');
-        link.href = URL.createObjectURL(new Blob([pgn], { type: 'application/x-chess-pgn' }));
-        link.download = 'static-chess-game.pgn';
+        link.href = URL.createObjectURL(new Blob([text], { type: 'application/x-chess-pgn' }));
+        link.download = filename;
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -1527,9 +1584,116 @@ function copyPGN() {
     };
 
     if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(pgn).then(() => flash('Copied!'), download);
+        navigator.clipboard.writeText(text).then(() => flash('Copied!'), download);
     } else {
         download();
+    }
+}
+
+// --- Loading a game from PGN ---
+
+/**
+ * Takes the moves out of PGN text: tags, comments, variations, annotation
+ * codes, move numbers and the result are dropped.
+ * @param {string} text
+ * @returns {string[]} The moves in standard algebraic notation.
+ */
+function pgnMoveTokens(text) {
+    let body = String(text)
+        .replace(/^\s*\[[^\]\n]*\]\s*$/gm, ' ') // Tag pairs
+        .replace(/\{[^}]*\}/g, ' ') // Comments in braces
+        .replace(/;[^\n]*/g, ' '); // Comments to the end of the line
+    while (/\([^()]*\)/.test(body)) body = body.replace(/\([^()]*\)/g, ' '); // Variations, innermost first
+    return body
+        .replace(/\$\d+/g, ' ') // Annotation codes
+        .replace(/\d+\.+/g, ' ') // Move numbers, also when attached: "1.e4"
+        .split(/\s+/)
+        .filter((token) => token && !['1-0', '0-1', '1/2-1/2', '*'].includes(token));
+}
+
+/**
+ * Replaces the current game with one given as PGN. Every move is checked
+ * first; if one cannot be played, nothing is changed.
+ * @param {string} text
+ * @returns {{ok: boolean, error?: string, moves?: number}}
+ */
+function importPGN(text) {
+    const tokens = pgnMoveTokens(text);
+    if (tokens.length === 0) return { ok: false, error: 'No moves found in the text.' };
+
+    let position = {
+        board: getInitialPieces(),
+        kingPositions: { [WHITE]: { row: 7, col: 4 }, [BLACK]: { row: 0, col: 4 } },
+        enPassantTarget: null,
+    };
+    let color = WHITE;
+    const moves = [];
+    for (const [index, token] of tokens.entries()) {
+        const move = findSANMove(position, color, token);
+        if (!move) {
+            const number = `${Math.floor(index / 2) + 1}${index % 2 === 0 ? '.' : '...'}`;
+            return { ok: false, error: `Move ${number} ${token} cannot be played.` };
+        }
+        moves.push(move);
+        position = applyMove(position, move.from, move.to, move.promotion).position;
+        color = opponentOf(color);
+    }
+
+    replaying = true; // No sounds, saving or computer replies while the moves go in
+    try {
+        resetGame();
+        for (const move of moves) {
+            makeMove(move.from.row, move.from.col, move.to.row, move.to.col, move.promotion);
+        }
+    } finally {
+        replaying = false;
+    }
+    redraw();
+    saveGameState();
+    announce(`Game loaded, ${moves.length} moves. ${currentStatus}`);
+    requestAIMove();
+    return { ok: true, moves: moves.length };
+}
+
+/** Opens the dialog for pasting a game. */
+function openImportDialog() {
+    if (!importDialog) return;
+    importError.textContent = '';
+    importDialog.hidden = false;
+    importText.focus();
+}
+
+/** Closes the dialog and gives the focus back to the button that opened it. */
+function closeImportDialog() {
+    if (!importDialog || importDialog.hidden) return;
+    cancelConfirm(importLoadButton);
+    importDialog.hidden = true;
+    if (importButton) importButton.focus();
+}
+
+/** Loads the pasted game. A game in progress needs a confirming second click first. */
+function handleImportLoad() {
+    if (pgnMoveTokens(importText.value).length === 0) {
+        importError.textContent = 'Paste a game in PGN format first.';
+        return;
+    }
+    if (isGameInProgress() && !confirmSecondClick(importLoadButton, 'Discard current game?')) {
+        return;
+    }
+    const result = importPGN(importText.value);
+    if (!result.ok) {
+        importError.textContent = `${result.error} The current game was not changed.`;
+        return;
+    }
+    importText.value = '';
+    closeImportDialog();
+}
+
+/** Escape closes the dialog. */
+function handleImportKeydown(event) {
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        closeImportDialog();
     }
 }
 
@@ -1622,6 +1786,9 @@ if (typeof module !== 'undefined' && module.exports) {
         viewMove,
         returnToLiveGame,
         requestHint,
+        importPGN,
+        pgnMoveTokens,
+        buildFEN,
         setTimeControl,
         clockRemaining,
         formatClock,

@@ -322,9 +322,107 @@ function hasInsufficientMaterial(board) {
     return others.every((p) => p.type === BISHOP && p.shade === others[0].shade);
 }
 
+/**
+ * Finds the legal move a piece of standard algebraic notation stands for, such
+ * as "Nf3", "exd5", "R1a3", "O-O" or "e8=N". Check marks and annotations
+ * ("+", "#", "!", "?") are ignored, and "0-0" is read as castling.
+ * @param {object} position
+ * @param {string} color - The side to move.
+ * @param {string} san
+ * @returns {{from: {row, col}, to: {row, col}, promotion: string}|null} null
+ *   if no legal move, or more than one, fits.
+ */
+function findSANMove(position, color, san) {
+    const text = String(san)
+        .replace(/[+#!?]+$/, '')
+        .replace(/0/g, 'O');
+    const moves = allLegalMoves(position, color);
+    const pieceAt = (square) => position.board[square.row][square.col];
+
+    if (text === 'O-O' || text === 'O-O-O') {
+        const toCol = text === 'O-O' ? 6 : 2;
+        const castle = moves.find(
+            (move) =>
+                pieceAt(move.from).type === KING &&
+                move.to.col === toCol &&
+                Math.abs(move.to.col - move.from.col) === 2
+        );
+        return castle ? { from: castle.from, to: castle.to, promotion: QUEEN } : null;
+    }
+
+    const parts = /^([KQRBN])?([a-h])?([1-8])?x?([a-h])([1-8])(?:=?([QRBN]))?$/.exec(text);
+    if (!parts) return null;
+    const type = parts[1] ? parts[1].toLowerCase() : PAWN;
+    const fileOf = (letter) => letter.charCodeAt(0) - 97;
+    const rowOf = (digit) => 8 - Number(digit);
+    const to = { row: rowOf(parts[5]), col: fileOf(parts[4]) };
+
+    const fitting = moves.filter((move) => {
+        const piece = pieceAt(move.from);
+        if (piece.type !== type || move.to.row !== to.row || move.to.col !== to.col) return false;
+        if (parts[2] && move.from.col !== fileOf(parts[2])) return false;
+        if (parts[3] && move.from.row !== rowOf(parts[3])) return false;
+        // Castling is never written as a king move
+        return !(type === KING && Math.abs(move.to.col - move.from.col) === 2);
+    });
+    if (fitting.length !== 1) return null;
+
+    const promotes = type === PAWN && (to.row === 0 || to.row === 7);
+    if (parts[6] && !promotes) return null;
+    return {
+        from: fitting[0].from,
+        to: fitting[0].to,
+        promotion: parts[6] ? parts[6].toLowerCase() : QUEEN,
+    };
+}
+
+/**
+ * Writes a position in Forsyth-Edwards Notation.
+ * @param {object} position
+ * @param {string} player - The side to move.
+ * @param {number} halfmoveClock - Half-moves since the last pawn move or capture.
+ * @param {number} fullmove - Number of the move about to be played, from 1.
+ * @returns {string}
+ */
+function positionToFEN(position, player, halfmoveClock, fullmove) {
+    const board = position.board;
+    const ranks = board.map((row) => {
+        let rank = '';
+        let empty = 0;
+        for (const piece of row) {
+            if (!piece) {
+                empty++;
+                continue;
+            }
+            if (empty) rank += empty;
+            empty = 0;
+            rank += piece.color === WHITE ? piece.type.toUpperCase() : piece.type;
+        }
+        return rank + (empty || '');
+    });
+
+    let castling = '';
+    for (const color of [WHITE, BLACK]) {
+        const row = color === WHITE ? 7 : 0;
+        const unmoved = (col, type) => {
+            const piece = board[row][col];
+            return !!piece && piece.type === type && piece.color === color && !piece.hasMoved;
+        };
+        if (!unmoved(4, KING)) continue;
+        if (unmoved(7, ROOK)) castling += color === WHITE ? 'K' : 'k';
+        if (unmoved(0, ROOK)) castling += color === WHITE ? 'Q' : 'q';
+    }
+
+    const target = position.enPassantTarget;
+    const enPassant = target ? `${String.fromCharCode(97 + target.col)}${8 - target.row}` : '-';
+    return `${ranks.join('/')} ${player} ${castling || '-'} ${enPassant} ${halfmoveClock} ${fullmove}`;
+}
+
 // Export for Node/Jest tests (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
+        findSANMove,
+        positionToFEN,
         PROMOTION_TYPES,
         opponentOf,
         isPathObstructed,

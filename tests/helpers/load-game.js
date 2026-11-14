@@ -1,6 +1,6 @@
 const { JSDOM } = globalThis; // Provided by tests/helpers/jsdom-environment.js
 
-const HTML = `<!DOCTYPE html><body><div id="chess-board"></div><ul id="move-history"></ul><div id="captured-by-black"></div><div id="captured-by-white"></div><span id="clock-black" hidden></span><span id="clock-white" hidden></span><div id="game-status"></div><button id="live-button" hidden>Back to game</button><button id="hint-button">Hint</button><button id="draw-button">Offer draw</button><button id="resign-button">Resign</button><button id="undo-button">Undo</button><button id="pgn-button">Copy PGN</button><button id="reset-button">New Game</button></body>`;
+const HTML = `<!DOCTYPE html><body><div id="chess-board"></div><ul id="move-history"></ul><div id="captured-by-black"></div><div id="captured-by-white"></div><span id="clock-black" hidden></span><span id="clock-white" hidden></span><div id="game-status"></div><button id="live-button" hidden>Back to game</button><button id="hint-button">Hint</button><button id="draw-button">Offer draw</button><button id="resign-button">Resign</button><button id="undo-button">Undo</button><button id="pgn-button">Copy PGN</button><button id="fen-button">Copy FEN</button><button id="import-button">Load PGN</button><button id="reset-button">New Game</button><div id="import-dialog" hidden><textarea id="import-text"></textarea><p id="import-error"></p><button id="import-cancel">Cancel</button><button id="import-load">Load game</button></div></body>`;
 
 /**
  * Loads a fresh copy of the game into a new JSDOM. Modules are reset first, so

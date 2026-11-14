@@ -12,6 +12,8 @@ All notable changes to this project will be documented in this file.
 - **Hint**: Marks the move the engine would play for the side to move, without playing it
 - **Chess clock**: An optional clock with five time controls, chosen under "Clock" for the next new game. Running out of time loses (or draws if the opponent cannot checkmate); Undo is off in timed games; the times survive a reload and the PGN names the time control
 - **Offline and installable**: After one visit the game opens and plays without a connection, and browsers offer to install it as an app. The page has a real icon
+- **Load PGN**: Paste a game to load it; every move is checked first and a move that cannot be played is named, leaving the current game untouched
+- **Copy FEN**: Copies the position on the board, also while looking back through the move list
 - **Themes**: Four board colour schemes (classic, green, blue, high contrast) and a light page theme that can also follow the system setting
 - The result is stored with the game, and the PGN says when a game ended by resignation or agreement
 
