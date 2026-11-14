@@ -27,6 +27,9 @@ const CONFIG = {
     // Shortest time between the player's move and the computer's reply (ms)
     AI_MOVE_DELAY_MS: 400,
 
+    // The level the engine plays at when asked for a hint
+    HINT_LEVEL: 'hard',
+
     // How long the New Game button waits for a confirming second click (ms)
     RESET_CONFIRM_MS: 4000,
 

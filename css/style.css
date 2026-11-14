@@ -168,6 +168,7 @@ body {
 
 #undo-button,
 #draw-button,
+#hint-button,
 #resign-button,
 #pgn-button {
     padding: 8px 12px;
@@ -184,6 +185,7 @@ body {
 
 #undo-button:disabled,
 #draw-button:disabled,
+#hint-button:disabled,
 #resign-button:disabled,
 #pgn-button:disabled {
     opacity: 0.4;
@@ -192,6 +194,7 @@ body {
 
 #undo-button:hover:not(:disabled),
 #draw-button:hover:not(:disabled),
+#hint-button:hover:not(:disabled),
 #resign-button:hover:not(:disabled),
 #pgn-button:hover:not(:disabled) {
     background-color: rgba(255, 255, 255, 0.06);
@@ -201,6 +204,7 @@ body {
 
 #undo-button:active:not(:disabled),
 #draw-button:active:not(:disabled),
+#hint-button:active:not(:disabled),
 #resign-button:active:not(:disabled),
 #pgn-button:active:not(:disabled) {
     transform: translateY(0);

@@ -164,6 +164,7 @@ That's it! No build process or dependencies are required.
 10. Click "Copy PGN" to copy the game for an analysis board or to share it
     - Click a move in the Move History (or use the arrow keys, Home and End there) to look at the position after it; "Back to game" returns to the live position
     - "Resign" ends the game after a second click. "Offer draw" is accepted by the other side with a second click, or answered at once by the computer. Undo reopens a game ended this way
+    - "Hint" marks the move the built-in engine would play for the side to move; nothing is played
     - The pieces each side has captured, and the material lead, are shown under the Move History
 11. Keyboard: Tab to the board, move between squares with the arrow keys, and press Enter or Space to select a piece or move it
 12. To play against the computer, pick a level under "Opponent" and a side under "Play as" (use "Flip board" to sit behind the black pieces). Undo then takes back your move and the computer's reply

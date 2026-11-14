@@ -238,3 +238,9 @@
     left: 0;
     border-top-right-radius: 5px;
 }
+
+/* The move suggested by the Hint button */
+.square.hint-from,
+.square.hint-to {
+    box-shadow: inset 0 0 0 4px #e6a23c;
+}

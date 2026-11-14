@@ -1,6 +1,6 @@
 const { JSDOM } = globalThis; // Provided by tests/helpers/jsdom-environment.js
 
-const HTML = `<!DOCTYPE html><body><div id="chess-board"></div><ul id="move-history"></ul><div id="captured-by-black"></div><div id="captured-by-white"></div><div id="game-status"></div><button id="live-button" hidden>Back to game</button><button id="draw-button">Offer draw</button><button id="resign-button">Resign</button><button id="undo-button">Undo</button><button id="pgn-button">Copy PGN</button><button id="reset-button">New Game</button></body>`;
+const HTML = `<!DOCTYPE html><body><div id="chess-board"></div><ul id="move-history"></ul><div id="captured-by-black"></div><div id="captured-by-white"></div><div id="game-status"></div><button id="live-button" hidden>Back to game</button><button id="hint-button">Hint</button><button id="draw-button">Offer draw</button><button id="resign-button">Resign</button><button id="undo-button">Undo</button><button id="pgn-button">Copy PGN</button><button id="reset-button">New Game</button></body>`;
 
 /**
  * Loads a fresh copy of the game into a new JSDOM. Modules are reset first, so

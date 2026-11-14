@@ -31,6 +31,9 @@ const capturedRows = {
     [BLACK]: document.getElementById('captured-by-black'),
 };
 const pendingConfirms = new Map(); // Buttons waiting for a confirming second click
+const hintButton = document.getElementById('hint-button');
+let hintMove = null; // The move the engine suggested for the current position, if asked
+let hintPending = false; // True while the engine is working out a hint
 let announcerElement = document.getElementById('announcer'); // Live region read out by screen readers
 const resetButton = document.getElementById('reset-button');
 const undoButton = document.getElementById('undo-button');
@@ -77,6 +80,10 @@ function initializeGame() {
     if (drawButton) {
         drawButton.removeEventListener('click', handleDrawClick);
         drawButton.addEventListener('click', handleDrawClick);
+    }
+    if (hintButton) {
+        hintButton.removeEventListener('click', requestHint);
+        hintButton.addEventListener('click', requestHint);
     }
 
     // Add event listener for board clicks (delegated)
@@ -229,6 +236,7 @@ function refreshBoardVisuals(kingInCheck) {
         kingInCheck = isInCheck(shown, shown.player) ? shown.kingPositions[shown.player] : null;
     }
     updateBoardVisuals(shown.board, kingInCheck, moveHistory[shown.ply - 1] || null);
+    showHintOnBoard();
 }
 
 /**
@@ -339,6 +347,7 @@ function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
     if (!boardState[startRow][startCol]) return; // Should not happen if logic is correct
     viewPly = null; // A move (for example the computer's reply) brings the live game back
     drawOffered = false; // Playing on declines a draw offer
+    clearHint();
     cancelConfirms();
 
     // --- Save snapshot for undo ---
@@ -654,6 +663,8 @@ function setOpponent(level, color = WHITE) {
 function cancelAIMove() {
     aiRequestId++;
     aiThinking = false;
+    hintPending = false; // A hint being worked out shares the engine and is dropped with it
+    hintMove = null;
 }
 
 /** @returns {Worker|null} The search worker, or null where workers are not available. */
@@ -677,14 +688,11 @@ function requestAIMove() {
     const color = computerColor();
     if (!color || isGameOver || currentPlayer !== color) return;
 
-    const id = ++aiRequestId;
-    const position = livePosition();
-    const level = opponentLevel;
     const started = Date.now();
     aiThinking = true;
     updateStatusDisplay();
 
-    const play = (move) => {
+    const id = askEngine(livePosition(), color, opponentLevel, (move) => {
         // A short pause, so the reply does not land in the same instant as the player's move
         const wait = Math.max(0, CONFIG.AI_MOVE_DELAY_MS - (Date.now() - started));
         setTimeout(() => {
@@ -696,19 +704,34 @@ function requestAIMove() {
                 updateStatusDisplay();
             }
         }, wait);
-    };
+    });
+}
+
+/**
+ * Asks the engine for a move. The search runs in a Web Worker so the page
+ * stays responsive; without one it runs here after the page has had a chance
+ * to draw. Only the latest request is answered: a newer one, or cancelAIMove,
+ * drops it.
+ * @param {object} position - A rules.js position.
+ * @param {string} color - The side to find a move for.
+ * @param {string} level - A key of AI_LEVELS.
+ * @param {(move: object|null) => void} onMove - Called with the engine's move.
+ * @returns {number} The id of the request, to compare with aiRequestId later.
+ */
+function askEngine(position, color, level, onMove) {
+    const id = ++aiRequestId;
     const thinkHere = () =>
         setTimeout(() => {
-            if (id === aiRequestId) play(chooseAIMove(position, color, level));
+            if (id === aiRequestId) onMove(chooseAIMove(position, color, level));
         }, 0);
 
     const worker = getAIWorker();
     if (!worker) {
         thinkHere();
-        return;
+        return id;
     }
     worker.onmessage = (event) => {
-        if (event.data.id === id) play(event.data.move);
+        if (event.data.id === id) onMove(event.data.move);
     };
     worker.onerror = (event) => {
         if (event && event.preventDefault) event.preventDefault();
@@ -716,6 +739,54 @@ function requestAIMove() {
         thinkHere();
     };
     worker.postMessage({ id, position, color, level });
+    return id;
+}
+
+// --- Hint ---
+
+/**
+ * Asks the engine what it would play for the side to move and marks that move
+ * on the board. Nothing is played. The marks stay until the position changes.
+ */
+function requestHint() {
+    if (isBoardLocked() || hintPending) return;
+    hintPending = true;
+    hintMove = null;
+    updateStatusDisplay();
+    refreshBoardVisuals();
+    const position = livePosition();
+    const id = askEngine(position, currentPlayer, CONFIG.HINT_LEVEL, (move) => {
+        if (id !== aiRequestId) return;
+        hintPending = false;
+        hintMove = move;
+        updateStatusDisplay();
+        refreshBoardVisuals();
+        if (move) {
+            const piece = position.board[move.from.row][move.from.col];
+            const from = coordsToAlgebraic(move.from.row, move.from.col);
+            const to = coordsToAlgebraic(move.to.row, move.to.col);
+            announce(`Hint: ${PIECE_NAMES[piece.type]} from ${from} to ${to}.`);
+        }
+    });
+}
+
+/** Removes the hint, and drops one that is still being worked out. */
+function clearHint() {
+    if (hintPending) aiRequestId++;
+    hintPending = false;
+    hintMove = null;
+}
+
+/** Marks the hinted move's two squares, or removes the marks when there is no hint. */
+function showHintOnBoard() {
+    boardElement
+        .querySelectorAll('.hint-from, .hint-to')
+        .forEach((el) => el.classList.remove('hint-from', 'hint-to'));
+    if (!hintMove || viewPly !== null) return;
+    const from = getSquareElement(hintMove.from.row, hintMove.from.col);
+    const to = getSquareElement(hintMove.to.row, hintMove.to.col);
+    if (from) from.classList.add('hint-from');
+    if (to) to.classList.add('hint-to');
 }
 
 // --- Draw detection ---
@@ -1179,6 +1250,10 @@ function updateStatusDisplay() {
     if (resignButton) {
         resignButton.disabled = !isGameInProgress();
     }
+    if (hintButton) {
+        hintButton.disabled = isBoardLocked() || hintPending;
+        hintButton.textContent = hintPending ? 'Thinking' : 'Hint';
+    }
     if (drawButton) {
         drawButton.disabled = !isGameInProgress();
         drawButton.textContent = drawOffered ? 'Accept draw?' : 'Offer draw';
@@ -1364,6 +1439,10 @@ if (typeof module !== 'undefined' && module.exports) {
         hasInsufficientMaterial,
         viewMove,
         returnToLiveGame,
+        requestHint,
+        get hintMove() {
+            return hintMove;
+        },
         resign,
         handleResignClick,
         handleDrawClick,
