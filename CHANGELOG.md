@@ -21,11 +21,16 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - On narrow screens the side panel was wider than the screen and its edges were cut off
+- Light theme: the card around the board stayed black with an unreadable title, and the move list, status and settings boxes were grey
+- The pawn promotion chooser ran off the edge of very narrow screens
+- Switches showed no keyboard focus, and white text on the teal buttons and the running clock was below AA contrast
 
 ### Changed
 
 - The display settings are folded under "Settings"; the opponent and side selectors stay in view
-- The side panel may be taller than the board (up to the window height), and its buttons are slightly smaller, to make room for the new controls
+- The status line sits above the board, and each player has a bar on their side of the board with their name, captured pieces and clock, so all of it is in view on a phone
+- The side panel is as tall as the board and the move list takes the height that is left; its controls are grouped (this game, new game, copy or load) and every control is at least 44px tall
+- The last move is shown as a tint on both squares instead of corner marks, and the dots for possible moves no longer pulse
 
 ## [0.2.0] - 2026-11-13
 
