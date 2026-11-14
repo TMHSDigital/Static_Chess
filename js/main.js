@@ -211,6 +211,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initialize Feature Modules ---
     initializeFeatureModules();
+
+    // --- Offline support ---
+    // Service workers need http(s); a page opened straight from a file plays without one
+    if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+        navigator.serviceWorker.register('sw.js').catch((error) => {
+            debugLog('Service worker not registered:', error);
+        });
+    }
 });
 
 /**

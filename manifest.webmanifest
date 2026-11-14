@@ -1,0 +1,15 @@
+{
+    "name": "Static Chess",
+    "short_name": "Chess",
+    "description": "Chess in the browser for two players or against the computer. Works offline.",
+    "start_url": "./",
+    "scope": "./",
+    "display": "standalone",
+    "background_color": "#1a1a1a",
+    "theme_color": "#282828",
+    "icons": [
+        { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+        { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+        { "src": "assets/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+    ]
+}

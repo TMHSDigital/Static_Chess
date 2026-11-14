@@ -152,7 +152,7 @@ That's it! No build process or dependencies are required.
 
 ## How to Play
 
-1. Open `index.html` in your browser
+1. Open `index.html` in your browser. Served over http(s), for example from GitHub Pages, the game also works offline after the first visit and can be installed as an app
 2. The game starts with White's turn
 3. Click on a piece to select it and see possible moves, or drag the piece to move it
 4. Click on a highlighted square to move the selected piece (or drop if dragging)
