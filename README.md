@@ -215,6 +215,7 @@ Static_Chess/
 │   └── integration/     # Integration tests for game flow
 ├── releases/            # Release files
 │   ├── README.md        # Release directory documentation
+│   ├── RELEASE_NOTES_v0.2.0.md  # Release notes for v0.2.0
 │   ├── RELEASE_NOTES_v0.1.0.md  # Release notes for v0.1.0
 │   └── RELEASE_GUIDE_v0.1.0.md  # Release guide for v0.1.0
 ├── docs/                # Documentation

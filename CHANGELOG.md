@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-13
+
 ### Added
 
 - **Sound Effects**: The settings toggle now plays short synthesized tones for moves, captures, check, castling, promotion and game end

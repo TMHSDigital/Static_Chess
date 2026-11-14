@@ -11,6 +11,7 @@ For each release version `vX.Y.Z`, create:
 
 ## Current Releases
 
+- **v0.2.0** - Computer Opponent, Full Rules and Accessibility (November 13, 2026)
 - **v0.1.0** - First Public Release (November 2, 2025)
 
 ## How It Works
