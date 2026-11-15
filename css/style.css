@@ -1,6 +1,7 @@
 :root {
-    /* As big as the window allows once the status line and the two player bars are counted */
-    --board-size: clamp(240px, calc(100vh - 250px), 580px);
+    /* As big as the window allows: 232px is the page padding (40px) plus what the
+       board card holds besides the board (title, status, two player bars, padding) */
+    --board-size: clamp(240px, calc(100vh - 232px), 580px);
     --light-square: #f0d9b5;
     --dark-square: #b58863;
     --selected-square: rgba(255, 255, 0, 0.3);
@@ -90,8 +91,6 @@ body {
     gap: 24px;
     justify-content: center;
     max-width: 1200px;
-    margin-top: 20px;
-    margin-bottom: 20px;
 }
 
 .board-container {
@@ -147,17 +146,17 @@ body {
     width: var(--info-panel-width);
     box-sizing: border-box;
     background-color: var(--panel-bg);
-    padding: 20px;
+    padding: var(--space-4);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-card);
     display: flex;
     flex-direction: column;
-    gap: var(--space-4);
+    gap: var(--space-3);
 }
 
 .panel-group {
     border-top: 1px solid var(--border-color);
-    padding-top: var(--space-4);
+    padding-top: var(--space-3);
 }
 
 .moves-group {
@@ -179,8 +178,11 @@ body {
     list-style: none;
     padding: 0;
     margin: 0;
-    flex: 1 1 0; /* Long games scroll inside the list instead of stretching the panel */
-    min-height: 168px;
+    /* The list takes the height the panel has left and gives it up first: long
+       games scroll inside it, and the lines shown while looking back come out
+       of it, so nothing below it moves */
+    flex: 1 1 0;
+    min-height: 120px;
     overflow-y: auto;
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius) var(--border-radius) 0 0; /* The step buttons close it off below */
@@ -428,7 +430,7 @@ body {
     align-items: center;
     justify-content: space-between;
     gap: var(--space-3);
-    min-height: var(--control-height);
+    min-height: var(--control-height-compact);
 }
 
 .toggle-label {
@@ -440,7 +442,7 @@ body {
     position: relative;
     display: inline-block;
     width: 44px;
-    height: var(--control-height);
+    height: var(--control-height-compact);
     flex-shrink: 0;
 }
 
@@ -453,10 +455,10 @@ body {
 .slider {
     position: absolute;
     cursor: pointer;
-    top: 10px;
+    top: calc(50% - 12px); /* A 24px track in the middle of the touch target */
     left: 0;
     right: 0;
-    bottom: 10px;
+    height: 24px;
     background-color: var(--control-border);
     transition: background-color 0.2s ease;
     border-radius: 24px;
@@ -603,7 +605,7 @@ body.coords-visible {
 }
 
 .toggle-container select {
-    min-height: var(--control-height);
+    min-height: var(--control-height-compact);
     background-color: var(--panel-bg);
     color: var(--text-color);
     border: 1px solid var(--control-border);
@@ -717,7 +719,9 @@ body.coords-visible {
 }
 
 .review-actions .btn {
+    min-height: var(--control-height-compact);
     padding: 0 6px;
+    font-size: var(--text-sm);
 }
 
 .live-button {
@@ -808,9 +812,14 @@ body.coords-visible {
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 600;
-    min-height: var(--control-height);
-    line-height: var(--control-height);
+    min-height: var(--control-height-compact);
+    line-height: var(--control-height-compact);
     border-radius: var(--radius-sm);
+}
+
+/* Two selects in a row would otherwise touch */
+.more-settings .toggle-container + .toggle-container {
+    margin-top: var(--space-1);
 }
 
 .more-settings summary:hover {
