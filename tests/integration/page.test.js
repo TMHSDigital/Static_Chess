@@ -164,6 +164,40 @@ describe('the real page', () => {
     page.close();
   });
 
+  test('a finished game offers Review and New game beside the result', () => {
+    const { window, byId } = openPage();
+    const square = (name) =>
+      window.document.querySelector(
+        `#chess-board .square[data-row="${8 - Number(name[1])}"][data-col="${name.charCodeAt(0) - 97}"]`
+      );
+    const play = (...moves) => {
+      for (const move of moves) {
+        square(move.slice(0, 2)).click();
+        square(move.slice(2)).click();
+      }
+    };
+    play('f2f3', 'e7e5', 'g2g4');
+    expect(byId('result-actions').hidden).toBe(true);
+
+    play('d8h4');
+    expect(byId('game-status').textContent).toBe('Checkmate! Black wins.');
+    expect(byId('status-bar').classList.contains('is-over')).toBe(true);
+    expect(byId('result-actions').hidden).toBe(false);
+
+    byId('review-button').click();
+    expect(byId('game-status').textContent).toBe('Viewing the starting position');
+    expect(byId('result-actions').hidden).toBe(true); // It belongs to the final position
+    expect(window.document.activeElement.dataset.ply).toBe('1'); // The arrow keys go on from here
+    expect(square('e2').querySelector('.piece')).not.toBeNull();
+
+    byId('live-button').click();
+    expect(byId('result-actions').hidden).toBe(false);
+    byId('again-button').click(); // No question: the game is over
+    expect(byId('game-status').textContent).toBe("White's turn");
+    expect(byId('move-history').querySelectorAll('button')).toHaveLength(0);
+    expect(byId('result-actions').hidden).toBe(true);
+  });
+
   test('a move made with two clicks shows in the status and the move list', () => {
     const { window, byId } = openPage();
     const square = (row, col) =>

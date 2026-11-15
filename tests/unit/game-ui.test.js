@@ -15,7 +15,9 @@ const HTML = `<!DOCTYPE html><body>
   <div id="side-white"><span class="side-name">White</span><span class="thinking" hidden></span></div>
   <div id="captured-by-black"></div><div id="captured-by-white"></div>
   <span id="clock-black" hidden></span><span id="clock-white" hidden></span>
-  <div id="game-status"></div>
+  <div id="status-bar"><div id="game-status"></div>
+    <div id="result-actions" hidden><button id="review-button"></button><button id="again-button"></button></div>
+  </div>
   <p id="review-score" hidden></p>
   <div id="review-actions" hidden><button id="live-button" hidden></button></div>
   <button id="hint-button">Hint</button><button id="draw-button">Offer draw</button>
@@ -45,6 +47,8 @@ afterEach(() => {
 
 const view = (changes = {}) => ({
   reviewing: false,
+  gameOver: false,
+  canReview: true,
   canView: true,
   shownPly: 3,
   moveCount: 3,
@@ -133,6 +137,28 @@ describe('game-ui.js without a game', () => {
     ui.renderControls(view({ moveCount: 0, shownPly: 0 }));
     expect(el('pgn-button').disabled).toBe(true);
     expect(el('download-button').disabled).toBe(true);
+  });
+
+  test('a finished game gets a marked status bar and what to do next', () => {
+    ui.renderControls(view());
+    expect(el('result-actions').hidden).toBe(true);
+    expect(el('status-bar').classList.contains('is-over')).toBe(false);
+
+    ui.renderControls(view({ gameOver: true }));
+    expect(el('result-actions').hidden).toBe(false);
+    expect(el('status-bar').classList.contains('is-over')).toBe(true);
+    expect(el('review-button').hidden).toBe(false);
+
+    // A game that ended before a move, or without the positions behind its moves
+    ui.renderControls(view({ gameOver: true, canReview: false }));
+    expect(el('review-button').hidden).toBe(true);
+    expect(el('result-actions').hidden).toBe(false);
+
+    const calls = [];
+    ui.bindControls({ review: () => calls.push('review'), reset: () => calls.push('reset') });
+    el('review-button').click();
+    el('again-button').click();
+    expect(calls).toEqual(['review', 'reset']);
   });
 
   test('names the players, marks the side to move and shows who is thinking', () => {
@@ -228,6 +254,7 @@ describe('game-ui.js without a game', () => {
       'draw',
       'hint',
       'reset',
+      'review',
       'copyPGN',
       'downloadPGN',
       'copyFEN',

@@ -8,6 +8,10 @@
 
 const moveHistoryElement = document.getElementById('move-history');
 const gameStatusElement = document.getElementById('game-status');
+const statusBar = document.getElementById('status-bar');
+const resultActions = document.getElementById('result-actions');
+const reviewButton = document.getElementById('review-button');
+const againButton = document.getElementById('again-button');
 const liveButton = document.getElementById('live-button');
 const reviewActions = document.getElementById('review-actions');
 const playHereButton = document.getElementById('play-here-button');
@@ -60,8 +64,8 @@ function listen(element, type, handler) {
  * when the game is started anew, without anything being called twice.
  * @param {object} handlers - What the game does on a click in the move list
  *   (moveListClick) or a key there (moveListKeydown), and on the buttons: live,
- *   playHere, step, resign, draw, hint, reset, copyPGN, downloadPGN, copyFEN
- *   and undo. undoOffered: false hides the Undo button.
+ *   playHere, step, resign, draw, hint, reset, review, copyPGN, downloadPGN,
+ *   copyFEN and undo. undoOffered: false hides the Undo button.
  */
 function bindControls(handlers) {
     listen(moveHistoryElement, 'click', handlers.moveListClick);
@@ -73,6 +77,9 @@ function bindControls(handlers) {
     listen(drawButton, 'click', handlers.draw);
     listen(hintButton, 'click', handlers.hint);
     listen(resetButton, 'click', handlers.reset);
+    // Beside the result of a finished game
+    listen(reviewButton, 'click', handlers.review);
+    listen(againButton, 'click', handlers.reset);
     listen(pgnButton, 'click', handlers.copyPGN);
     listen(downloadButton, 'click', handlers.downloadPGN);
     listen(fenButton, 'click', handlers.copyFEN);
@@ -115,9 +122,15 @@ function renderStatus(text) {
  * @param {object} view - reviewing: an earlier position is on the board.
  *   canView: the positions behind the moves are there to look at. shownPly:
  *   moves played in the position on screen. moveCount: moves played in the
- *   game. canUndo, inProgress, canHint, hintPending, drawOffered: as named.
+ *   game. gameOver: the result of a finished game is on screen. canReview:
+ *   that game has moves to go through. canUndo, inProgress, canHint,
+ *   hintPending, drawOffered: as named.
  */
 function renderControls(view) {
+    // A finished game: the result stands out and offers what to do next
+    if (statusBar) statusBar.classList.toggle('is-over', view.gameOver);
+    if (resultActions) resultActions.hidden = !view.gameOver;
+    if (reviewButton) reviewButton.hidden = !view.canReview;
     if (liveButton) liveButton.hidden = !view.reviewing;
     if (reviewActions) reviewActions.hidden = !view.reviewing;
     if (reviewScoreElement) reviewScoreElement.hidden = !view.reviewing;

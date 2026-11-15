@@ -98,6 +98,7 @@ function initializeGame() {
         draw: handleDrawClick,
         hint: requestHint,
         reset: handleResetClick,
+        review: reviewFromStart,
         copyPGN,
         downloadPGN,
         copyFEN,
@@ -430,6 +431,15 @@ function playFromHere() {
     saveGameState();
     announce(`Playing on from here. ${currentStatus}`);
     requestAIMove();
+}
+
+/**
+ * Starts going through the game from its first position, with the focus in
+ * the move list so the arrow keys step on from there.
+ */
+function reviewFromStart() {
+    viewMove(0);
+    focusCurrentMove();
 }
 
 /** Shows the live game again. */
@@ -1299,6 +1309,8 @@ function statusText() {
 function controlsView() {
     return {
         reviewing: viewPly !== null,
+        gameOver: isGameOver && viewPly === null,
+        canReview: moveHistory.length > 0 && positionHistory.length === moveHistory.length,
         // False for a save from an older version without the positions behind its moves
         canView: positionHistory.length === moveHistory.length,
         shownPly: shownPosition().ply,
@@ -1500,6 +1512,7 @@ if (typeof module !== 'undefined' && module.exports) {
         hasInsufficientMaterial,
         viewMove,
         returnToLiveGame,
+        reviewFromStart,
         requestHint,
         importPGN,
         importFEN,
