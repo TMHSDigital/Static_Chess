@@ -15,7 +15,8 @@
   "jest": {
     "testEnvironment": "<rootDir>/tests/helpers/jsdom-environment.js",
     "collectCoverageFrom": [
-      "js/**/*.js"
+      "js/**/*.js",
+      "sw.js"
     ]
   },
   "devDependencies": {
