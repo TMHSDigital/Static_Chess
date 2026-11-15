@@ -10,6 +10,17 @@
     min-height: 0; /* Prevents overflow */
 }
 
+/* On a narrow screen the board card has a width of its own (style.css), which
+   never exceeds the page; the board fills it and stays square */
+@media (max-width: 900px) {
+    .chess-board {
+        box-sizing: border-box;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1;
+    }
+}
+
 /* Coordinates: file letters along the rank nearest the player and rank numbers
    down the left edge, 16 labels in all. board.js puts a label element in every
    square of the four outer lines; which two lines show depends on which way

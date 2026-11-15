@@ -335,10 +335,11 @@ body {
 /* Responsive adjustments */
 @media (max-width: 900px) {
     :root {
-        /* 85% of the window, but never wider than what is left of it after the page
-           and card padding (46px) and a scrollbar that takes up room. vw counts
-           the scrollbar, so the last term keeps a very narrow window from scrolling sideways. */
-        --board-size: min(85vw, 85vh, calc(100vw - 58px));
+        /* The widest the board gets: 85% of the window. vw counts a scrollbar that
+           takes up room, so this alone can be wider than the page. The board card
+           below is therefore also limited to the width the page really has, and the
+           board fills the card (see .chess-board in board.css). */
+        --board-size: min(85vw, 85vh);
     }
 
     body {
@@ -350,10 +351,18 @@ body {
         flex-direction: column;
         align-items: center;
         margin-top: 10px;
+        width: 100%; /* The page's width without its padding or a scrollbar */
     }
 
+    /* 26px is the card's padding (24px) plus the board's border (2px) */
+    .board-container,
     .game-info {
-        width: calc(var(--board-size) + 24px);
+        box-sizing: border-box;
+        width: min(calc(var(--board-size) + 26px), 100%);
+    }
+
+    .board-container {
+        align-self: center;
     }
 
     .move-history {

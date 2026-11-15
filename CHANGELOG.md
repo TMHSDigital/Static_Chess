@@ -41,7 +41,7 @@ All notable changes to this project will be documented in this file.
 - Copy FEN: where the clipboard is not available, the position is saved as a plain text file, not marked as a PGN file
 - On the clock, two bishops on squares of one colour no longer count as enough to win when the other side runs out of time
 - The computer's reply no longer waits for a search that was abandoned, for example a hint that was overtaken by a move or a move that was undone while the computer was thinking
-- In a very narrow window with a scrollbar that takes up room, the board card no longer runs over the page padding or past the window edge
+- In a very narrow window with a scrollbar that takes up room, the board card no longer runs over the page padding or past the window edge, whatever the scrollbar's width, and the board on a phone is no smaller for it
 - Offline support: a new version of the service worker removes only this app's own old caches, not those of other apps served from the same host
 - Touch: when the browser cancels a touch in the middle of a drag (a system gesture, a call, a second finger), the piece goes back to its square instead of hanging in the air, and the next tap no longer plays its move
 - Notation: a move no longer gets a file or rank because of a second piece of the same type that is pinned and could not have made it (for example "Ne4", not "Nge4")
