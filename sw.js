@@ -1,13 +1,20 @@
 /**
  * @fileoverview Service worker: keeps a copy of the app so it opens and plays
  * without a connection. The network is always tried first, so a new release
- * shows up at once when online; the copy is only used when the network fails.
+ * shows up at once when online; the copy is used when the network fails, or
+ * when it has not answered after a few seconds.
  */
 
 // Cache Storage is shared by every app on the same host, so this app's caches
 // carry its own prefix and nothing else is ever touched
 const CACHE_PREFIX = 'static-chess-';
 const CACHE_NAME = `${CACHE_PREFIX}v1`; // Change only to throw every saved copy away
+
+// How long the network gets to answer before the saved copy is used instead.
+// A connection that is up but delivers nothing (a captive portal, a weak
+// signal) does not fail; without this the app would wait for the browser's own
+// timeout although a complete copy is saved.
+const NETWORK_WAIT_MS = 3000;
 
 // Everything the app needs. tests/unit/offline.test.js checks this list
 // against index.html and the files on disk.
@@ -74,19 +81,33 @@ self.addEventListener('fetch', (event) => {
     const request = event.request;
     if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
 
+    const savedCopy = () => caches.match(request, { ignoreSearch: true });
+
     event.respondWith(
-        fetch(request)
-            .then((response) => {
-                if (response.ok) {
-                    const copy = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-                }
-                return response;
-            })
-            .catch(() =>
-                caches
-                    .match(request, { ignoreSearch: true })
-                    .then((saved) => saved || Response.error())
-            )
+        new Promise((resolve) => {
+            // The network is slow: answer from the saved copy if there is one.
+            // Without one there is nothing better to do than keep waiting.
+            const waiting = setTimeout(() => {
+                savedCopy().then((saved) => {
+                    if (saved) resolve(saved);
+                });
+            }, NETWORK_WAIT_MS);
+
+            fetch(request)
+                .then((response) => {
+                    clearTimeout(waiting);
+                    if (response.ok) {
+                        // Saved also when the copy has already been used, so the
+                        // next visit gets the new version
+                        const copy = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+                    }
+                    resolve(response); // Has no effect if the saved copy was used
+                })
+                .catch(() => {
+                    clearTimeout(waiting);
+                    savedCopy().then((saved) => resolve(saved || Response.error()));
+                });
+        })
     );
 });

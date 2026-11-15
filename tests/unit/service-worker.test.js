@@ -156,6 +156,92 @@ describe('service worker', () => {
     expect((await sw.fetchEvent(get(PAGE))).body).toBe('./');
   });
 
+  describe('a network that does not answer', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    /** A network whose requests stay open until the test settles them. */
+    function stalledNetwork() {
+      const pending = [];
+      const network = () => new Promise((resolve, reject) => pending.push({ resolve, reject }));
+      return { network, pending };
+    }
+    /** Tells whether a promise has settled yet, without waiting for it. */
+    const stateOf = async (promise) => {
+      let state = 'waiting';
+      promise.then(
+        () => (state = 'answered'),
+        () => (state = 'rejected')
+      );
+      await jest.advanceTimersByTimeAsync(0);
+      return state;
+    };
+
+    test('the saved copy is used after three seconds', async () => {
+      const { network } = stalledNetwork();
+      const sw = startServiceWorker(network);
+      await sw.lifecycle('install');
+      const answer = sw.fetchEvent(get(`${PAGE}js/game.js?v=2`));
+
+      await jest.advanceTimersByTimeAsync(2999);
+      expect(await stateOf(answer)).toBe('waiting');
+      await jest.advanceTimersByTimeAsync(1);
+      expect((await answer).body).toBe('js/game.js');
+    });
+
+    test('an answer that comes late is still saved for the next visit', async () => {
+      const { network, pending } = stalledNetwork();
+      const sw = startServiceWorker(network);
+      await sw.lifecycle('install');
+      const request = get(`${PAGE}js/game.js`);
+      const answer = sw.fetchEvent(request);
+      await jest.advanceTimersByTimeAsync(3000);
+      expect((await answer).body).toBe('js/game.js'); // The copy from the install
+
+      pending[0].resolve(response(true, 'new version'));
+      await jest.advanceTimersByTimeAsync(0);
+      const [saved] = sw.stores.values();
+      expect(saved.get(request.url).body).toBe('new version');
+    });
+
+    test('a file that was never saved waits for the network', async () => {
+      const { network, pending } = stalledNetwork();
+      const sw = startServiceWorker(network);
+      await sw.lifecycle('install');
+      const answer = sw.fetchEvent(get(`${PAGE}never-saved.png`));
+      await jest.advanceTimersByTimeAsync(60000);
+      expect(await stateOf(answer)).toBe('waiting');
+
+      const late = response(true, 'at last');
+      pending[0].resolve(late);
+      expect(await answer).toBe(late);
+    });
+
+    test('a network that answers in time is not overtaken by the saved copy', async () => {
+      const { network, pending } = stalledNetwork();
+      const sw = startServiceWorker(network);
+      await sw.lifecycle('install');
+      const answer = sw.fetchEvent(get(`${PAGE}js/game.js`));
+      await jest.advanceTimersByTimeAsync(2000);
+      const fresh = response(true, 'new version');
+      pending[0].resolve(fresh);
+      expect(await answer).toBe(fresh);
+      await jest.advanceTimersByTimeAsync(5000); // The timer was cancelled: nothing more happens
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    test('a network that fails after a while still falls back to the copy', async () => {
+      const { network, pending } = stalledNetwork();
+      const sw = startServiceWorker(network);
+      await sw.lifecycle('install');
+      const answer = sw.fetchEvent(get(`${PAGE}index.html`));
+      await jest.advanceTimersByTimeAsync(1000);
+      pending[0].reject(new Error('connection reset'));
+      expect((await answer).body).toBe('index.html');
+      expect(jest.getTimerCount()).toBe(0);
+    });
+  });
+
   test('without a connection and without a copy the answer is a network error, not a rejection', async () => {
     const sw = startServiceWorker();
     await sw.lifecycle('install');
