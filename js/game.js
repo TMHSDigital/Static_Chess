@@ -707,6 +707,7 @@ function cancelConfirm(button) {
 /** Drops every confirmation that is waiting; used whenever the game moves on. */
 function cancelConfirms() {
     for (const button of Array.from(pendingConfirms.keys())) cancelConfirm(button);
+    cancelResetConfirm();
 }
 
 /**

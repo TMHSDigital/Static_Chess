@@ -42,6 +42,19 @@ describe('New Game button', () => {
     }
   });
 
+  test('playing a move drops a pending New Game confirmation', () => {
+    const g = loadGame();
+    g.play('e2e4');
+    button(g).click();
+    expect(button(g).textContent).toBe('Discard game?');
+    g.play('e7e5');
+    expect(button(g).textContent).toBe('New Game');
+    expect(button(g).classList.contains('confirming')).toBe(false);
+    button(g).click();
+    expect(g.game.moveHistory).toHaveLength(2);
+    expect(button(g).textContent).toBe('Discard game?');
+  });
+
   test('a finished game resets with one click', () => {
     const g = loadGame();
     g.play('f2f3', 'e7e5', 'g2g4', 'd8h4');
