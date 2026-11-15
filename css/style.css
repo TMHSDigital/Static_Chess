@@ -473,9 +473,17 @@ body {
         overflow-y: visible;
     }
 
-    .move-history {
+    /* The moves group has one height whether or not an earlier move is being
+       looked at: the heading, at least four rows of moves, the step strip, and
+       room for a score line of two lines and the two review buttons. The list takes what
+       the others leave, so starting a review moves nothing below the group. */
+    .moves-group {
         flex: none;
-        height: 180px;
+        height: calc(246px + 2 * var(--control-height-compact));
+    }
+
+    .move-history {
+        min-height: 0;
     }
 }
 
