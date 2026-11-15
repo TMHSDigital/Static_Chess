@@ -552,6 +552,12 @@ function livePosition() {
  */
 function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
     if (isGameOver || !boardState[startRow][startCol]) return;
+    // A flag that fell between two ticks still ends the game: a side with no
+    // time left does not get to move, and is not given the increment.
+    if (clock && clock.turnStartedAt !== null && clockRemaining(currentPlayer) === 0) {
+        endGameOnTime();
+        return;
+    }
     viewPly = null; // A move (for example the computer's reply) brings the live game back
     drawOffered = false; // Playing on declines a draw offer
     clearHint();
@@ -1018,6 +1024,11 @@ function tickClock() {
         warnIfTimeIsLow();
         return;
     }
+    endGameOnTime();
+}
+
+/** Ends the game because the side to move has run out of time. */
+function endGameOnTime() {
     const winnerCanMate = canDeliverMate(boardState, opponentOf(currentPlayer));
     const { result, status } = timeoutResult(currentPlayer, winnerCanMate);
     endGameWithoutMove(result, status);
