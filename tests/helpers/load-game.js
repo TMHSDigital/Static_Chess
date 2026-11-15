@@ -2,6 +2,26 @@ const { JSDOM } = globalThis; // Provided by tests/helpers/jsdom-environment.js
 
 const HTML = `<!DOCTYPE html><body><div id="chess-board"></div><ul id="move-history"></ul><div id="step-buttons"><button data-step="first"></button><button data-step="previous"></button><button data-step="next"></button><button data-step="last"></button></div><div id="captured-by-black"></div><div id="captured-by-white"></div><span id="clock-black" hidden></span><span id="clock-white" hidden></span><div id="game-status"></div><p id="review-score" hidden></p><div id="review-actions" hidden><button id="live-button" hidden>Back to game</button><button id="play-here-button">Play from here</button></div><button id="hint-button">Hint</button><button id="draw-button">Offer draw</button><button id="resign-button">Resign</button><button id="undo-button">Undo</button><button id="pgn-button">Copy PGN</button><button id="download-button">Save PGN</button><button id="fen-button">Copy FEN</button><button id="import-button">Load PGN</button><button id="reset-button">New Game</button><div id="import-dialog" hidden><textarea id="import-text"></textarea><p id="import-error"></p><button id="import-file-button">Open file</button><input id="import-file" type="file" hidden /><button id="import-cancel">Cancel</button><button id="import-load">Load game</button><div id="archive-section" hidden><ul id="archive-list"></ul></div></div></body>`;
 
+let previous = null; // The game and window of the last loadGame() call, until cleaned up
+
+/** Stops the previous game's timers and closes its window, if there is one. */
+function cleanupPreviousGame() {
+  if (!previous) return;
+  const { game, window } = previous;
+  previous = null;
+  try {
+    game.stopAllTimers();
+  } finally {
+    window.close();
+  }
+}
+
+// A test that ends with a clock running or the computer thinking must not leak
+// either into the next test: clean up after every test, not just when the next
+// game is built. Every file that requires this helper does so at the top level,
+// so this registers once per file.
+afterEach(cleanupPreviousGame);
+
 /**
  * Loads a fresh copy of the game into a new JSDOM. Modules are reset first, so
  * every call gets its own DOM and game state.
@@ -12,6 +32,7 @@ const HTML = `<!DOCTYPE html><body><div id="chess-board"></div><ul id="move-hist
  *   initializeGame to the caller, as when main.js starts the page.
  */
 function loadGame(options = {}) {
+  cleanupPreviousGame();
   jest.resetModules();
   const dom = new JSDOM(HTML, { url: 'http://localhost' });
   const window = dom.window;
@@ -148,6 +169,7 @@ function loadGame(options = {}) {
       })
     );
 
+  previous = { game, window };
   return {
     window,
     game,

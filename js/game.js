@@ -1031,6 +1031,22 @@ function runClockTimer() {
     }
 }
 
+/**
+ * Stops everything this game started that could outlive it: the clock interval,
+ * a computer move or hint still being worked out, and a pending confirm button.
+ * A move worked out after this call is void (see cancelAIMove), so nothing it
+ * does can land on another game. The tests call this when a game is replaced
+ * or a test ends; the page itself never needs it.
+ */
+function stopAllTimers() {
+    if (clockTimer !== null) {
+        clearInterval(clockTimer);
+        clockTimer = null;
+    }
+    cancelAIMove();
+    cancelConfirms();
+}
+
 /** Redraws the running clock and ends the game when it reaches zero. */
 function tickClock() {
     if (!clock || clock.turnStartedAt === null || isGameOver) {
@@ -1971,6 +1987,7 @@ if (typeof module !== 'undefined' && module.exports) {
         setTimeControl,
         clockRemaining,
         formatClock,
+        stopAllTimers,
         saveGameState,
         get clock() {
             return clock;
