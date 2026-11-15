@@ -310,6 +310,9 @@ function renderHint(move) {
  *   to look at their positions. live: the live game is on the board.
  */
 function renderMoveList(moves, view) {
+    // Rebuilding drops the focused entry; it is put back below, also when the
+    // change comes from the computer's move or the review scores, not a key
+    const hadFocus = moveHistoryElement.contains(document.activeElement);
     moveHistoryElement.innerHTML = ''; // Clear existing
     let listItem = null;
     let current = null; // The entry for the position on screen
@@ -357,6 +360,7 @@ function renderMoveList(moves, view) {
 
     const tabStop = current || moveHistoryElement.querySelector('button[data-ply]');
     if (tabStop) tabStop.tabIndex = 0;
+    if (hadFocus && tabStop && !tabStop.disabled) tabStop.focus();
 
     // Highlight the row of the last move played
     if (moveHistoryElement.lastElementChild) {

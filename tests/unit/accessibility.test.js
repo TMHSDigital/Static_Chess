@@ -185,6 +185,34 @@ describe('announcements', () => {
   });
 });
 
+describe('the move list keeps the focus when it is redrawn', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  test("by the computer's move, on the current move", () => {
+    const g = loadGame();
+    g.game.setOpponent('easy', 'w');
+    g.play('e2e4'); // The computer starts thinking
+    doc(g).querySelector('#move-history button[tabindex="0"]').focus();
+    jest.runAllTimers(); // Its reply redraws the list
+    expect(g.game.moveHistory).toHaveLength(2);
+    const focused = doc(g).activeElement;
+    expect(focused.closest('#move-history')).not.toBeNull();
+    expect(focused.dataset.ply).toBe('2');
+  });
+
+  test('not when the focus was elsewhere', () => {
+    const g = loadGame();
+    g.game.setOpponent('easy', 'w');
+    g.play('e2e4');
+    const elsewhere = doc(g).getElementById('pgn-button');
+    elsewhere.focus();
+    jest.runAllTimers();
+    expect(g.game.moveHistory).toHaveLength(2);
+    expect(doc(g).activeElement).toBe(elsewhere);
+  });
+});
+
 describe('a button that switches itself off hands the focus on', () => {
   const step = (g, name) => doc(g).querySelector(`button[data-step="${name}"]`);
   const press = (button) => {
