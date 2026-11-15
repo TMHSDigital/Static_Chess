@@ -304,4 +304,49 @@ describe('mouse and touch input with drag and drop enabled', () => {
       expect(g.at('e4').type).toBe('p'); // The first finger's drag still plays its move
     });
   });
+
+  describe('two fingers on the screen', () => {
+    // Each finger is { id, x, y }; touches are those still down, changed the one that moved
+    const fingers = (g, type, target, touches, changed) => {
+      const event = new g.window.Event(type, { bubbles: true, cancelable: true });
+      const asTouch = ({ id, x, y }) => ({ identifier: id, clientX: x, clientY: y });
+      event.touches = touches.map(asTouch);
+      event.changedTouches = changed.map(asTouch);
+      target.dispatchEvent(event);
+    };
+    const first = { id: 1, x: 100, y: 100 };
+    const second = { id: 2, x: 300, y: 300 };
+
+    test('lifting a second finger neither ends nor moves the drag', () => {
+      const g = loadGame({ drag: true });
+      const doc = g.window.document;
+      const pawn = pieceAt(g, 6, 4);
+      const dropped = [];
+      doc.elementsFromPoint = (x, y) => {
+        dropped.push([x, y]);
+        return [g.board.getSquareElement(x === 100 && y === 60 ? 4 : 5, 4)];
+      };
+      fingers(g, 'touchstart', pawn, [first], [first]);
+      fingers(g, 'touchmove', doc, [{ ...first, y: 60 }], [{ ...first, y: 60 }]);
+      const where = [pawn.style.left, pawn.style.top];
+      fingers(
+        g,
+        'touchstart',
+        g.board.getSquareElement(5, 4),
+        [{ ...first, y: 60 }, second],
+        [second]
+      );
+      // The second finger moves and lifts, listed first among the touches
+      fingers(g, 'touchmove', doc, [second, { ...first, y: 60 }], [second]);
+      expect([pawn.style.left, pawn.style.top]).toEqual(where); // The piece follows the first finger
+      fingers(g, 'touchend', doc, [{ ...first, y: 60 }], [second]);
+      expect(pawn.classList.contains('dragging')).toBe(true);
+      expect(g.game.moveHistory).toHaveLength(0);
+
+      // The first finger lifts on e4: the drop is where it is, not where the second one was
+      fingers(g, 'touchend', doc, [], [{ ...first, y: 60 }]);
+      expect(dropped).toEqual([[100, 60]]);
+      expect(g.at('e4').type).toBe('p');
+    });
+  });
 });

@@ -14,7 +14,21 @@ let dragState = {
     currentPos: { x: 0, y: 0 },
     offset: { x: 0, y: 0 },
     hasMoved: false, // Track if mouse actually moved during drag
+    touchId: null, // The identifier of the finger that started a touch drag
 };
+
+/**
+ * @param {TouchList|Array} list - A touch event's touches or changedTouches.
+ * @returns {Touch|null} The finger the drag follows, if it is in the list.
+ */
+function findDragTouch(list) {
+    return Array.from(list || []).find((touch) => touch.identifier === dragState.touchId) || null;
+}
+
+/** @returns {number} A coordinate of an event or touch, or the fallback if it has none. */
+function coordinate(value, fallback) {
+    return Number.isFinite(value) ? value : fallback;
+}
 
 // Flag to prevent click events after drag
 let dragJustEnded = false;
@@ -101,9 +115,13 @@ function handleDragStart(event) {
         return;
     }
 
-    // Get start position
-    const clientX = event.type === 'touchstart' ? event.touches[0].clientX : event.clientX;
-    const clientY = event.type === 'touchstart' ? event.touches[0].clientY : event.clientY;
+    // Get start position: for a touch, that of the finger just put down
+    const touch =
+        event.type === 'touchstart'
+            ? (event.changedTouches && event.changedTouches[0]) || event.touches[0]
+            : null;
+    const clientX = touch ? touch.clientX : event.clientX;
+    const clientY = touch ? touch.clientY : event.clientY;
 
     // Get bounding rect for initial positioning (before adding dragging class)
     const rect = pieceElement.getBoundingClientRect();
@@ -121,6 +139,7 @@ function handleDragStart(event) {
     dragState.offset = { x: offsetX, y: offsetY };
     dragState.rect = rect;
     dragState.hasMoved = false;
+    dragState.touchId = touch ? touch.identifier : null;
     dragJustEnded = false;
 
     // Stop the browser starting a text selection on mouse press. This does not
@@ -166,9 +185,11 @@ function handleDragMove(event) {
         event.preventDefault();
     }
 
-    // Get current position
-    const clientX = event.type === 'touchmove' ? event.touches[0].clientX : event.clientX;
-    const clientY = event.type === 'touchmove' ? event.touches[0].clientY : event.clientY;
+    // Get current position: for a touch, that of the finger that started the drag
+    const point = event.type === 'touchmove' ? findDragTouch(event.touches) : event;
+    if (!point) return;
+    const clientX = point.clientX;
+    const clientY = point.clientY;
 
     dragState.currentPos = { x: clientX, y: clientY };
 
@@ -223,6 +244,10 @@ function cancelDrag() {
 function handleDragEnd(event) {
     if (!CONFIG.FEATURES.DRAG_AND_DROP || !dragState.isDragging) return;
 
+    // Lifting another finger leaves the drag to the finger that started it
+    const point = event.type === 'touchend' ? findDragTouch(event.changedTouches) : event;
+    if (!point) return;
+
     // A press that never became a drag is a click or tap: leave it to the click handler
     if (!dragState.hasMoved) {
         dragState.isDragging = false;
@@ -232,14 +257,8 @@ function handleDragEnd(event) {
     }
 
     // Get drop position (use currentPos if event coordinates aren't available)
-    const clientX =
-        event.type === 'touchend'
-            ? event.changedTouches[0]?.clientX || dragState.currentPos.x
-            : event.clientX || dragState.currentPos.x;
-    const clientY =
-        event.type === 'touchend'
-            ? event.changedTouches[0]?.clientY || dragState.currentPos.y
-            : event.clientY || dragState.currentPos.y;
+    const clientX = coordinate(point.clientX, dragState.currentPos.x);
+    const clientY = coordinate(point.clientY, dragState.currentPos.y);
 
     // Store drag state before resetting
     const wasDrag = dragState.hasMoved;
