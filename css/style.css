@@ -334,7 +334,10 @@ body {
 /* Responsive adjustments */
 @media (max-width: 900px) {
     :root {
-        --board-size: min(85vw, 85vh); /* Adjust for mobile */
+        /* 85% of the window, but never wider than what is left of it after the page
+           and card padding (46px) and a scrollbar that takes up room. vw counts
+           the scrollbar, so the last term keeps a very narrow window from scrolling sideways. */
+        --board-size: min(85vw, 85vh, calc(100vw - 58px));
     }
 
     body {
