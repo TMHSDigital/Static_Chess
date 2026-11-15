@@ -9,6 +9,8 @@ Static Chess is a pure vanilla implementation of chess using HTML, CSS, and Java
 ```
 Static_Chess/
 ├── index.html           # Main HTML entry point
+├── sw.js                # Service worker: keeps a copy of the app for offline use
+├── manifest.webmanifest # Makes the page installable as an app
 ├── css/                 # CSS styles
 │   ├── style.css        # General page styles
 │   ├── board.css        # Chessboard specific styles
@@ -27,8 +29,8 @@ Static_Chess/
 │   └── promotion.js     # Pawn promotion chooser
 ├── tests/               # Jest tests (dev only)
 │   ├── helpers/         # Shared loader that builds a fresh page and game per test
-│   ├── unit/            # Rules, undo, persistence, input, utilities
-│   └── integration/     # Move flow through the DOM
+│   ├── unit/            # Rules, engine, undo, persistence, clock, import, input, settings, service worker
+│   └── integration/     # Move flow through the DOM, and the real index.html
 ├── package.json         # Dev tooling only: lint, format and test scripts
 ├── eslint.config.mjs     # ESLint configuration, including the list of names shared between scripts
 ├── assets/              # SVG files for chess pieces, plus screenshots/ for the README
@@ -37,7 +39,8 @@ Static_Chess/
 │   ├── wn.svg, bn.svg   # Knights
 │   ├── wb.svg, bb.svg   # Bishops
 │   ├── wq.svg, bq.svg   # Queens
-│   └── wk.svg, bk.svg   # Kings
+│   ├── wk.svg, bk.svg   # Kings
+│   └── icons/           # App icon as SVG and as 192px and 512px PNG
 ├── releases/            # Release files (notes and guides)
 │   └── RELEASE_NOTES_vX.Y.Z.md  # Release notes for each version
 ├── .github/             # GitHub configuration
@@ -56,7 +59,8 @@ Static_Chess/
    - Calls `initializeGame()` from game.js
 
 2. **game.js**: The live game
-   - Holds the game state (board, side to move, history, undo stack)
+   - Holds the game state (board, side to move, history, undo stack, result, clock)
+   - Adds the click listener to the board and handles the buttons beside it
    - `makeMove()` plays a move in the live game. The change to the game itself is `playMove()`: it applies the move through `rules.js`, records it and detects checkmate and stalemate, and it refuses a finished game. `makeMove()` adds what only a move made on the page needs: the clock, automatic draws, `showMoveResult()` for the page updates, saving and the computer's reply. Load PGN plays its moves in through `playMove()` alone
    - `startGameFrom()` begins a game from a position, by default `initialPosition()` from `rules.js` with White to move. How the game began is kept in `gameStart` and saved with it, and `moveNumberAt()` is the one place that works out move numbers from it for the move list, PGN and FEN
    - `currentSnapshot()` and `restoreSnapshot()` are the one place that lists the fields of a position; the undo stack, saving, loading and a new game go through them
@@ -70,7 +74,7 @@ Static_Chess/
 
 4. **board.js**: UI representation of the chess board
    - Renders the board and pieces
-   - Handles interactions (clicks, keyboard navigation, drags)
+   - Handles keyboard navigation on the board (`keydown`, `focusin`); clicks are handled by `game.js` and drags by `drag.js`
    - Diff-based rendering updates only changed squares
    - Updates visual state (highlighting, animations, ARIA labels)
 
@@ -85,7 +89,8 @@ Static_Chess/
 
 7. **config.js**: Centralized configuration
    - Feature flags (see the table below)
-   - Default values for the settings toggles (`DEFAULT_SETTINGS`)
+   - Default values for the settings (`DEFAULT_SETTINGS`)
+   - The time controls on offer (`TIME_CONTROLS`) and the board themes (`BOARD_THEMES`)
    - The `localStorage` keys (`STORAGE_KEYS`), animation timing and sound definitions
 
 ### Feature flags
@@ -97,16 +102,22 @@ Static_Chess/
 | `SOUND_EFFECTS` | `false` | Runtime state. It is overwritten at startup from the "Sound effects" toggle, so editing it in `config.js` has no lasting effect; change `DEFAULT_SETTINGS.ENABLE_SOUNDS` instead |
 | `AI_OPPONENT`   | `true`  | Offers the computer opponent in the settings. When `false`, the selectors are hidden and the game is always two-player                                                           |
 | `PROMOTION_UI`  | `true`  | Asks which piece a pawn promotes to. When `false`, pawns become queens without asking                                                                                            |
+| `GAME_TIMER`    | `true`  | Offers the chess clock under "Clock". When `false`, the selector is hidden and no game is timed                                                                                  |
 
 ### Stored data
 
-Everything is kept in `localStorage` under the keys in `CONFIG.STORAGE_KEYS`: `chessGameState` (the game, its move list, undo stack and fifty-move counter, with a `version` field) and one key per setting (`showCoords`, `showPossibleMoves`, `showLastMove`, `enableSounds`, `flipBoard`, `opponent`, `playerSide`). A saved game is validated before it is used; anything unusable is discarded and a fresh game starts.
+Everything is kept in `localStorage` under the keys in `CONFIG.STORAGE_KEYS`:
+
+- `chessGameState`: the game. It holds a `version` field, the position (`boardState`, `currentPlayer`, `isGameOver`, `kingPositions`, `currentStatus`, `enPassantTarget`, `halfmoveClock`), the move list (`moveHistory`), the undo stack (`positionHistory`), the result (`gameResult`, and `endedWithoutMove` for a resignation, an agreed draw or a loss on time), how the game began (`gameStart`) and the `clock` object when the game is timed
+- One key per setting: `showCoords`, `showPossibleMoves`, `showLastMove`, `enableSounds`, `flipBoard`, `opponent`, `playerSide`, `timeControl`, `boardTheme`, `pageTheme`
+
+A saved game is validated before it is used (`validateSavedGame()`); anything unusable is discarded and a fresh game starts. Fields added later are optional there, so older saves still load. Changing a key name orphans what players have saved under the old one.
 
 ## How the scripts depend on each other
 
 The scripts are plain `<script>` files in one global scope, loaded in the order in `index.html`: `config`, `utils`, `pieces`, `rules`, `ai`, `board`, `drag`, `promotion`, `game`, `main`.
 
-- `rules.js` and `ai.js` depend only on `pieces.js` and `utils.js`
+- `rules.js` depends only on `pieces.js` and `utils.js`; `ai.js` builds on `rules.js` (`allLegalMoves`, `allLegalCaptures`, `applyMove`, `isInCheck`, `positionKey`). Neither touches the DOM, which is what lets `ai-worker.js` load them in a Web Worker
 - `board.js` owns the selection (`getSelectedSquare()`, `getPossibleMoves()` and their setters) and renders what it is given; it reads nothing from `game.js`. The last move to highlight is an argument of `updateBoardVisuals()`
 - `game.js` owns the game state and calls into `board.js`, `rules.js`, `promotion.js` and `ai.js`
 - `drag.js` calls `board.js` for the selection and `game.js` for `isBoardLocked()`, `generateLegalMovesForPiece()`, `playChosenMove()` and `refreshBoardVisuals()`
@@ -116,7 +127,7 @@ The scripts are plain `<script>` files in one global scope, loaded in the order 
 ## Data Flow
 
 1. User interacts with the board (clicks a square)
-2. `board.js` captures the event and calls the appropriate handler in `game.js`
+2. The click listener that `game.js` puts on the board calls `handleBoardClick()`; `board.js` turns Enter and Space on a focused square into the same call
 3. `game.js` validates the move using `rules.js` (which builds on the movement patterns in `pieces.js`)
 4. If valid, `game.js` updates the game state and calls `renderPieces()` in `board.js`
 5. `board.js` updates the visual representation
@@ -138,7 +149,11 @@ The game state is primarily managed in `game.js` and consists of:
 - Move history
 - Game status (in progress, check, checkmate, stalemate, draw)
 - Half-move clock for the fifty-move rule
-- Selected piece and possible moves
+- The result, and whether it came from a move
+- The chess clock of a timed game
+- The position being looked at while reviewing (`viewPly`), a pending draw offer and the current hint
+
+The selected piece and its possible moves are held in `board.js`.
 
 ## Optional Modules
 
@@ -202,15 +217,18 @@ To make it stronger, the limit is speed: each extra half-move costs roughly an o
 4. The choices are `<button>` elements with labels. The first one takes focus, and Tab and the arrow keys cycle through them
 5. With `PROMOTION_UI` set to `false` the chooser is skipped and the pawn becomes a queen
 
-### 4. Game Timer
+### 4. Chess Clock
 
-To implement the chess clock:
+> **✅ Fully Implemented: `js/game.js` (the "Clock" section), `js/config.js`**
 
-1. Add timer UI elements to the HTML
-2. Create a new `js/timer.js` file to manage clock state
-3. Integrate with `game.js` to switch active timer on move
-4. Add timer settings to the UI
-5. Add a `GAME_TIMER` feature flag to `config.js` and read it where the timer starts
+1. `CONFIG.TIME_CONTROLS` lists the time controls: minutes each and seconds added per move. `main.js` fills the "Clock" selector from it and calls `setTimeControl()`. The choice applies to the next new game; a game with no move yet takes it at once
+2. A timed game has a `clock` object: `{ control, base, increment, remaining: { w, b }, turnStartedAt }`, times in milliseconds. `turnStartedAt` is when the side to move was put on the clock, or `null` while no clock runs. `clockRemaining(color)` works out the time left from it, so nothing has to count down
+3. `makeMove()` stops the mover's clock, adds the increment and starts the other side's. White's first move is not timed
+4. `runClockTimer()` keeps an interval going (`CONFIG.CLOCK_TICK_MS`) only while a clock runs. `tickClock()` redraws it and, at zero, ends the game through `endGameWithoutMove()`: a loss, or a draw if the other side could never give mate (`canDeliverMate()`)
+5. Undo is off in a timed game
+6. The clock is saved with the game, as the times left and whether it was running, and the page saves again on `pagehide`. After a reload the side to move is put back on the clock from that moment
+7. A game loaded from PGN has no clock
+8. With `GAME_TIMER` off, `setTimeControl()` never chooses a clock and `main.js` hides the selector
 
 ### 5. Sound Effects
 
@@ -231,7 +249,7 @@ Undo is implemented using a pre-move snapshot stack:
 
 ### 7. Multiple Saved Games
 
-To implement multiple saved games:
+Not implemented: there is one save slot. To implement multiple saved games:
 
 1. Modify save/load functions to support named game slots
 2. Create a game selection/management UI
@@ -255,6 +273,52 @@ SAN generation with disambiguation is implemented:
 1. `generateNotationWithDisambiguation()` in `game.js` uses the pre-move board to resolve conflicts (file first, then rank, then both)
 2. Includes capture markers, checks, mates, promotions, and en passant indicator
 3. Future work: handle all edge cases for full SAN parity
+
+### 10. Game Review
+
+1. `viewPly` is the number of moves played in the position on screen, or `null` for the live game. `viewMove(ply)` sets it and redraws; nothing in the game changes
+2. `shownPosition()` returns the position to draw: the live one, or the undo-stack snapshot taken before move `viewPly + 1`. The board, the captured pieces, the last-move highlight and Copy FEN all follow it
+3. The moves in the list are buttons. A click, the arrow keys, Home and End in the list, and the four step buttons under it all call `viewMove()`; "Back to game" calls `returnToLiveGame()`
+4. `isBoardLocked()` is true while looking back. A move, such as the computer's reply, returns to the live game
+5. A save from an older version without an undo stack has no positions to show, so its move buttons and the step buttons are disabled
+
+### 11. Resign, Draw by Agreement and the Result
+
+1. `endGameWithoutMove(result, status)` ends a game that no move ended: resignation, an agreed draw or a loss on time. It sets `gameResult` and `endedWithoutMove`
+2. Resign needs a confirming second click (`confirmSecondClick()`). Against the computer it is the person who resigns
+3. With two players "Offer draw" becomes "Accept draw?" for the other side, and playing a move declines. The computer accepts unless it is at least `AI_DRAW_MARGIN` ahead
+4. Undo reopens a game ended this way without taking a move back
+5. `gameResult` is `'1-0'`, `'0-1'` or `'1/2-1/2'` once the game is over. It is saved with the game and written to the PGN
+
+### 12. Hint
+
+1. `requestHint()` asks the engine, at `CONFIG.HINT_LEVEL`, for the move it would play for the side to move, through the same `askEngine()` the computer opponent uses
+2. The move is not played. `showHintOnBoard()` marks its two squares and `announce()` reads it out
+3. The hint is dropped when the position changes, and a hint still being worked out is cancelled with the engine request it shares
+
+### 13. PGN and FEN
+
+1. `buildPGN()` writes the seven standard tags, `TimeControl` for a timed game, `SetUp` and `FEN` for a game that did not begin from the usual position, the moves, and a comment before the result when the game ended without a move
+2. `importPGN(text)` reads a game. `pgnMoveTokens()` drops tags, comments, variations and annotations, `findSANMove()` in `rules.js` finds the legal move each token stands for, and every move is checked before anything is changed; the first one that cannot be played is named in the dialog. Of several games in the text the first is loaded
+3. The moves go in through `playMove()`. A draw nobody claimed in the loaded game is ignored until the last move, and `pgnResult()` restores a result the moves do not show
+4. `buildFEN()` writes the position on screen with `positionToFEN()` from `rules.js`, also while looking back
+5. Copying goes through `copyOrDownload()`: the clipboard where it is available, otherwise a file download
+
+### 14. Themes
+
+1. `CONFIG.BOARD_THEMES` maps each board theme to the CSS custom properties it sets. `main.js` applies the saved one at startup and on change by setting them on the root element
+2. The page theme is `dark`, `light` or `auto`, written to `data-theme` on the root element; `auto` follows `prefers-color-scheme`. `style.css` defines every colour as a token per theme
+
+### 15. Offline Support and Install
+
+1. `sw.js` is a service worker registered by `main.js` when the page is served over http(s). On install it saves the files in its `APP_FILES` list
+2. It always tries the network first and saves a copy of each successful response, so a new release shows up at once when online. The saved copy is used only when the network fails
+3. `manifest.webmanifest` and the icons under `assets/icons/` make the page installable
+4. When a file is added, renamed or removed, `APP_FILES` has to follow; see `docs/RELEASE.md`. `tests/unit/offline.test.js` checks the list against `index.html` and the files on disk, and `tests/unit/service-worker.test.js` runs the handlers
+
+### 16. Captured Pieces
+
+`updateCapturedDisplay()` in `game.js` lists what each side has taken, with the material lead, from the moves up to the position on screen. It is redrawn with the move list.
 
 ## Coding Standards
 
@@ -287,9 +351,8 @@ SAN generation with disambiguation is implemented:
 
 Automated tests with Jest + jsdom, all built on `tests/helpers/load-game.js`:
 
-- Unit: rules (castling, en passant, pins, check, mate, stalemate, promotion, notation), undo, persistence, mouse and touch input, utilities, piece setup
-- Integration: move flow updates status and history
-- Not covered yet: board rendering details and the settings toggles
+- Unit: rules (castling, en passant, pins, check, mate, stalemate, promotion, notation, perft counts), the engine and its Web Worker, undo, persistence, the clock, review and results, PGN and FEN, hint, board rendering, the settings and themes, mouse and touch input, the service worker, utilities, piece setup
+- Integration: move flow updates status and history; `tests/integration/page.test.js` runs the real `index.html` with its scripts in page order
 - Optional: Playwright E2E for browser-level scenarios
 
 Manual testing:
