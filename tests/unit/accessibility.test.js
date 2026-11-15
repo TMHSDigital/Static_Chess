@@ -185,6 +185,28 @@ describe('announcements', () => {
   });
 });
 
+describe('announcements', () => {
+  test('a button that asks twice says so', () => {
+    const g = loadGame();
+    g.play('e2e4');
+    doc(g).getElementById('resign-button').click();
+    expect(announced(g)).toBe('Resign? Press again to confirm.');
+  });
+
+  test('the same message twice is a change each time, so it is read again', () => {
+    const g = loadGame();
+    const seen = [];
+    g.game.setOpponent(null);
+    for (let n = 0; n < 3; n++) {
+      doc(g).getElementById('reset-button').click(); // Nothing to lose: resets at once
+      seen.push(announced(g));
+    }
+    expect(seen[0]).not.toBe(seen[1]);
+    expect(seen[1]).not.toBe(seen[2]);
+    expect(seen.map((text) => text.trim())).toEqual(Array(3).fill("New game. White's turn"));
+  });
+});
+
 describe('the move list keeps the focus when it is redrawn', () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());

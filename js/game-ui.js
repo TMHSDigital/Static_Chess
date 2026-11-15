@@ -437,7 +437,10 @@ function announce(message) {
         announcerElement.setAttribute('aria-live', 'polite');
         document.body.appendChild(announcerElement);
     }
-    announcerElement.textContent = message;
+    // The same text set again is no change, and would not be read again: a
+    // repeat goes in with a trailing no-break space, or without the one it had
+    const current = announcerElement.textContent;
+    announcerElement.textContent = current === message ? `${message}\u00A0` : message;
 }
 
 // --- Buttons that ask twice, and short notices on buttons ---
@@ -460,6 +463,7 @@ function confirmSecondClick(button, question) {
     });
     button.textContent = question;
     button.classList.add('confirming');
+    announce(`${question} Press again to confirm.`);
     return false;
 }
 
@@ -481,6 +485,7 @@ function cancelConfirms() {
 /** Shows a short notice on a button, then its normal label again. */
 function flashButton(button, notice, label) {
     button.textContent = notice;
+    announce(notice);
     setTimeout(() => {
         button.textContent = label;
     }, CONFIG.NOTICE_MS);

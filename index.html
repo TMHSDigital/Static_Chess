@@ -92,10 +92,8 @@
             </div>
             <div class="game-info">
                 <div class="panel-group action-row" role="group" aria-label="This game">
-                    <button id="undo-button" class="btn" aria-label="Undo last move">Undo</button>
-                    <button id="hint-button" class="btn" aria-label="Show a suggested move">
-                        Hint
-                    </button>
+                    <button id="undo-button" class="btn" title="Undo last move">Undo</button>
+                    <button id="hint-button" class="btn" title="Show a suggested move">Hint</button>
                     <button id="draw-button" class="btn">Offer draw</button>
                     <button id="resign-button" class="btn">Resign</button>
                 </div>
@@ -174,27 +172,23 @@
                     role="group"
                     aria-label="Copy, save or load a game"
                 >
-                    <button id="pgn-button" class="btn btn-quiet" aria-label="Copy the game as PGN">
+                    <button id="pgn-button" class="btn btn-quiet" title="Copy the game as PGN">
                         Copy PGN
                     </button>
                     <button
                         id="download-button"
                         class="btn btn-quiet"
-                        aria-label="Save the game as a PGN file"
+                        title="Save the game as a PGN file"
                     >
                         Save PGN
                     </button>
-                    <button
-                        id="fen-button"
-                        class="btn btn-quiet"
-                        aria-label="Copy the position as FEN"
-                    >
+                    <button id="fen-button" class="btn btn-quiet" title="Copy the position as FEN">
                         Copy FEN
                     </button>
                     <button
                         id="import-button"
                         class="btn btn-quiet"
-                        aria-label="Load a game from PGN or a position from FEN"
+                        title="Load a game from PGN or a position from FEN"
                     >
                         Load
                     </button>
@@ -286,7 +280,7 @@
                     <button
                         id="import-file-button"
                         class="btn import-file-button"
-                        aria-label="Open a PGN or FEN file"
+                        title="Open a PGN or FEN file"
                     >
                         Open file
                     </button>

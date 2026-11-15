@@ -87,6 +87,18 @@ describe('the real page', () => {
     expect([...SCRIPTS].sort()).toEqual(onDisk.sort());
   });
 
+  test('every button with visible text is named with that text, so voice control can find it', () => {
+    const { window } = openPage();
+    const squash = (text) => text.replace(/\s+/g, ' ').trim().toLowerCase();
+    const mismatched = Array.from(window.document.querySelectorAll('button[aria-label]'))
+      .filter((button) => squash(button.textContent) !== '')
+      .filter(
+        (button) => !squash(button.getAttribute('aria-label')).includes(squash(button.textContent))
+      )
+      .map((button) => button.id || button.outerHTML);
+    expect(mismatched).toEqual([]);
+  });
+
   test('offers two players and exactly the levels the engine has', () => {
     const { run, values } = openPage();
     expect(values('opponent-select')).toEqual(['human', ...run('Object.keys(AI_LEVELS)')]);
