@@ -9,7 +9,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const INDEX = read('index.html');
 const SCRIPTS = [...INDEX.matchAll(/<script src="([^"]+)"/g)].map((match) => match[1]);
 
-const open = [];
+const openPages = [];
 
 /**
  * Opens the real index.html and runs its scripts in the order of its script
@@ -21,7 +21,7 @@ const open = [];
  */
 function openPage(options = {}) {
   const dom = new JSDOM(INDEX, { url: 'http://localhost/', runScripts: 'outside-only' });
-  open.push(dom);
+  openPages.push(dom);
   const { window } = dom;
   for (const [key, value] of Object.entries(options.storage || {})) {
     window.localStorage.setItem(key, value);
@@ -40,7 +40,7 @@ function openPage(options = {}) {
 }
 
 afterEach(() => {
-  while (open.length) open.pop().window.close(); // Stops the page's timers
+  while (openPages.length) openPages.pop().window.close(); // Stops the page's timers
 });
 
 describe('the real page', () => {
