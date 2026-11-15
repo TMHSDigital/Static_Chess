@@ -24,6 +24,8 @@ let viewPly = null; // Number of moves played in the position being looked at; n
 const moveHistoryElement = document.getElementById('move-history');
 const gameStatusElement = document.getElementById('game-status');
 const liveButton = document.getElementById('live-button');
+const reviewActions = document.getElementById('review-actions');
+const playHereButton = document.getElementById('play-here-button');
 const stepButtons = document.getElementById('step-buttons');
 const reviewScoreElement = document.getElementById('review-score');
 const resignButton = document.getElementById('resign-button');
@@ -128,6 +130,10 @@ function initializeGame() {
     if (liveButton) {
         liveButton.removeEventListener('click', returnToLiveGame);
         liveButton.addEventListener('click', returnToLiveGame);
+    }
+    if (playHereButton) {
+        playHereButton.removeEventListener('click', handlePlayHereClick);
+        playHereButton.addEventListener('click', handlePlayHereClick);
     }
     if (stepButtons) {
         stepButtons.removeEventListener('click', handleStepClick);
@@ -366,6 +372,7 @@ function viewMove(ply) {
     if (positionHistory.length !== moveHistory.length) return;
     const wanted = Math.max(0, Math.min(moveHistory.length, ply));
     viewPly = wanted === moveHistory.length ? null : wanted;
+    if (playHereButton) cancelConfirm(playHereButton); // The question was about another position
     cancelPendingPromotion();
     clearSelectedSquare();
     clearPossibleMoves();
@@ -403,6 +410,43 @@ function showReviewScore() {
         text = `Engine thinks ${ahead} is ahead by ${pawns.toFixed(1)}.`;
     }
     reviewScoreElement.textContent = text;
+}
+
+/** Handles "Play from here", which needs a confirming second click because it drops the later moves. */
+function handlePlayHereClick() {
+    if (viewPly === null) return;
+    if (confirmSecondClick(playHereButton, 'Drop later moves?')) playFromHere();
+}
+
+/**
+ * Makes the position being looked at the live one, so the game goes on from
+ * there. The moves after it are dropped; the game as it was goes into the past
+ * games first. The clock is dropped too, since the time those moves took
+ * cannot be given back, which also makes Undo available again.
+ */
+function playFromHere() {
+    if (viewPly === null) return;
+    const ply = viewPly;
+    cancelPendingPromotion();
+    cancelAIMove();
+    cancelConfirms();
+    archiveCurrentGame();
+    restoreSnapshot(positionHistory[ply]); // Taken before the move that followed, as for undo
+    moveHistory = moveHistory.slice(0, ply);
+    positionHistory = positionHistory.slice(0, ply);
+    isGameOver = false;
+    gameResult = null;
+    endedWithoutMove = false;
+    drawOffered = false;
+    viewPly = null;
+    clock = null;
+    runClockTimer();
+    clearSelectedSquare();
+    clearPossibleMoves();
+    redraw();
+    saveGameState();
+    announce(`Playing on from here. ${currentStatus}`);
+    requestAIMove();
 }
 
 /** Shows the live game again. */
@@ -1740,6 +1784,9 @@ function updateStatusDisplay() {
     if (liveButton) {
         liveButton.hidden = viewPly === null;
     }
+    if (reviewActions) {
+        reviewActions.hidden = viewPly === null;
+    }
     if (reviewScoreElement) {
         reviewScoreElement.hidden = viewPly === null;
     }
@@ -2300,6 +2347,7 @@ if (typeof module !== 'undefined' && module.exports) {
         resign,
         handleResignClick,
         handleDrawClick,
+        playFromHere,
         get gameStart() {
             return gameStart;
         },

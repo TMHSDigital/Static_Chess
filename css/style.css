@@ -608,16 +608,25 @@ body.coords-visible {
     display: none;
 }
 
-/* Shown while an earlier position is on the board */
-.live-button {
-    display: block;
-    width: 100%;
+/* Shown while an earlier position is on the board: go back to the game, or
+   go on playing from the position on screen */
+.review-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2);
     margin-top: var(--space-2);
-    border-color: var(--accent-color);
 }
 
-.live-button[hidden] {
+.review-actions[hidden] {
     display: none;
+}
+
+.review-actions .btn {
+    padding: 0 6px;
+}
+
+.live-button {
+    border-color: var(--accent-color);
 }
 
 /* The wrapper only groups the two player bars; they lay out in the board card */

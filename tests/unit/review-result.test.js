@@ -135,6 +135,144 @@ describe('Looking back through the move list', () => {
     expect(g.game.isBoardLocked()).toBe(false);
   });
 
+  describe('Play from here', () => {
+    const KEY = 'chessGameState';
+    const saved = (g) => JSON.parse(g.window.localStorage.getItem(KEY));
+
+    test('is offered only while looking back, and asks before it drops the later moves', () => {
+      jest.useFakeTimers();
+      try {
+        const g = loadGame();
+        g.play('e2e4', 'e7e5', 'g1f3', 'b8c6');
+        expect(el(g, 'review-actions').hidden).toBe(true);
+        g.game.viewMove(2);
+        expect(el(g, 'review-actions').hidden).toBe(false);
+
+        el(g, 'play-here-button').click();
+        expect(el(g, 'play-here-button').textContent).toBe('Drop later moves?');
+        expect(g.game.moveHistory).toHaveLength(4); // Nothing yet
+        jest.advanceTimersByTime(global.CONFIG.RESET_CONFIRM_MS);
+        expect(el(g, 'play-here-button').textContent).toBe('Play from here');
+
+        el(g, 'play-here-button').click();
+        g.game.viewMove(1); // Looking at another position withdraws the question
+        expect(el(g, 'play-here-button').textContent).toBe('Play from here');
+        expect(g.game.moveHistory).toHaveLength(4);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    test('makes the viewed position the live one and drops the later moves', () => {
+      const g = loadGame();
+      g.play('e2e4', 'e7e5', 'g1f3', 'b8c6');
+      g.game.viewMove(2);
+      el(g, 'play-here-button').click();
+      el(g, 'play-here-button').click();
+
+      expect(g.game.viewPly).toBeNull();
+      expect(g.game.moveHistory.map((m) => m.notation)).toEqual(['e4', 'e5']);
+      expect(g.game.positionHistory).toHaveLength(2);
+      expect(pieceOn(g, 'f3')).toBeNull();
+      expect(pieceOn(g, 'g1')).toBe('wn');
+      expect(el(g, 'game-status').textContent).toBe("White's turn");
+      expect(el(g, 'review-actions').hidden).toBe(true);
+      expect(g.window.document.querySelectorAll('#move-history button')).toHaveLength(2);
+      expect(saved(g).moveHistory).toHaveLength(2);
+      expect(saved(g).positionHistory).toHaveLength(2);
+
+      g.play('d2d4'); // The game goes on along another line
+      expect(g.game.moveHistory.map((m) => m.notation)).toEqual(['e4', 'e5', 'd4']);
+      g.game.undoLastMove();
+      g.game.undoLastMove();
+      expect(g.game.moveHistory.map((m) => m.notation)).toEqual(['e4']);
+    });
+
+    test('the game as it was is kept among the past games', () => {
+      const g = loadGame();
+      g.play('e2e4', 'e7e5', 'g1f3', 'b8c6');
+      g.game.viewMove(1);
+      g.game.playFromHere();
+      const archive = g.game.readArchive();
+      expect(archive).toHaveLength(1);
+      expect(archive[0].pgn).toContain('1. e4 e5 2. Nf3 Nc6');
+    });
+
+    test('reopens a finished game on the clock, without the clock', () => {
+      jest.useFakeTimers();
+      try {
+        const g = loadGame();
+        g.game.setTimeControl('5+0');
+        g.game.resetGame();
+        g.play('f2f3', 'e7e5', 'g2g4', 'd8h4'); // Checkmate
+        expect(g.game.isGameOver).toBe(true);
+        expect(el(g, 'undo-button').disabled).toBe(true); // No Undo on the clock
+
+        g.game.viewMove(2);
+        g.game.playFromHere();
+        expect(g.game.isGameOver).toBe(false);
+        expect(g.game.gameResult).toBeNull();
+        expect(g.game.clock).toBeNull();
+        expect(el(g, 'clock-white').hidden).toBe(true);
+        expect(el(g, 'undo-button').disabled).toBe(false);
+        expect(saved(g).isGameOver).toBe(false);
+        g.play('e2e4');
+        expect(g.game.moveHistory.map((m) => m.notation)).toEqual(['f3', 'e5', 'e4']);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    test('reopens a game that ended by resignation', () => {
+      const g = loadGame();
+      g.play('e2e4', 'e7e5');
+      g.game.resign();
+      g.game.viewMove(1);
+      g.game.playFromHere();
+      expect(g.game.isGameOver).toBe(false);
+      expect(el(g, 'game-status').textContent).toBe("Black's turn");
+      expect(saved(g).endedWithoutMove).toBe(false);
+    });
+
+    test('against the computer, it replies if the position gives it the move', () => {
+      jest.useFakeTimers();
+      try {
+        const g = loadGame();
+        g.game.setOpponent('easy', 'w');
+        g.play('e2e4');
+        jest.runAllTimers();
+        g.play('d2d4');
+        jest.runAllTimers();
+        expect(g.game.moveHistory).toHaveLength(4);
+
+        g.game.viewMove(1); // After 1. e4: the computer to move
+        g.game.playFromHere();
+        expect(g.game.moveHistory).toHaveLength(1);
+        expect(el(g, 'game-status').textContent).toBe("Black's turn (computer is thinking)");
+        jest.runAllTimers();
+        expect(g.game.moveHistory).toHaveLength(2);
+        expect(g.game.currentPlayer).toBe('w');
+
+        g.game.viewMove(0); // The starting position: the player to move
+        g.game.playFromHere();
+        jest.runAllTimers();
+        expect(g.game.moveHistory).toHaveLength(0);
+        expect(g.game.isBoardLocked()).toBe(false);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    test('does nothing while the live game is on the board', () => {
+      const g = loadGame();
+      g.play('e2e4', 'e7e5');
+      g.game.playFromHere();
+      el(g, 'play-here-button').click();
+      expect(g.game.moveHistory).toHaveLength(2);
+      expect(el(g, 'play-here-button').textContent).toBe('Play from here');
+    });
+  });
+
   describe('engine score', () => {
     const score = (g) => el(g, 'review-score');
 

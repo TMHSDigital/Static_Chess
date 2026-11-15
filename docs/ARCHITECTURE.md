@@ -284,8 +284,9 @@ SAN generation with disambiguation is implemented:
 2. `shownPosition()` returns the position to draw: the live one, or the undo-stack snapshot taken before move `viewPly + 1`. The board, the captured pieces, the last-move highlight and Copy FEN all follow it
 3. The moves in the list are buttons. A click, the arrow keys, Home and End in the list, and the four step buttons under it all call `viewMove()`; "Back to game" calls `returnToLiveGame()`
 4. `showReviewScore()` writes what the engine makes of the position on screen under the move list. It calls `assessPosition()` in `ai.js`, a search two half-moves deep, on the page's own thread, so the worker and a computer move it may be working on are left alone. The line is not a live region
-5. `isBoardLocked()` is true while looking back. A move, such as the computer's reply, returns to the live game
-6. A save from an older version without an undo stack has no positions to show, so its move buttons and the step buttons are disabled
+5. "Play from here" (`playFromHere()`, after a confirming second click) makes the position on screen the live one: it archives the game as it was, restores the undo-stack snapshot for that ply, cuts the move list and the undo stack to it, and clears the result and the clock
+6. `isBoardLocked()` is true while looking back. A move, such as the computer's reply, returns to the live game
+7. A save from an older version without an undo stack has no positions to show, so its move buttons and the step buttons are disabled
 
 ### 11. Resign, Draw by Agreement and the Result
 
