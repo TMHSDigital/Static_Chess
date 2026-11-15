@@ -140,12 +140,19 @@
                     <button id="reset-button" class="btn btn-primary">New Game</button>
                 </div>
                 <div
-                    class="panel-group button-grid button-grid-3"
+                    class="panel-group button-grid"
                     role="group"
-                    aria-label="Copy or load a game"
+                    aria-label="Copy, save or load a game"
                 >
                     <button id="pgn-button" class="btn" aria-label="Copy the game as PGN">
                         Copy PGN
+                    </button>
+                    <button
+                        id="download-button"
+                        class="btn"
+                        aria-label="Save the game as a PGN file"
+                    >
+                        Save PGN
                     </button>
                     <button id="fen-button" class="btn" aria-label="Copy the position as FEN">
                         Copy FEN
@@ -232,6 +239,14 @@
                 ></textarea>
                 <p id="import-error" class="import-error" role="alert"></p>
                 <div class="buttons-row">
+                    <button
+                        id="import-file-button"
+                        class="btn import-file-button"
+                        aria-label="Open a PGN or FEN file"
+                    >
+                        Open file
+                    </button>
+                    <input id="import-file" type="file" accept=".pgn,.fen,.txt,text/plain" hidden />
                     <button id="import-cancel" class="btn">Cancel</button>
                     <button id="import-load" class="btn btn-primary">Load game</button>
                 </div>

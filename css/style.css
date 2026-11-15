@@ -814,6 +814,17 @@ body.coords-visible {
     justify-content: flex-end;
 }
 
+/* "Open file" keeps to the left, away from Cancel and Load */
+.import-panel .import-file-button {
+    margin-right: auto;
+}
+
+/* A file is being dragged over the dialog */
+.import-panel.drop-target {
+    outline: 2px dashed var(--focus-ring);
+    outline-offset: -6px;
+}
+
 /* Past games, under the box for pasting one */
 .archive-section {
     margin-top: var(--space-4);
@@ -838,6 +849,14 @@ body.coords-visible {
     overflow-y: auto;
     display: grid;
     gap: var(--space-2);
+}
+
+/* On a narrow phone "Open file" wraps onto a line of its own above Cancel and
+   Load; the list gives up that much height so the dialog still fits */
+@media (max-width: 380px) {
+    .archive-list {
+        max-height: min(13rem, 21vh);
+    }
 }
 
 .archive-list .btn {

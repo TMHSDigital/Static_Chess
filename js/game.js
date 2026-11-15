@@ -52,6 +52,7 @@ let announcerElement = document.getElementById('announcer'); // Live region read
 const resetButton = document.getElementById('reset-button');
 const undoButton = document.getElementById('undo-button');
 const pgnButton = document.getElementById('pgn-button');
+const downloadButton = document.getElementById('download-button');
 const fenButton = document.getElementById('fen-button');
 const importButton = document.getElementById('import-button');
 const importDialog = document.getElementById('import-dialog');
@@ -59,6 +60,8 @@ const importText = document.getElementById('import-text');
 const importError = document.getElementById('import-error');
 const importLoadButton = document.getElementById('import-load');
 const importCancelButton = document.getElementById('import-cancel');
+const importFileButton = document.getElementById('import-file-button');
+const importFile = document.getElementById('import-file');
 const archiveSection = document.getElementById('archive-section');
 const archiveList = document.getElementById('archive-list');
 const RESET_LABEL = resetButton ? resetButton.textContent : 'New Game';
@@ -173,6 +176,10 @@ function initializeGame() {
         pgnButton.removeEventListener('click', copyPGN);
         pgnButton.addEventListener('click', copyPGN);
     }
+    if (downloadButton) {
+        downloadButton.removeEventListener('click', downloadPGN);
+        downloadButton.addEventListener('click', downloadPGN);
+    }
     if (fenButton) {
         fenButton.removeEventListener('click', copyFEN);
         fenButton.addEventListener('click', copyFEN);
@@ -186,6 +193,17 @@ function initializeGame() {
         importCancelButton.addEventListener('click', closeImportDialog);
         importDialog.removeEventListener('keydown', handleImportKeydown);
         importDialog.addEventListener('keydown', handleImportKeydown);
+        // A file can be dropped anywhere on the dialog
+        for (const type of ['dragover', 'dragleave', 'drop']) {
+            importDialog.removeEventListener(type, handleImportDrag);
+            importDialog.addEventListener(type, handleImportDrag);
+        }
+    }
+    if (importFileButton && importFile) {
+        importFileButton.removeEventListener('click', chooseImportFile);
+        importFileButton.addEventListener('click', chooseImportFile);
+        importFile.removeEventListener('change', handleImportFileChosen);
+        importFile.addEventListener('change', handleImportFileChosen);
     }
 
     // Add event listener for undo button
@@ -1807,6 +1825,9 @@ function updateStatusDisplay() {
     if (pgnButton) {
         pgnButton.disabled = moveHistory.length === 0;
     }
+    if (downloadButton) {
+        downloadButton.disabled = moveHistory.length === 0;
+    }
     if (resignButton) {
         resignButton.disabled = !isGameInProgress();
     }
@@ -1898,6 +1919,13 @@ function copyPGN() {
     copyOrDownload(buildPGN(), pgnButton, 'Copy PGN', 'static-chess-game.pgn');
 }
 
+/** Saves the game as a PGN file, whether or not the clipboard is available. */
+function downloadPGN() {
+    if (moveHistory.length === 0) return;
+    downloadText(buildPGN(), 'static-chess-game.pgn');
+    flashButton(downloadButton, 'Saved', 'Save PGN');
+}
+
 /**
  * Copies the position on the board to the clipboard as FEN, for an analysis
  * board. While an earlier move is being viewed, it is that position.
@@ -1921,28 +1949,37 @@ function buildFEN() {
  * @param {string} filename - Name of the file if it has to be downloaded.
  */
 function copyOrDownload(text, button, label, filename) {
-    const flash = (notice) => {
-        button.textContent = notice;
-        setTimeout(() => {
-            button.textContent = label;
-        }, 1500);
-    };
     const download = () => {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(new Blob([text], { type: 'application/x-chess-pgn' }));
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(link.href);
-        flash('Downloaded');
+        downloadText(text, filename);
+        flashButton(button, 'Downloaded', label);
     };
 
     if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(() => flash('Copied!'), download);
+        navigator.clipboard
+            .writeText(text)
+            .then(() => flashButton(button, 'Copied!', label), download);
     } else {
         download();
     }
+}
+
+/** Hands text to the browser as a file to save. */
+function downloadText(text, filename) {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([text], { type: 'application/x-chess-pgn' }));
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(link.href);
+}
+
+/** Shows a short notice on a button, then its normal label again. */
+function flashButton(button, notice, label) {
+    button.textContent = notice;
+    setTimeout(() => {
+        button.textContent = label;
+    }, 1500);
 }
 
 // --- Loading a game from PGN ---
@@ -2231,6 +2268,53 @@ function handleImportLoad() {
     closeImportDialog();
 }
 
+/** "Open file" opens the browser's file chooser. */
+function chooseImportFile() {
+    importFile.click();
+}
+
+/** A file was chosen: its text goes into the box, where Load checks it like pasted text. */
+function handleImportFileChosen() {
+    const file = importFile.files && importFile.files[0];
+    importFile.value = ''; // So choosing the same file again is noticed
+    if (file) readImportFile(file);
+}
+
+/** A file dragged over the dialog is marked as welcome; dropped, it is read. */
+function handleImportDrag(event) {
+    const types = event.dataTransfer ? Array.from(event.dataTransfer.types || []) : [];
+    if (!types.includes('Files')) return; // Dragged text is left to the text box
+    event.preventDefault();
+    const panel = importDialog.querySelector('.import-panel') || importDialog;
+    panel.classList.toggle('drop-target', event.type === 'dragover');
+    if (event.type === 'drop' && event.dataTransfer.files[0]) {
+        readImportFile(event.dataTransfer.files[0]);
+    }
+}
+
+/**
+ * Puts the text of a file into the Load dialog's box. Nothing is loaded yet:
+ * the Load button then checks it and asks before a game in progress is replaced.
+ * @param {File} file
+ */
+function readImportFile(file) {
+    cancelConfirm(importLoadButton);
+    if (file.size > CONFIG.IMPORT_MAX_LENGTH) {
+        importError.textContent = IMPORT_TOO_LONG;
+        return;
+    }
+    file.text().then(
+        (text) => {
+            importText.value = text;
+            importError.textContent = '';
+            importLoadButton.focus();
+        },
+        () => {
+            importError.textContent = 'That file could not be read.';
+        }
+    );
+}
+
 /** Escape closes the dialog. */
 function handleImportKeydown(event) {
     if (event.key === 'Escape') {
@@ -2329,6 +2413,7 @@ if (typeof module !== 'undefined' && module.exports) {
         requestHint,
         importPGN,
         importFEN,
+        downloadPGN,
         pgnMoveTokens,
         pgnResult,
         readArchive,

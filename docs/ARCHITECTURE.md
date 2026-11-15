@@ -309,7 +309,8 @@ SAN generation with disambiguation is implemented:
 3. The moves go in through `playMove()`. A draw nobody claimed in the loaded game is ignored until the last move, and `pgnResult()` restores a result the moves do not show
 4. `buildFEN()` writes the position on screen with `positionToFEN()` from `rules.js`, also while looking back
 5. `importFEN(text)` starts a game from a position: `positionFromFEN()` in `rules.js` reads it (castling rights become the `hasMoved` marks of kings and rooks) and says what is wrong with text it cannot use, and `startGameFrom()` begins the game. The Load dialog takes text that begins like a FEN as a position and anything else as PGN. A PGN with a `FEN` tag is read from that position
-6. Copying goes through `copyOrDownload()`: the clipboard where it is available, otherwise a file download
+6. Copying goes through `copyOrDownload()`: the clipboard where it is available, otherwise a file download. "Save PGN" (`downloadPGN()`) always downloads; both use `downloadText()`
+7. "Open file" and a file dropped on the Load dialog go through `readImportFile()`, which only puts the file's text in the box; the Load button then checks it like pasted text
 
 ### 14. Themes
 

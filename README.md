@@ -161,10 +161,10 @@ That's it! No build process or dependencies are required.
 7. A pawn that reaches the last rank becomes a queen
 8. Game ends with checkmate, stalemate or a draw (insufficient material, threefold repetition, fifty-move rule)
 9. Click "Undo" to take back the last move, or "New Game" to reset the board (a game in progress asks for a second click)
-10. Click "Copy PGN" to copy the game for an analysis board or to share it
+10. Click "Copy PGN" to copy the game for an analysis board or to share it, or "Save PGN" to save it as a file
     - Click a move in the Move History (or use the arrow keys, Home and End there) to look at the position after it. "Play from here" (asked twice) drops the later moves and lets you go on from the position you are looking at; the game as it was is kept under "Past games". While you look back, a line under the list says what the engine makes of the position ("Engine thinks White is ahead by 1.3"). The four buttons under the list step to the starting position, the previous move, the next move and the latest move; "Back to game" returns to the live position
     - "Resign" ends the game after a second click. "Offer draw" is accepted by the other side with a second click, or answered at once by the computer. Undo reopens a game ended this way
-    - "Load" replaces the game with a PGN game you paste, keeping its result (a resigned, drawn or timed-out game stays finished; Undo reopens it), or starts a new game from a FEN position you paste. It also lists your last 20 games under "Past games" (a game goes there when you start or load another); click one to open it again
+    - "Load" replaces the game with a PGN game you paste, keeping its result (a resigned, drawn or timed-out game stays finished; Undo reopens it), or starts a new game from a FEN position you paste. "Open file" in that dialog reads a `.pgn` or `.fen` file instead, and a file can also be dropped on the dialog. It also lists your last 20 games under "Past games" (a game goes there when you start or load another); click one to open it again
     - "Copy FEN" copies the position on the board
     - "Hint" marks the move the built-in engine would play for the side to move; nothing is played
     - The pieces each side has captured, and the material lead, are shown under the Move History
