@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Page not found - Static Chess</title>
+        <meta name="robots" content="noindex" />
+        <meta name="theme-color" content="#282828" />
+        <!-- GitHub Pages serves this page for an unknown address at any depth,
+             so every path in it starts at the site root instead of being relative -->
+        <link rel="stylesheet" href="/Static_Chess/css/style.css" />
+        <link rel="icon" href="/Static_Chess/assets/icons/icon.svg" type="image/svg+xml" />
+        <style>
+            .not-found {
+                max-width: 420px;
+                padding: 28px;
+                text-align: center;
+                align-items: center;
+            }
+
+            .not-found p {
+                margin: 0 0 var(--space-3);
+                color: var(--text-color);
+            }
+
+            .not-found .btn {
+                display: inline-flex;
+                align-items: center;
+                text-decoration: none;
+            }
+        </style>
+    </head>
+    <body>
+        <main class="board-container not-found">
+            <h1 class="game-title">Page not found</h1>
+            <p>There is nothing at this address.</p>
+            <a class="btn btn-primary" href="/Static_Chess/">Play Static Chess</a>
+        </main>
+        <script>
+            // Use the page theme chosen in the game, if one was saved
+            try {
+                const theme = localStorage.getItem('pageTheme');
+                if (theme) document.documentElement.dataset.theme = theme;
+            } catch {
+                // Storage is blocked: the default theme is fine
+            }
+        </script>
+    </body>
+</html>

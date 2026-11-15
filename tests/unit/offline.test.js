@@ -47,6 +47,22 @@ describe('offline support', () => {
     }
   });
 
+  test('the 404 page links to the game and its files with paths from the site root', () => {
+    const page = read('404.html');
+    const site = '/Static_Chess/'; // Where GitHub Pages serves the repository
+    const references = [...page.matchAll(/(?:src|href)="([^"]+)"/g)].map((match) => match[1]);
+    expect(references).toContain(site); // The way back to the game
+    expect(references.length).toBeGreaterThanOrEqual(3);
+    for (const url of references) {
+      // A relative path would break for an unknown address in a sub-folder
+      expect([url, url.startsWith(site)]).toEqual([url, true]);
+      const file = url.slice(site.length);
+      if (file) expect([file, exists(file)]).toEqual([file, true]);
+    }
+    expect(page).toContain(`localStorage.getItem('${'pageTheme'}')`);
+    expect(page).toContain('<meta name="robots" content="noindex" />');
+  });
+
   test('the manifest is valid and its icons exist', () => {
     const manifest = JSON.parse(read('manifest.webmanifest'));
     expect(manifest.name).toBe('Static Chess');
