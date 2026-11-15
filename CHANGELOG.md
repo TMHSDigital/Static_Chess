@@ -29,6 +29,7 @@ All notable changes to this project will be documented in this file.
 - The pawn promotion chooser ran off the edge of very narrow screens
 - Switches showed no keyboard focus, and white text on the teal buttons and the running clock was below AA contrast
 - Load PGN: text that cannot be played now shows its error on the first click, instead of first asking to discard the current game
+- Touch: when the browser cancels a touch in the middle of a drag (a system gesture, a call, a second finger), the piece goes back to its square instead of hanging in the air, and the next tap no longer plays its move
 - Notation: a move no longer gets a file or rank because of a second piece of the same type that is pinned and could not have made it (for example "Ne4", not "Nge4")
 - Load PGN: the result is kept, so a game that ended by resignation, agreement or on time loads as finished instead of in progress (Undo reopens it), and of several games in the pasted text the first is loaded
 - Load PGN: a game that played on through a threefold repetition or another unclaimed draw loads in full and can be continued, instead of being marked drawn with the later moves still applied

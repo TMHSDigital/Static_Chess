@@ -60,6 +60,8 @@ function initDragAndDrop() {
     boardElement.addEventListener('touchstart', handleDragStart, { passive: false });
     document.addEventListener('touchmove', handleDragMove, { passive: false });
     document.addEventListener('touchend', handleDragEnd);
+    // The browser takes a touch away for a system gesture, a call or a second finger
+    document.addEventListener('touchcancel', cancelDrag);
 
     debugLog('Drag and drop event listeners attached');
 }
@@ -71,6 +73,7 @@ function initDragAndDrop() {
 function handleDragStart(event) {
     if (!CONFIG.FEATURES.DRAG_AND_DROP) return;
     if (event.type === 'mousedown' && event.button !== 0) return; // Left button only
+    if (dragState.isDragging && dragState.hasMoved) return; // A second finger does not take over a drag
     if (isBoardLocked()) return; // Game over or not the player's turn
 
     const target = event.target;
@@ -183,6 +186,37 @@ function handleDragMove(event) {
     dragState.element.style.top = `${clientY - dragState.offset.y}px`;
 }
 
+/** Puts a lifted piece back in its square and forgets the drag. */
+function dropDraggedPiece() {
+    const element = dragState.element;
+    if (element) {
+        element.style.left = '';
+        element.style.top = '';
+        element.style.width = '';
+        element.style.height = '';
+        element.classList.remove('dragging');
+    }
+    dragState.isDragging = false;
+    dragState.piece = null;
+    dragState.element = null;
+    dragState.hasMoved = false;
+}
+
+/**
+ * Abandons a drag without playing a move: the piece goes back to its square
+ * and nothing stays selected. Used when the browser cancels the touch.
+ */
+function cancelDrag() {
+    if (!dragState.isDragging) return;
+    const lifted = dragState.hasMoved;
+    dropDraggedPiece();
+    if (lifted) {
+        clearSelectedSquare();
+        clearPossibleMoves();
+        refreshBoardVisuals();
+    }
+}
+
 /**
  * Handle the end of a drag operation.
  * @param {MouseEvent|TouchEvent} event - The mouse or touch event.
@@ -225,13 +259,9 @@ function handleDragEnd(event) {
         targetSquare = elementsAtPoint.find((el) => el.classList.contains('square'));
     }
 
-    // Restore display and reset styles
+    // Restore display, put the piece back in its square and end the drag
     dragElement.style.display = originalDisplay;
-    dragElement.style.left = '';
-    dragElement.style.top = '';
-    dragElement.style.width = '';
-    dragElement.style.height = '';
-    dragElement.classList.remove('dragging');
+    dropDraggedPiece();
 
     // Process drop if it was a drag (not just a click)
     if (wasDrag && targetSquare) {
@@ -267,15 +297,15 @@ function handleDragEnd(event) {
     }, 100);
     event.stopPropagation();
     if (event.cancelable) event.preventDefault();
-
-    // Reset drag state
-    dragState.isDragging = false;
-    dragState.piece = null;
-    dragState.element = null;
-    dragState.hasMoved = false;
 }
 
 // Export for Node/Jest tests (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { initDragAndDrop, handleDragStart, handleDragMove, handleDragEnd };
+    module.exports = {
+        initDragAndDrop,
+        handleDragStart,
+        handleDragMove,
+        handleDragEnd,
+        cancelDrag,
+    };
 }

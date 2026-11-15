@@ -237,4 +237,71 @@ describe('mouse and touch input with drag and drop enabled', () => {
     g.board.getSquareElement(4, 4).dispatchEvent(onEmpty);
     expect(onEmpty.defaultPrevented).toBe(false);
   });
+
+  describe('a touch the browser cancels', () => {
+    const touch = (g, type, target, x, y) => {
+      const event = new g.window.Event(type, { bubbles: true, cancelable: true });
+      const point = [{ clientX: x, clientY: y }];
+      event.touches = type === 'touchend' || type === 'touchcancel' ? [] : point;
+      event.changedTouches = point;
+      target.dispatchEvent(event);
+    };
+    const squareState = (g, row, col) => g.board.getSquareElement(row, col).className;
+
+    test('puts the piece back and clears the highlights', () => {
+      const g = loadGame({ drag: true });
+      const pawn = pieceAt(g, 6, 4);
+      const before = squareState(g, 4, 4);
+      touch(g, 'touchstart', pawn, 100, 100);
+      touch(g, 'touchmove', g.window.document, 100, 60);
+      expect(pawn.classList.contains('dragging')).toBe(true);
+      expect(g.board.getSelectedSquare()).toEqual({ row: 6, col: 4 });
+
+      touch(g, 'touchcancel', g.window.document, 100, 60);
+      expect(pawn.classList.contains('dragging')).toBe(false);
+      expect(pawn.style.left).toBe('');
+      expect(pawn.style.width).toBe('');
+      expect(g.board.getSelectedSquare()).toBeNull();
+      expect(g.board.getPossibleMoves()).toEqual([]);
+      expect(squareState(g, 4, 4)).toBe(before);
+      expect(g.game.moveHistory).toHaveLength(0);
+    });
+
+    test('the next tap does not play the move of the cancelled drag', () => {
+      const g = loadGame({ drag: true });
+      g.window.document.elementsFromPoint = () => [g.board.getSquareElement(4, 4)];
+      touch(g, 'touchstart', pieceAt(g, 6, 4), 100, 100);
+      touch(g, 'touchmove', g.window.document, 100, 60);
+      touch(g, 'touchcancel', g.window.document, 100, 60);
+
+      touch(g, 'touchend', g.window.document, 100, 60); // A tap that lands on e4
+      expect(g.game.moveHistory).toHaveLength(0);
+      expect(g.at('e2').type).toBe('p');
+      expect(g.window.dragJustEnded).toBe(false); // Its click is not swallowed either
+    });
+
+    test('a press that had not become a drag is forgotten', () => {
+      const g = loadGame({ drag: true });
+      const pawn = pieceAt(g, 6, 4);
+      touch(g, 'touchstart', pawn, 100, 100);
+      touch(g, 'touchcancel', g.window.document, 100, 100);
+      touch(g, 'touchmove', g.window.document, 100, 40); // A scroll that follows
+      expect(pawn.classList.contains('dragging')).toBe(false);
+      expect(g.board.getSelectedSquare()).toBeNull();
+    });
+
+    test('a second finger does not take over a drag in progress', () => {
+      const g = loadGame({ drag: true });
+      const pawn = pieceAt(g, 6, 4);
+      touch(g, 'touchstart', pawn, 100, 100);
+      touch(g, 'touchmove', g.window.document, 100, 60);
+      touch(g, 'touchstart', pieceAt(g, 6, 0), 20, 100);
+      expect(pawn.classList.contains('dragging')).toBe(true);
+      expect(g.board.getSelectedSquare()).toEqual({ row: 6, col: 4 });
+
+      g.window.document.elementsFromPoint = () => [g.board.getSquareElement(4, 4)];
+      touch(g, 'touchend', g.window.document, 100, 60);
+      expect(g.at('e4').type).toBe('p'); // The first finger's drag still plays its move
+    });
+  });
 });
