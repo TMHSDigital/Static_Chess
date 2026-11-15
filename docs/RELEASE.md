@@ -21,7 +21,7 @@ When you push a tag starting with `v` (e.g., `v0.1.0`, `v1.2.3`), the `.github/w
 
 2. **Verify CI Passes**:
    - Check that GitHub Actions CI is green: https://github.com/TMHSDigital/Static_Chess/actions
-   - Run locally: `npm test && npm run lint`
+   - Run locally: `npm run lint && npm run format && npm run coverage`
 
 3. **Create and Push Tag**:
 

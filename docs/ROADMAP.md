@@ -7,18 +7,25 @@ This document outlines the planned enhancements for the Static Chess project, or
 The current version includes:
 
 - ✅ Standard chess rules with all piece movements
-- ✅ Special moves (castling, en passant, pawn promotion)
+- ✅ Special moves (castling, en passant, pawn promotion with a choice of piece)
 - ✅ Check/checkmate detection
 - ✅ Stalemate detection
+- ✅ Draw detection (insufficient material, threefold repetition, fifty-move rule), resignation and draw by agreement
+- ✅ Computer opponent at three levels, and a hint for the side to move
+- ✅ Chess clock with five time controls
 - ✅ Visual feedback (highlights, move indicators)
-- ✅ Move history in algebraic notation with basic disambiguation
+- ✅ Move history in standard algebraic notation, with full disambiguation
+- ✅ Game review: stepping through the moves, an engine score, and playing on from an earlier position
+- ✅ PGN and FEN import and export, and a list of past games
 - ✅ Game persistence using localStorage
+- ✅ Board and page themes
 - ✅ Responsive design for different devices
 - ✅ SVG piece representation for consistent rendering
-- ✅ Undo move
+- ✅ Drag and drop, and undo move
 - ✅ Keyboard navigation and ARIA enhancements
 - ✅ Diff-based rendering performance improvements
 - ✅ Sound effects (synthesized tones, toggle in settings)
+- ✅ Offline play and install as an app
 
 ## Priority Queue
 
@@ -71,13 +78,13 @@ This is a rough guideline for feature implementation:
 ### Phase 2: Usability Enhancements (2-3 months)
 
 - [x] **Sound Effects** _(synthesized tones; no audio assets needed)_
-- [x] **SAN Disambiguation (basic)**
+- [x] **SAN Disambiguation (full)**
 - [x] **Advanced Draw Detection**
 - [x] **Game Timer**
 
 ### Phase 3: Advanced Features (3-6 months)
 
-- [ ] **Multiple Saved Games**
+- [ ] **Multiple Saved Games** _(the last 20 games are kept; named slots are to do)_
 - [x] **Theme Customization**
 - [x] **AI Opponent (basic)**
 - [x] **Game Import/Export**
@@ -85,7 +92,7 @@ This is a rough guideline for feature implementation:
 ### Phase 4: Final Polish (Ongoing)
 
 - [ ] **AI Opponent (advanced)**
-- [ ] **Game Analysis**
+- [ ] **Game Analysis** _(the Hint button and a score for the position being reviewed are in; marking mistakes is to do)_
 - [ ] **Mobile App Conversion**
 - [ ] **Multiplayer Support**
 
@@ -93,21 +100,14 @@ This is a rough guideline for feature implementation:
 
 These are areas that need improvement in the current codebase:
 
-1. **Refactoring board.js** - Currently handles too many responsibilities
+1. **Splitting game.js** - At over 2,000 lines it holds the move flow, the clock, saving, the engine bridge, import and export and most of the page updates in one scope (`board.js`, at under 400 lines, is no longer the concern)
 2. **Browser-level tests** - Jest suites cover the rules, undo, persistence, input, rendering, settings and accessibility in jsdom; there is no automated check in a real browser yet
 3. **Performance optimization** - Improve rendering and move calculation performance
 4. **Accessibility testing** - The board is keyboard-operable and moves are announced; it has not been tested with a range of screen readers
 
 ## Implementation Progress
 
-The following files provide a foundation for implementing the planned features:
-
-- **js/config.js**: Contains feature flags for enabling/disabling features
-- **js/utils.js**: Enhanced with helper functions for future features
-- **js/drag.js**: Drag and drop (complete and enabled)
-- **js/promotion.js**: Pawn promotion chooser (complete and enabled)
-- **js/rules.js**: The rules as pure functions, usable on board copies
-- **js/ai.js**: Computer opponent (complete and enabled)
+How each feature is built, and which file holds it, is described in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Contribution Guidelines
 

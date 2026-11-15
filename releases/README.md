@@ -16,13 +16,7 @@ For each release version `vX.Y.Z`, create:
 
 ## How It Works
 
-1. When preparing a release, create `RELEASE_NOTES_vX.Y.Z.md` in this directory
-2. Update `CHANGELOG.md` in the root directory
-3. Push a tag `vX.Y.Z` to GitHub
-4. The `.github/workflows/release.yml` workflow automatically:
-   - Reads `releases/RELEASE_NOTES_vX.Y.Z.md`
-   - Creates a GitHub Release with those notes
-   - Publishes it automatically
+The steps for making a release are in [docs/RELEASE.md](../docs/RELEASE.md), and only there, so they cannot drift apart. In short: the notes file in this directory is what the `.github/workflows/release.yml` workflow publishes as the GitHub Release when a tag `vX.Y.Z` is pushed, after lint and the tests have passed. The version in `package.json` has to be set as well; that document says how.
 
 ## File Naming Convention
 
@@ -37,7 +31,6 @@ Where `X.Y.Z` follows Semantic Versioning (e.g., `v0.1.0`, `v1.2.3`).
 releases/
 ├── README.md                    # This file
 ├── RELEASE_NOTES_v0.1.0.md     # Release notes for v0.1.0
-├── RELEASE_GUIDE_v0.1.0.md      # Release guide for v0.1.0
-├── RELEASE_NOTES_v0.2.0.md     # Future release notes
-└── RELEASE_GUIDE_v0.2.0.md      # Future release guide
+├── RELEASE_GUIDE_v0.1.0.md      # Release guide for v0.1.0 (guides are optional)
+└── RELEASE_NOTES_v0.2.0.md     # Release notes for v0.2.0
 ```
