@@ -225,6 +225,68 @@ describe('mouse and touch input with drag and drop enabled', () => {
     g.game.setOpponent(null); // Drop the pending computer move
   });
 
+  const touch = (g, type, target, x = 0, y = 0) => {
+    const event = new g.window.Event(type, { bubbles: true, cancelable: true });
+    const point = [{ clientX: x, clientY: y }];
+    event.touches = type === 'touchend' || type === 'touchcancel' ? [] : point;
+    event.changedTouches = point;
+    target.dispatchEvent(event);
+    return event;
+  };
+
+  test('a cancelled touch puts the piece back and clears the selection', () => {
+    const g = loadGame({ drag: true });
+    const pawn = pieceAt(g, 6, 4);
+    touch(g, 'touchstart', pawn, 100, 100);
+    touch(g, 'touchmove', g.window.document, 100, 60);
+    expect(pawn.classList.contains('dragging')).toBe(true);
+
+    touch(g, 'touchcancel', g.window.document, 100, 60);
+
+    // Back on its square, with no leftover styles or highlights.
+    expect(pawn.classList.contains('dragging')).toBe(false);
+    expect(pawn.style.left).toBe('');
+    expect(pawn.style.top).toBe('');
+    expect(pawn.style.width).toBe('');
+    expect(pawn.style.height).toBe('');
+    expect(g.board.selectedSquare).toBeNull();
+    expect(g.board.possibleMoves).toEqual([]);
+    expect(g.window.document.querySelectorAll('.possible-move, .selected')).toHaveLength(0);
+    expect(g.game.moveHistory).toHaveLength(0);
+  });
+
+  test('a tap after a cancelled drag does not play a move', () => {
+    const g = loadGame({ drag: true });
+    const pawn = pieceAt(g, 6, 4);
+    touch(g, 'touchstart', pawn, 100, 100);
+    touch(g, 'touchmove', g.window.document, 100, 60);
+    touch(g, 'touchcancel', g.window.document, 100, 60);
+
+    // The square the finger was over is no longer a legal target, so a tap there
+    // must do nothing instead of completing the drag that never ended.
+    g.game.handleBoardClick(4, 4);
+
+    expect(g.at('e2').type).toBe('p');
+    expect(g.at('e4')).toBeNull();
+    expect(g.game.moveHistory).toHaveLength(0);
+  });
+
+  test('a second touchstart during a drag is ignored', () => {
+    const g = loadGame({ drag: true });
+    const pawn = pieceAt(g, 6, 4);
+    const knight = pieceAt(g, 7, 6);
+    touch(g, 'touchstart', pawn, 100, 100);
+    touch(g, 'touchmove', g.window.document, 100, 60);
+
+    // A second finger must not re-arm the drag under the first one.
+    touch(g, 'touchstart', knight, 100, 60);
+    touch(g, 'touchmove', g.window.document, 100, 40);
+
+    expect(g.board.selectedSquare).toEqual({ row: 6, col: 4 });
+    expect(pawn.classList.contains('dragging')).toBe(true);
+    expect(knight.classList.contains('dragging')).toBe(false);
+  });
+
   test('touchstart on the board is not cancelled, so taps still produce clicks', () => {
     const g = loadGame({ drag: true });
     const touchstart = new g.window.Event('touchstart', { bubbles: true, cancelable: true });

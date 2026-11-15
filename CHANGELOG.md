@@ -30,6 +30,7 @@ All notable changes to this project will be documented in this file.
 - Load PGN: a game that played on through a threefold repetition or another unclaimed draw loads in full and can be continued, instead of being marked drawn with the later moves still applied
 - Load PGN with a clock selected: the loaded game is no longer put on a running clock with the increment added for every move, and Undo works in it
 - Playing as Black against the computer: reopening the page no longer lets the computer play an extra move on the saved game
+- Touch: a drag the browser interrupts (a notification shade, a call, a second finger) puts the piece back and plays nothing, so the next tap no longer completes the move
 
 ### Changed
 

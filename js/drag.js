@@ -60,6 +60,9 @@ function initDragAndDrop() {
     boardElement.addEventListener('touchstart', handleDragStart, { passive: false });
     document.addEventListener('touchmove', handleDragMove, { passive: false });
     document.addEventListener('touchend', handleDragEnd);
+    // The browser cancels a touch when a system gesture, a call or a second finger
+    // interrupts it. Without this the piece stays lifted and the next tap drops it.
+    document.addEventListener('touchcancel', cancelDrag);
 
     debugLog('Drag and drop event listeners attached');
 }
@@ -70,6 +73,7 @@ function initDragAndDrop() {
  */
 function handleDragStart(event) {
     if (!CONFIG.FEATURES.DRAG_AND_DROP) return;
+    if (dragState.isDragging) return; // One pointer at a time: ignore a second finger or button
     if (event.type === 'mousedown' && event.button !== 0) return; // Left button only
     if (isBoardLocked()) return; // Game over or not the player's turn
 
@@ -184,6 +188,38 @@ function handleDragMove(event) {
 }
 
 /**
+ * Handle the browser cancelling a touch mid-drag: a notification shade, a call or
+ * a second finger. Put the piece back, clear the selection and play nothing.
+ * @param {TouchEvent} event - The touchcancel event.
+ */
+function cancelDrag(event) {
+    if (!CONFIG.FEATURES.DRAG_AND_DROP || !dragState.isDragging) return;
+
+    const element = dragState.element;
+    if (element) {
+        element.style.left = '';
+        element.style.top = '';
+        element.style.width = '';
+        element.style.height = '';
+        element.style.display = '';
+        element.classList.remove('dragging');
+    }
+
+    // The cancelled touch is not a drop, so nothing is played; clearing the
+    // selection also stops the next tap from completing the old drag.
+    clearSelectedSquare();
+    clearPossibleMoves();
+    refreshBoardVisuals();
+
+    if (event && event.cancelable) event.preventDefault();
+
+    dragState.isDragging = false;
+    dragState.piece = null;
+    dragState.element = null;
+    dragState.hasMoved = false;
+}
+
+/**
  * Handle the end of a drag operation.
  * @param {MouseEvent|TouchEvent} event - The mouse or touch event.
  */
@@ -277,5 +313,11 @@ function handleDragEnd(event) {
 
 // Export for Node/Jest tests (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { initDragAndDrop, handleDragStart, handleDragMove, handleDragEnd };
+    module.exports = {
+        initDragAndDrop,
+        handleDragStart,
+        handleDragMove,
+        handleDragEnd,
+        cancelDrag,
+    };
 }
