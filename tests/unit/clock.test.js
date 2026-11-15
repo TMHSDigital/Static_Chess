@@ -9,6 +9,95 @@ function timedGame(control, options = {}) {
   return g;
 }
 
+describe('running low on time', () => {
+  const announced = (g) => {
+    const announcer = el(g, 'announcer');
+    return announcer ? announcer.textContent : '';
+  };
+  /** Counts the low-time sounds from here on. */
+  const listen = () => {
+    global.playSound = jest.fn();
+    return () => global.playSound.mock.calls.filter(([name]) => name === 'low_time').length;
+  };
+
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  test('crossing 20 and 10 seconds each gives one announcement and one sound', () => {
+    const g = timedGame('1+0');
+    const sounds = listen();
+    g.play('e2e4'); // Black is on the clock with a minute
+
+    jest.advanceTimersByTime(39000);
+    expect(announced(g)).not.toContain('seconds left');
+    expect(sounds()).toBe(0);
+
+    jest.advanceTimersByTime(1500); // 19.5 s left
+    expect(announced(g)).toBe('Black has 20 seconds left.');
+    expect(sounds()).toBe(1);
+
+    jest.advanceTimersByTime(8000); // 11.5 s left: many ticks, nothing new
+    expect(announced(g)).toBe('Black has 20 seconds left.');
+    expect(sounds()).toBe(1);
+
+    jest.advanceTimersByTime(2000); // 9.5 s left
+    expect(announced(g)).toBe('Black has 10 seconds left.');
+    expect(sounds()).toBe(2);
+
+    jest.advanceTimersByTime(9000); // Half a second left
+    expect(announced(g)).toBe('Black has 10 seconds left.');
+    expect(sounds()).toBe(2);
+
+    jest.advanceTimersByTime(1000); // The flag falls: that is announced on its own
+    expect(announced(g)).toBe('Black ran out of time. White wins.');
+    expect(sounds()).toBe(2);
+  });
+
+  test('each side is warned about its own clock', () => {
+    const g = timedGame('1+0');
+    const sounds = listen();
+    g.play('e2e4');
+    jest.advanceTimersByTime(45000); // Black: 15 s
+    expect(announced(g)).toBe('Black has 20 seconds left.');
+    g.play('e7e5');
+    jest.advanceTimersByTime(45000); // White: 15 s
+    expect(announced(g)).toBe('White has 20 seconds left.');
+    g.play('g1f3');
+    jest.advanceTimersByTime(2000); // Black: 13 s, already warned at 20
+    expect(announced(g)).not.toContain('seconds left');
+    expect(sounds()).toBe(2);
+    jest.advanceTimersByTime(4000); // Black: 9 s
+    expect(announced(g)).toBe('Black has 10 seconds left.');
+    expect(sounds()).toBe(3);
+  });
+
+  test('an increment that takes the clock back above a threshold lets it warn again', () => {
+    const g = timedGame('3+2');
+    const sounds = listen();
+    g.play('e2e4');
+    g.game.clock.remaining.b = 9500; // Already under both thresholds: one warning, the nearer one
+    jest.advanceTimersByTime(600); // Black: 8.9 s
+    expect(announced(g)).toBe('Black has 10 seconds left.');
+    expect(sounds()).toBe(1);
+
+    g.play('e7e5'); // Black gains two seconds: 10.9 s
+    g.play('g1f3');
+    jest.advanceTimersByTime(400); // 10.5 s: above ten again, still under twenty
+    expect(announced(g)).not.toContain('seconds left');
+    expect(sounds()).toBe(1);
+    jest.advanceTimersByTime(1000); // 9.5 s: down past ten a second time
+    expect(announced(g)).toBe('Black has 10 seconds left.');
+    expect(sounds()).toBe(2);
+  });
+
+  test('the warning sound is a sound the settings know', () => {
+    const g = loadGame();
+    expect(global.CONFIG.SOUNDS.LOW_TIME.length).toBeGreaterThan(0);
+    expect(global.CONFIG.LOW_TIME_WARNINGS).toEqual([20000, 10000]);
+    expect(() => g.utils.playSound('low_time')).not.toThrow();
+  });
+});
+
 describe('the computer on the clock', () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());

@@ -227,10 +227,11 @@ To make it stronger, the limit is speed: each extra half-move costs roughly an o
 2. A timed game has a `clock` object: `{ control, base, increment, remaining: { w, b }, turnStartedAt }`, times in milliseconds. `turnStartedAt` is when the side to move was put on the clock, or `null` while no clock runs. `clockRemaining(color)` works out the time left from it, so nothing has to count down
 3. `makeMove()` stops the mover's clock, adds the increment and starts the other side's. White's first move is not timed
 4. `runClockTimer()` keeps an interval going (`CONFIG.CLOCK_TICK_MS`) only while a clock runs. `tickClock()` redraws it and, at zero, ends the game through `endGameWithoutMove()`: a loss, or a draw if the other side could never give mate (`canDeliverMate()`)
-5. Undo is off in a timed game
-6. The clock is saved with the game, as the times left and whether it was running, and the page saves again on `pagehide`. After a reload the side to move is put back on the clock from that moment
-7. A game loaded from PGN has no clock
-8. With `GAME_TIMER` off, `setTimeControl()` never chooses a clock and `main.js` hides the selector
+5. `warnIfTimeIsLow()` announces "White has 20 seconds left." and plays the `LOW_TIME` sound when the side to move goes down past a threshold in `CONFIG.LOW_TIME_WARNINGS`, once per threshold unless an increment takes the clock back above it
+6. Undo is off in a timed game
+7. The clock is saved with the game, as the times left and whether it was running, and the page saves again on `pagehide`. After a reload the side to move is put back on the clock from that moment
+8. A game loaded from PGN has no clock
+9. With `GAME_TIMER` off, `setTimeControl()` never chooses a clock and `main.js` hides the selector
 
 ### 5. Sound Effects
 

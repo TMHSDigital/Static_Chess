@@ -124,7 +124,14 @@ const CONFIG = {
             { frequency: 392, duration: 0.14 },
             { frequency: 262, duration: 0.3 },
         ],
+        LOW_TIME: [
+            { frequency: 880, duration: 0.06, wave: 'square' },
+            { frequency: 880, duration: 0.06, wave: 'square' },
+        ],
     },
+
+    // A player on the clock is warned, once each, when this much time is left (ms)
+    LOW_TIME_WARNINGS: [20000, 10000],
 
     // localStorage keys. Changing a value here orphans what players have
     // already saved under the old key, so migrate before renaming.

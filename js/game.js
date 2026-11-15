@@ -1108,6 +1108,7 @@ function tickClock() {
     }
     if (clockRemaining(currentPlayer) > 0) {
         updateClockDisplay();
+        warnIfTimeIsLow();
         return;
     }
     const loser = currentPlayer;
@@ -1123,6 +1124,31 @@ function tickClock() {
             '1/2-1/2',
             `${name(loser)} ran out of time, but ${name(winner)} cannot checkmate. Draw.`
         );
+    }
+}
+
+/**
+ * Tells the side to move, with a sound and an announcement, that its time is
+ * running out. Each threshold in CONFIG.LOW_TIME_WARNINGS warns once as the
+ * clock goes down past it; if an increment takes the clock back above a
+ * threshold, that one warns again on the next way down.
+ */
+function warnIfTimeIsLow() {
+    const left = clockRemaining(currentPlayer);
+    // The smallest threshold the clock is at or under now, or null above them all
+    const reached = CONFIG.LOW_TIME_WARNINGS.filter((threshold) => left <= threshold);
+    const level = reached.length > 0 ? Math.min(...reached) : null;
+    clock.warned = clock.warned || { [WHITE]: null, [BLACK]: null };
+    const before = clock.warned[currentPlayer];
+    clock.warned[currentPlayer] = level;
+    if (level === null || (before !== null && level >= before)) return;
+
+    const name = currentPlayer === WHITE ? 'White' : 'Black';
+    announce(`${name} has ${level / 1000} seconds left.`);
+    try {
+        playSound('low_time');
+    } catch {
+        /* ignore sound errors */
     }
 }
 

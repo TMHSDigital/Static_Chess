@@ -169,14 +169,15 @@ That's it! No build process or dependencies are required.
     - "Hint" marks the move the built-in engine would play for the side to move; nothing is played
     - The pieces each side has captured, and the material lead, are shown under the Move History
 11. Keyboard: Tab to the board, move between squares with the arrow keys, and press Enter or Space to select a piece or move it
-12. To play against the computer, pick a level under "Opponent" and a side under "Play as"; the board turns to the side you pick, and "Flip board" turns it back. Undo then takes back your move and the computer's reply
-13. Open "Settings" to choose a board theme and a dark or light page, and to toggle:
+12. With a clock, a player who has 20 and then 10 seconds left is warned by an announcement for screen readers and, with sound effects on, a double beep
+13. To play against the computer, pick a level under "Opponent" and a side under "Play as"; the board turns to the side you pick, and "Flip board" turns it back. Undo then takes back your move and the computer's reply
+14. Open "Settings" to choose a board theme and a dark or light page, and to toggle:
     - Show coordinates
     - Show possible moves
     - Highlight last move
     - Sound effects
     - Flip board (play from Black's side)
-14. The game and its undo history are saved automatically to localStorage, so a refresh picks up where you left off
+15. The game and its undo history are saved automatically to localStorage, so a refresh picks up where you left off
 
 ---
 
