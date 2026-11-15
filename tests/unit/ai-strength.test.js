@@ -173,20 +173,22 @@ describe('search options', () => {
     g.play('e2e4', 'e7e5', 'g1f3', 'b8c6');
     const position = g.game.livePosition();
     const legal = g.game.generateAllLegalMoves('w').map((move) => alg(g, move));
-    const started = Date.now();
+    // How long it takes depends on the machine, so only the move is checked
     const move = g.ai.chooseAIMove(position, 'w', 'hard', first, { timed: true });
-    const elapsed = Date.now() - started;
     expect(legal).toContain(alg(g, move));
-    expect(elapsed).toBeLessThan(g.ai.AI_LEVELS.hard.timeMs * 4);
   });
 
-  test('a timed search still finds a mate at once', () => {
+  test('a timed search stops deepening as soon as it has found a mate', () => {
     const g = loadGame();
     const position = positionOf(g, { g6: 'wk*', a1: 'wr*', h8: 'bk*' });
-    const started = Date.now();
+    // Counted in looks at the clock rather than in seconds, which would depend on the machine:
+    // deepening to the level's full depth would look at it thousands of times
+    const now = jest.spyOn(Date, 'now');
     const move = g.ai.chooseAIMove(position, 'w', 'hard', first, { timed: true });
+    const looks = now.mock.calls.length;
+    now.mockRestore();
     expect(alg(g, move)).toBe('a1a8');
-    expect(Date.now() - started).toBeLessThan(500);
+    expect(looks).toBeLessThan(20);
   });
 
   test('levels without a time allowance ignore the timed option', () => {

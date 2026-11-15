@@ -209,6 +209,22 @@ describe('promotion choice', () => {
     expect(ctx.window.document.activeElement).toBe(buttons[1]);
   });
 
+  test('a click on the dimmed area cancels, a click on the panel does not', () => {
+    const ctx = ready();
+    click(ctx, 'b7');
+    click(ctx, 'b8');
+    const panel = dialog(ctx).firstElementChild;
+    panel.click(); // Inside the panel, beside the buttons
+    expect(dialog(ctx).hidden).toBe(false);
+
+    dialog(ctx).click(); // The backdrop itself
+    expect(dialog(ctx).hidden).toBe(true);
+    expect(ctx.promotion.isPromotionChooserOpen()).toBe(false);
+    expect(ctx.game.moveHistory).toHaveLength(0);
+    expect(ctx.at('b7').type).toBe('p');
+    expect(ctx.game.currentPlayer).toBe('w');
+  });
+
   test('Escape cancels and the pawn stays where it was', () => {
     const ctx = ready();
     click(ctx, 'b7');

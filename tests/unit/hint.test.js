@@ -7,11 +7,19 @@ describe('Hint', () => {
     to: g.window.document.querySelectorAll('.square.hint-to').length,
   });
 
+  // What is marked and when it is removed does not depend on how good the hint is,
+  // so those tests ask the quick level. "finds a mate in one" keeps the real one.
+  const quickHints = {
+    configure: (config) => {
+      config.HINT_LEVEL = 'easy';
+    },
+  };
+
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
 
   test('marks a legal move for the side to move without playing it', () => {
-    const g = loadGame();
+    const g = loadGame(quickHints);
     g.play('e2e4');
     button(g).click();
     expect(button(g).disabled).toBe(true);
@@ -28,6 +36,7 @@ describe('Hint', () => {
 
   test('finds a mate in one', () => {
     const g = loadGame();
+    expect(global.CONFIG.HINT_LEVEL).toBe('hard');
     g.play('f2f3', 'e7e5', 'g2g4');
     g.game.requestHint();
     jest.runOnlyPendingTimers();
@@ -37,7 +46,7 @@ describe('Hint', () => {
   });
 
   test('is cleared by a move, by undo and by New Game', () => {
-    const g = loadGame();
+    const g = loadGame(quickHints);
     const hint = () => {
       g.game.requestHint();
       jest.runOnlyPendingTimers();
@@ -55,7 +64,7 @@ describe('Hint', () => {
   });
 
   test('a hint still being worked out is dropped when a move is played', () => {
-    const g = loadGame();
+    const g = loadGame(quickHints);
     g.game.requestHint();
     g.play('e2e4');
     jest.runOnlyPendingTimers();
@@ -65,7 +74,7 @@ describe('Hint', () => {
   });
 
   test('is hidden while an earlier position is viewed and not offered when the board is locked', () => {
-    const g = loadGame();
+    const g = loadGame(quickHints);
     g.play('e2e4', 'e7e5');
     g.game.requestHint();
     jest.runOnlyPendingTimers();
@@ -83,7 +92,7 @@ describe('Hint', () => {
   });
 
   test('does not disturb the computer opponent', () => {
-    const g = loadGame();
+    const g = loadGame(quickHints);
     g.game.setOpponent('easy', 'w');
     g.game.requestHint();
     jest.runOnlyPendingTimers();

@@ -171,6 +171,43 @@ describe('saving the game as a file', () => {
     expect(el(g, 'download-button').textContent).toBe('Save PGN');
   });
 
+  test('the Copied notice gives way to the label again', async () => {
+    jest.useFakeTimers();
+    const g = loadGame();
+    global.navigator = { clipboard: { writeText: jest.fn(() => Promise.resolve()) } };
+    g.play('e2e4');
+    el(g, 'pgn-button').click();
+    await Promise.resolve();
+    expect(el(g, 'pgn-button').textContent).toBe('Copied!');
+    jest.advanceTimersByTime(1499);
+    expect(el(g, 'pgn-button').textContent).toBe('Copied!');
+    jest.advanceTimersByTime(1);
+    expect(el(g, 'pgn-button').textContent).toBe('Copy PGN');
+  });
+
+  test('Copy FEN copies the position on screen, also while looking back', async () => {
+    jest.useFakeTimers();
+    const g = loadGame();
+    const writeText = jest.fn(() => Promise.resolve());
+    global.navigator = { clipboard: { writeText } };
+    g.play('e2e4', 'e7e5');
+
+    el(g, 'fen-button').click();
+    await Promise.resolve();
+    expect(writeText).toHaveBeenLastCalledWith(g.game.buildFEN());
+    expect(writeText.mock.calls[0][0]).toContain(' w KQkq e6 0 2');
+    expect(el(g, 'fen-button').textContent).toBe('Copied!');
+    jest.advanceTimersByTime(1500);
+    expect(el(g, 'fen-button').textContent).toBe('Copy FEN');
+
+    g.game.viewMove(1); // After 1. e4
+    el(g, 'fen-button').click();
+    await Promise.resolve();
+    expect(writeText).toHaveBeenLastCalledWith(
+      'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'
+    );
+  });
+
   test('Copy PGN uses the clipboard when it can, and a file when it cannot', async () => {
     const g = loadGame();
     const saved = watchDownloads(g);
@@ -190,6 +227,8 @@ describe('saving the game as a file', () => {
     await Promise.resolve();
     expect(saved.map((file) => file.name)).toEqual(['static-chess-game.pgn']);
     expect(el(g, 'pgn-button').textContent).toBe('Downloaded');
+    expect(global.URL.revokeObjectURL).toHaveBeenCalledTimes(1);
+    expect(g.window.document.querySelector('a[download]')).toBeNull(); // The link is removed again
 
     delete global.navigator; // A page opened from a file has no clipboard at all
     el(g, 'fen-button').click();

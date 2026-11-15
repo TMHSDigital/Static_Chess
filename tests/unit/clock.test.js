@@ -251,7 +251,10 @@ describe('Chess clock', () => {
     const first = timedGame('5+0');
     first.play('e2e4', 'e7e5');
     jest.advanceTimersByTime(20000);
-    first.game.saveGameState(); // As the pagehide handler does
+    const stored = () => JSON.parse(first.window.localStorage.getItem('chessGameState'));
+    expect(stored().clock.remaining.w).toBe(300000); // As of the last move
+    first.window.dispatchEvent(new first.window.Event('pagehide')); // The page is being closed
+    expect(stored().clock.remaining.w).toBe(280000);
     const saved = first.window.localStorage.getItem('chessGameState');
     jest.clearAllTimers();
 
@@ -262,6 +265,12 @@ describe('Chess clock', () => {
     jest.advanceTimersByTime(5000);
     expect(g.game.clockRemaining('w')).toBe(275000);
     expect(el(g, 'clock-white').textContent).toBe('4:35');
+  });
+
+  test('closing the page before the first move saves nothing', () => {
+    const g = timedGame('5+0');
+    g.window.dispatchEvent(new g.window.Event('pagehide'));
+    expect(g.window.localStorage.getItem('chessGameState')).toBeNull();
   });
 
   test('a damaged saved clock is dropped and the game still loads', () => {

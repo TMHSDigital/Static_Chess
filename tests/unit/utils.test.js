@@ -78,3 +78,125 @@ describe('utils', () => {
     expect(board[1][0]).toBeNull();
   });
 });
+
+describe('playSound', () => {
+  /** A stand-in for the Web Audio API that records what it is asked to play. */
+  function fakeAudio({ state = 'running', broken = false } = {}) {
+    const made = { contexts: 0, oscillators: [], resumed: 0 };
+    class FakeAudioContext {
+      constructor() {
+        if (broken) throw new Error('Audio is not allowed here');
+        made.contexts++;
+        this.state = state;
+        this.currentTime = 10;
+        this.destination = {};
+      }
+
+      resume() {
+        made.resumed++;
+      }
+
+      createOscillator() {
+        const oscillator = {
+          frequency: {},
+          connect: jest.fn(),
+          start: jest.fn(),
+          stop: jest.fn(),
+        };
+        made.oscillators.push(oscillator);
+        return oscillator;
+      }
+
+      createGain() {
+        return {
+          gain: { setValueAtTime: jest.fn(), exponentialRampToValueAtTime: jest.fn() },
+          connect: jest.fn(),
+        };
+      }
+    }
+    return { made, FakeAudioContext };
+  }
+
+  /** Loads a fresh utils.js with sound switched on and the given audio stand-in. */
+  function soundOn(audio) {
+    jest.resetModules();
+    const dom = new JSDOM(`<!DOCTYPE html><body></body>`, { url: 'http://localhost' });
+    global.window = dom.window;
+    global.document = dom.window.document;
+    if (audio) dom.window.AudioContext = audio.FakeAudioContext;
+    const { CONFIG } = require('../../js/config');
+    CONFIG.FEATURES.SOUND_EFFECTS = true;
+    global.CONFIG = CONFIG;
+    return { CONFIG, playSound: require('../../js/utils').playSound };
+  }
+
+  afterEach(() => jest.restoreAllMocks());
+
+  test('plays one tone after another, as the settings describe the sound', () => {
+    const audio = fakeAudio();
+    const { CONFIG, playSound } = soundOn(audio);
+    playSound('check');
+
+    const tones = CONFIG.SOUNDS.CHECK;
+    expect(tones.length).toBeGreaterThan(1);
+    expect(audio.made.oscillators).toHaveLength(tones.length);
+    expect(audio.made.oscillators.map((o) => o.frequency.value)).toEqual(
+      tones.map((tone) => tone.frequency)
+    );
+    // Each tone starts where the one before it ends
+    expect(audio.made.oscillators[0].start).toHaveBeenCalledWith(10);
+    expect(audio.made.oscillators[0].stop).toHaveBeenCalledWith(10 + tones[0].duration);
+    expect(audio.made.oscillators[1].start).toHaveBeenCalledWith(10 + tones[0].duration);
+    expect(audio.made.oscillators[0].type).toBe(tones[0].wave || 'sine');
+
+    playSound('move');
+    expect(audio.made.oscillators).toHaveLength(tones.length + CONFIG.SOUNDS.MOVE.length);
+    expect(audio.made.contexts).toBe(1); // One audio context serves every sound
+  });
+
+  test('is silent when sound effects are off, and for a name it does not know', () => {
+    const audio = fakeAudio();
+    const { CONFIG, playSound } = soundOn(audio);
+    playSound('no_such_sound');
+    CONFIG.FEATURES.SOUND_EFFECTS = false;
+    playSound('move');
+    expect(audio.made.contexts).toBe(0);
+    expect(audio.made.oscillators).toHaveLength(0);
+  });
+
+  test('wakes a suspended audio context', () => {
+    const audio = fakeAudio({ state: 'suspended' });
+    const { playSound } = soundOn(audio);
+    playSound('move');
+    expect(audio.made.resumed).toBe(1);
+    expect(audio.made.oscillators).toHaveLength(1);
+  });
+
+  test('audio that cannot be started does not stop the game', () => {
+    const errors = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const { playSound } = soundOn(fakeAudio({ broken: true }));
+    expect(() => playSound('move')).not.toThrow();
+    expect(errors).toHaveBeenCalledTimes(1);
+  });
+
+  test('does nothing where there is no audio support', () => {
+    const { playSound } = soundOn(null);
+    expect(() => playSound('move')).not.toThrow();
+  });
+
+  test('every sound the game asks for is defined in the settings', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const { CONFIG } = soundOn(null);
+    const source = fs.readFileSync(path.join(__dirname, '..', '..', 'js', 'game.js'), 'utf8');
+    const names = [...source.matchAll(/playSound\('([^']+)'\)/g)].map((match) => match[1]);
+    expect(new Set(names).size).toBeGreaterThanOrEqual(7);
+    for (const name of names) {
+      expect([name, Array.isArray(CONFIG.SOUNDS[name.toUpperCase()])]).toEqual([name, true]);
+    }
+    // And nothing is defined that the game never plays
+    expect(Object.keys(CONFIG.SOUNDS).sort()).toEqual(
+      [...new Set(names)].map((name) => name.toUpperCase()).sort()
+    );
+  });
+});

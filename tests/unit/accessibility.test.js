@@ -59,6 +59,43 @@ describe('tab order', () => {
     expect(doc(g).activeElement).toBe(g.board.getSquareElement(5, 4));
   });
 
+  test('the arrow keys move the focus one square each way and stop at the edge', () => {
+    const g = loadGame();
+    const focused = () => {
+      const square = doc(g).activeElement;
+      return g.utils.coordsToAlgebraic(Number(square.dataset.row), Number(square.dataset.col));
+    };
+    const press = (key) =>
+      doc(g).activeElement.dispatchEvent(
+        new g.window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+      );
+    g.board.getSquareElement(6, 4).focus(); // e2
+
+    press('ArrowDown');
+    expect(focused()).toBe('e1');
+    press('ArrowDown'); // Already on the edge
+    expect(focused()).toBe('e1');
+    press('ArrowLeft');
+    expect(focused()).toBe('d1');
+    press('ArrowRight');
+    press('ArrowRight');
+    expect(focused()).toBe('f1');
+    press('ArrowUp');
+    expect(focused()).toBe('f2');
+    expect(tabStops(g)).toEqual([g.board.getSquareElement(6, 5)]);
+
+    // On a flipped board the keys follow what is on screen
+    g.board.setBoardFlipped(true);
+    g.board.getSquareElement(6, 4).focus(); // e2, now near the top
+    press('ArrowDown');
+    expect(focused()).toBe('e3');
+    press('ArrowRight');
+    expect(focused()).toBe('d3');
+    press('ArrowLeft');
+    press('ArrowUp');
+    expect(focused()).toBe('e2');
+  });
+
   test('there is still one tab stop after the board is flipped and after a new game', () => {
     const g = loadGame();
     g.board.setBoardFlipped(true);
