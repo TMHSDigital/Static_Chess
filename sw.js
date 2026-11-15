@@ -62,7 +62,11 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches
             .open(CACHE_NAME)
-            .then((cache) => cache.addAll(APP_FILES))
+            // 'no-cache' as in the fetch handler below: every file comes from the
+            // server, not from the browser's HTTP cache, so the saved copy is one release
+            .then((cache) =>
+                cache.addAll(APP_FILES.map((file) => new Request(file, { cache: 'no-cache' })))
+            )
             .then(() => self.skipWaiting())
     );
 });
