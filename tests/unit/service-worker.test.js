@@ -100,15 +100,17 @@ describe('service worker', () => {
     expect(saved.size).toBeGreaterThan(20);
   });
 
-  test("activate removes this app's older caches, keeps the current one, then claims the pages", async () => {
+  test("activate removes this app's older caches and no others, then claims the pages", async () => {
     const sw = startServiceWorker();
     await sw.lifecycle('install');
     const [current] = sw.stores.keys();
     sw.stores.set('static-chess-v0', new Map());
     sw.stores.set('static-chess-old', new Map());
+    sw.stores.set('another-app-v3', new Map()); // Another app on the same host
+    sw.stores.set('chess', new Map());
 
     await sw.lifecycle('activate');
-    expect([...sw.stores.keys()]).toEqual([current]);
+    expect([...sw.stores.keys()]).toEqual([current, 'another-app-v3', 'chess']);
     expect(sw.log.slice(2)).toEqual(['delete static-chess-v0', 'delete static-chess-old', 'claim']);
   });
 
