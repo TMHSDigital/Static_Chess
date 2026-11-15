@@ -24,6 +24,7 @@ let viewPly = null; // Number of moves played in the position being looked at; n
 const moveHistoryElement = document.getElementById('move-history');
 const gameStatusElement = document.getElementById('game-status');
 const liveButton = document.getElementById('live-button');
+const stepButtons = document.getElementById('step-buttons');
 const resignButton = document.getElementById('resign-button');
 const drawButton = document.getElementById('draw-button');
 const capturedRows = {
@@ -93,6 +94,10 @@ function initializeGame() {
     if (liveButton) {
         liveButton.removeEventListener('click', returnToLiveGame);
         liveButton.addEventListener('click', returnToLiveGame);
+    }
+    if (stepButtons) {
+        stepButtons.removeEventListener('click', handleStepClick);
+        stepButtons.addEventListener('click', handleStepClick);
     }
     if (resignButton) {
         resignButton.removeEventListener('click', handleResignClick);
@@ -361,6 +366,20 @@ function handleMoveListKeydown(event) {
     event.preventDefault();
     viewMove(targets[event.key]);
     focusCurrentMove();
+}
+
+/** The buttons under the move list step to the first, previous, next or last position. */
+function handleStepClick(event) {
+    const button = event.target.closest ? event.target.closest('button[data-step]') : null;
+    if (!button || button.disabled) return;
+    const shown = shownPosition().ply;
+    const targets = {
+        first: 0,
+        previous: shown - 1,
+        next: shown + 1,
+        last: moveHistory.length,
+    };
+    viewMove(targets[button.dataset.step]);
 }
 
 /** The list is rebuilt on every change, so focus has to be put back by hand. */
@@ -1467,6 +1486,15 @@ function updateStatusDisplay() {
     }
     if (liveButton) {
         liveButton.hidden = viewPly === null;
+    }
+    if (stepButtons) {
+        // Off at the end already reached, and when the positions behind the moves are missing
+        const canView = positionHistory.length === moveHistory.length;
+        const shown = shownPosition().ply;
+        for (const button of stepButtons.querySelectorAll('button[data-step]')) {
+            const back = button.dataset.step === 'first' || button.dataset.step === 'previous';
+            button.disabled = !canView || shown === (back ? 0 : moveHistory.length);
+        }
     }
     // Undo is only available while there is a move, or a resignation or agreed draw, to take back
     if (undoButton) {

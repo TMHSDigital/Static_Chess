@@ -162,7 +162,7 @@ That's it! No build process or dependencies are required.
 8. Game ends with checkmate, stalemate or a draw (insufficient material, threefold repetition, fifty-move rule)
 9. Click "Undo" to take back the last move, or "New Game" to reset the board (a game in progress asks for a second click)
 10. Click "Copy PGN" to copy the game for an analysis board or to share it
-    - Click a move in the Move History (or use the arrow keys, Home and End there) to look at the position after it; "Back to game" returns to the live position
+    - Click a move in the Move History (or use the arrow keys, Home and End there) to look at the position after it. The four buttons under the list step to the starting position, the previous move, the next move and the latest move; "Back to game" returns to the live position
     - "Resign" ends the game after a second click. "Offer draw" is accepted by the other side with a second click, or answered at once by the computer. Undo reopens a game ended this way
     - "Load PGN" replaces the game with one you paste; "Copy FEN" copies the position on the board
     - "Hint" marks the move the built-in engine would play for the side to move; nothing is played

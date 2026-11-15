@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 - **Captured pieces**: The pieces each side has taken are shown with the material lead
 - **Game review**: Click a move in the list, or use the arrow keys, Home and End there, to see the position after it; "Back to game" returns to the live position and nothing in the game is changed
+- **Step buttons**: Four buttons under the move list go to the starting position, the previous move, the next move and the latest move, so a game can be stepped through without a keyboard
 - **Resign and draw by agreement**: Resign needs a second click; with two players a draw is offered and then accepted, and the computer accepts unless it is ahead. Undo reopens a game ended this way
 - **Hint**: Marks the move the engine would play for the side to move, without playing it
 - **Chess clock**: An optional clock with five time controls, chosen under "Clock" for the next new game. Running out of time loses (or draws if the opponent cannot checkmate); Undo is off in timed games; the times survive a reload and the PGN names the time control

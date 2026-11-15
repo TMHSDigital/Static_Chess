@@ -135,6 +135,61 @@ describe('Looking back through the move list', () => {
     expect(g.game.isBoardLocked()).toBe(false);
   });
 
+  describe('step buttons', () => {
+    const step = (g, name) => el(g, 'step-buttons').querySelector(`[data-step="${name}"]`);
+    const disabled = (g) =>
+      ['first', 'previous', 'next', 'last'].filter((name) => step(g, name).disabled);
+
+    test('previous and next move one position at a time', () => {
+      const g = loadGame();
+      g.play('e2e4', 'e7e5', 'g1f3');
+      step(g, 'previous').click();
+      expect(g.game.viewPly).toBe(2);
+      expect(pieceOn(g, 'f3')).toBeNull();
+      step(g, 'previous').click();
+      expect(el(g, 'game-status').textContent).toBe('Viewing 1. e4');
+      step(g, 'next').click();
+      expect(g.game.viewPly).toBe(2);
+      step(g, 'next').click();
+      expect(g.game.viewPly).toBeNull(); // The last position is the live game
+      expect(pieceOn(g, 'f3')).toBe('wn');
+    });
+
+    test('first shows the starting position and last returns to the game', () => {
+      const g = loadGame();
+      g.play('e2e4', 'e7e5');
+      const before = g.snapshot();
+      step(g, 'first').click();
+      expect(g.game.viewPly).toBe(0);
+      expect(pieceOn(g, 'e2')).toBe('wp');
+      expect(pieceOn(g, 'e4')).toBeNull();
+      expect(el(g, 'game-status').textContent).toBe('Viewing the starting position');
+      step(g, 'last').click();
+      expect(g.game.viewPly).toBeNull();
+      expect(el(g, 'live-button').hidden).toBe(true);
+      expect(g.snapshot()).toEqual(before);
+    });
+
+    test('are off at the end already reached', () => {
+      const g = loadGame();
+      expect(disabled(g)).toEqual(['first', 'previous', 'next', 'last']); // No moves yet
+      g.play('e2e4', 'e7e5');
+      expect(disabled(g)).toEqual(['next', 'last']);
+      step(g, 'previous').click();
+      expect(disabled(g)).toEqual([]);
+      step(g, 'first').click();
+      expect(disabled(g)).toEqual(['first', 'previous']);
+    });
+
+    test('are off when the positions behind the moves are missing', () => {
+      const g = loadGame();
+      g.play('e2e4', 'e7e5');
+      g.game.positionHistory.length = 0; // As in a save from an older version
+      g.game.setOpponent(null); // Redraws the controls
+      expect(disabled(g)).toEqual(['first', 'previous', 'next', 'last']);
+    });
+  });
+
   test('clicking the last move is the live position', () => {
     const g = loadGame();
     g.play('e2e4', 'e7e5');
