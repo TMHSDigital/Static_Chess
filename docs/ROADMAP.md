@@ -50,12 +50,12 @@ Features are prioritized as follows:
 
 ### Tier 3: Advanced Features
 
-| Feature                  | Complexity | Dependencies | Description                                                              | Status       |
-| ------------------------ | ---------- | ------------ | ------------------------------------------------------------------------ | ------------ |
-| **AI Opponent**          | High       | None         | Computer opponent with three levels (alpha-beta search)                  | ✅ Completed |
-| **Multiple Saved Games** | Medium     | None         | The last 20 games are kept and can be reopened; named slots are to do    | In progress  |
-| **Game Import/Export**   | Medium     | None         | PGN import and export, FEN export; loading a FEN position is still to do | In progress  |
-| **Game Analysis**        | High       | AI Opponent  | Basic position evaluation and move suggestions                           | Planned      |
+| Feature                  | Complexity | Dependencies | Description                                                                        | Status       |
+| ------------------------ | ---------- | ------------ | ---------------------------------------------------------------------------------- | ------------ |
+| **AI Opponent**          | High       | None         | Computer opponent with three levels (alpha-beta search)                            | ✅ Completed |
+| **Multiple Saved Games** | Medium     | None         | The last 20 games are kept and can be reopened; named slots are to do              | In progress  |
+| **Game Import/Export**   | Medium     | None         | PGN import and export, FEN export; loading a FEN position is still to do           | In progress  |
+| **Game Analysis**        | High       | AI Opponent  | A score for the position being reviewed and Hint are in; marking mistakes is to do | In progress  |
 
 ## Implementation Timeline
 

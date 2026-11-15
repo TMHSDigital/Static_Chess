@@ -594,6 +594,17 @@ body.coords-visible {
     line-height: 1;
 }
 
+/* What the engine makes of the position being looked at */
+.review-score {
+    margin: var(--space-2) 0 0;
+    font-size: 0.9rem;
+    color: var(--text-color);
+}
+
+.review-score[hidden] {
+    display: none;
+}
+
 /* Shown while an earlier position is on the board */
 .live-button {
     display: block;

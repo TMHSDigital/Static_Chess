@@ -53,6 +53,7 @@ const appGlobals = {
   ]),
   // ai.js
   ...shared(['PROMOTION_TYPES']),
+  ...shared(['assessPosition']),
   ...shared(['AI_LEVELS', 'chooseAIMove', 'evaluatePosition']),
   // board.js
   ...shared([

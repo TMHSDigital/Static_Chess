@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - **Captured pieces**: The pieces each side has taken are shown with the material lead
 - **Game review**: Click a move in the list, or use the arrow keys, Home and End there, to see the position after it; "Back to game" returns to the live position and nothing in the game is changed
 - **Past games**: A game that is replaced by a new or a loaded one is kept. The last 20 are listed in the Load dialog with their date, opponent and result, and a click opens one again
+- **Engine score in review**: While an earlier position is on the board, a line under the move list says who the engine thinks is ahead and by how much, or that a mate is there
 - **Step buttons**: Four buttons under the move list go to the starting position, the previous move, the next move and the latest move, so a game can be stepped through without a keyboard
 - **Resign and draw by agreement**: Resign needs a second click; with two players a draw is offered and then accepted, and the computer accepts unless it is ahead. Undo reopens a game ended this way
 - **Hint**: Marks the move the engine would play for the side to move, without playing it

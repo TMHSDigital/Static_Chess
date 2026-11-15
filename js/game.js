@@ -25,6 +25,7 @@ const moveHistoryElement = document.getElementById('move-history');
 const gameStatusElement = document.getElementById('game-status');
 const liveButton = document.getElementById('live-button');
 const stepButtons = document.getElementById('step-buttons');
+const reviewScoreElement = document.getElementById('review-score');
 const resignButton = document.getElementById('resign-button');
 const drawButton = document.getElementById('draw-button');
 const capturedRows = {
@@ -366,6 +367,7 @@ function viewMove(ply) {
     clearSelectedSquare();
     clearPossibleMoves();
     redraw();
+    showReviewScore();
     if (viewPly === null) {
         announce(`Back to the game. ${currentStatus}`);
     } else {
@@ -373,6 +375,31 @@ function viewMove(ply) {
             viewPly === 0 ? 'Viewing the starting position.' : `Viewing ${moveLabel(viewPly)}.`
         );
     }
+}
+
+/**
+ * Says what the engine makes of the position being looked at, in a line under
+ * the move list. It is worked out on the page, so a computer move being
+ * thought about in the worker is not disturbed, and it is not announced:
+ * screen reader users find it under the move list when they want it.
+ */
+function showReviewScore() {
+    if (!reviewScoreElement || viewPly === null) return;
+    const shown = shownPosition();
+    const { score, mate, over } = assessPosition(shown, shown.player);
+    const ahead = score > 0 ? 'White' : 'Black';
+    const pawns = Math.abs(score) / 100;
+    let text;
+    if (over) {
+        text = mate ? 'Checkmate.' : 'Stalemate.';
+    } else if (mate) {
+        text = `Engine thinks ${ahead} can force mate.`;
+    } else if (pawns < 0.3) {
+        text = 'Engine thinks the position is about equal.';
+    } else {
+        text = `Engine thinks ${ahead} is ahead by ${pawns.toFixed(1)}.`;
+    }
+    reviewScoreElement.textContent = text;
 }
 
 /** Shows the live game again. */
@@ -1678,6 +1705,9 @@ function updateStatusDisplay() {
     }
     if (liveButton) {
         liveButton.hidden = viewPly === null;
+    }
+    if (reviewScoreElement) {
+        reviewScoreElement.hidden = viewPly === null;
     }
     if (stepButtons) {
         // Off at the end already reached, and when the positions behind the moves are missing

@@ -250,6 +250,25 @@ function scoreRootMoves(position, color, moves, depth, tolerance) {
 }
 
 /**
+ * A quick opinion of a position: a search two half-moves deep, short enough
+ * to run on the page while someone steps through a game.
+ * @param {object} position - A rules.js position.
+ * @param {string} color - The side to move.
+ * @returns {{score: number, mate: boolean, over: boolean}} score is in hundredths
+ *   of a pawn from White's point of view; mate means one side can force
+ *   checkmate within the search; over means the side to move has no legal move.
+ */
+function assessPosition(position, color) {
+    const over = allLegalMoves(position, color).length === 0;
+    const forMover = searchPosition(position, color, 2, -AI_MATE_SCORE, AI_MATE_SCORE, 0);
+    return {
+        score: color === WHITE ? forMover : -forMover,
+        mate: Math.abs(forMover) > AI_MATE_SCORE - 1000,
+        over,
+    };
+}
+
+/**
  * Picks a move for the side to move.
  * @param {object} position - A rules.js position.
  * @param {string} color - The side to move.
@@ -329,5 +348,5 @@ function chooseAIMove(position, color, level = 'easy', random = Math.random, opt
 
 // Export for Node/Jest tests (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { AI_LEVELS, evaluatePosition, chooseAIMove };
+    module.exports = { AI_LEVELS, evaluatePosition, assessPosition, chooseAIMove };
 }

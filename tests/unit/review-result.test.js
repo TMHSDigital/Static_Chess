@@ -135,6 +135,79 @@ describe('Looking back through the move list', () => {
     expect(g.game.isBoardLocked()).toBe(false);
   });
 
+  describe('engine score', () => {
+    const score = (g) => el(g, 'review-score');
+
+    test('is shown only while looking back', () => {
+      const g = loadGame();
+      g.play('e2e4', 'e7e5');
+      expect(score(g).hidden).toBe(true);
+      g.game.viewMove(1);
+      expect(score(g).hidden).toBe(false);
+      expect(score(g).textContent).toBe('Engine thinks the position is about equal.');
+      g.game.returnToLiveGame();
+      expect(score(g).hidden).toBe(true);
+    });
+
+    test('says who is ahead and by how much', () => {
+      const white = loadGame();
+      white.setPosition({ e1: 'wk*', d1: 'wq*', e8: 'bk*', a7: 'bp' });
+      white.play('e1e2', 'a7a6', 'e2e3');
+      white.game.viewMove(1);
+      expect(score(white).textContent).toMatch(/^Engine thinks White is ahead by (7|8|9)\.\d\.$/);
+
+      const black = loadGame();
+      black.setPosition({ e1: 'wk*', a2: 'wp', e8: 'bk*', a8: 'br*', h8: 'br*' });
+      black.play('a2a3', 'e8e7', 'a3a4');
+      black.game.viewMove(2);
+      expect(score(black).textContent).toMatch(/^Engine thinks Black is ahead by (9|10|11)\.\d\.$/);
+    });
+
+    test('sees a mate that is one move away, and the mate itself', () => {
+      const g = loadGame();
+      g.play('f2f3', 'e7e5', 'g2g4', 'd8h4');
+      g.game.viewMove(3);
+      expect(score(g).textContent).toBe('Engine thinks Black can force mate.');
+      g.game.viewMove(0);
+      expect(score(g).textContent).toBe('Engine thinks the position is about equal.');
+
+      const mated = loadGame();
+      mated.play('f2f3', 'e7e5', 'g2g4', 'd8h4');
+      mated.game.undoLastMove();
+      mated.play('d8h4');
+      mated.game.viewMove(3);
+      mated.game.viewMove(4); // The final position is the live game
+      expect(score(mated).hidden).toBe(true);
+    });
+
+    test('is not read out with every step', () => {
+      const g = loadGame();
+      g.play('e2e4', 'e7e5');
+      g.game.viewMove(1);
+      const announced = g.window.document.getElementById('announcer');
+      expect(score(g).getAttribute('aria-live')).toBeNull();
+      expect(score(g).getAttribute('role')).toBeNull();
+      if (announced) expect(announced.textContent).not.toContain('Engine');
+    });
+
+    test("does not hold up or drop the computer's move", () => {
+      jest.useFakeTimers();
+      try {
+        const g = loadGame();
+        g.game.setOpponent('easy', 'w');
+        g.play('e2e4'); // The computer starts thinking
+        g.game.viewMove(0);
+        expect(score(g).hidden).toBe(false);
+        jest.runAllTimers();
+        expect(g.game.moveHistory).toHaveLength(2);
+        expect(g.game.viewPly).toBeNull(); // Its reply brings the live game back
+        expect(score(g).hidden).toBe(true);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+  });
+
   describe('step buttons', () => {
     const step = (g, name) => el(g, 'step-buttons').querySelector(`[data-step="${name}"]`);
     const disabled = (g) =>
