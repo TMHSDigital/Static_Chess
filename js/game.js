@@ -56,6 +56,7 @@ const importText = document.getElementById('import-text');
 const importError = document.getElementById('import-error');
 const importLoadButton = document.getElementById('import-load');
 const importCancelButton = document.getElementById('import-cancel');
+const MAX_PGN_LENGTH = 200000; // Characters; a larger paste is refused before tokenizing
 let replaying = false; // True while a loaded game's moves are being played in
 const RESET_LABEL = resetButton ? resetButton.textContent : 'New Game';
 let resetConfirmTimer = null; // Set while the New Game button is waiting for a second click
@@ -1687,21 +1688,95 @@ function pgnResult(text) {
 
 /**
  * Takes the moves out of PGN text: tags, comments, variations, annotation
- * codes, move numbers and the result are dropped.
+ * codes, move numbers and the result are dropped. One linear pass over the
+ * text keeps malformed input (unclosed braces, unbalanced parentheses or
+ * many blank lines) from taking quadratic time.
  * @param {string} text
  * @returns {string[]} The moves in standard algebraic notation.
  */
 function pgnMoveTokens(text) {
-    let body = firstPGNGame(text)
-        .replace(/^\s*\[[^\]\n]*\]\s*$/gm, ' ') // Tag pairs
-        .replace(/\{[^}]*\}/g, ' ') // Comments in braces
-        .replace(/;[^\n]*/g, ' '); // Comments to the end of the line
-    while (/\([^()]*\)/.test(body)) body = body.replace(/\([^()]*\)/g, ' '); // Variations, innermost first
-    return body
-        .replace(/\$\d+/g, ' ') // Annotation codes
-        .replace(/\d+\.+/g, ' ') // Move numbers, also when attached: "1.e4"
-        .split(/\s+/)
-        .filter((token) => token && !['1-0', '0-1', '1/2-1/2', '*'].includes(token));
+    const body = firstPGNGame(text)
+        .split('\n')
+        .filter((line) => !/^\s*\[[^\]\n]*\]\s*$/.test(line)) // Tag pairs
+        .join('\n');
+
+    const tokens = [];
+    let token = '';
+    let braceDepth = 0;
+    let parenDepth = 0;
+    let inLineComment = false;
+
+    const endToken = () => {
+        if (token) {
+            tokens.push(token);
+            token = '';
+        }
+    };
+
+    for (let i = 0; i < body.length; i++) {
+        const char = body[i];
+
+        if (inLineComment) {
+            if (char === '\n') inLineComment = false;
+            continue;
+        }
+        if (braceDepth > 0) {
+            // Comments in braces; an unclosed one runs to the end of the text
+            if (char === '}') braceDepth = 0;
+            continue;
+        }
+        if (parenDepth > 0) {
+            // Variations
+            if (char === '(') parenDepth++;
+            else if (char === ')') parenDepth--;
+            continue;
+        }
+        if (char === '{') {
+            braceDepth = 1;
+            endToken();
+            continue;
+        }
+        if (char === '(') {
+            parenDepth = 1;
+            endToken();
+            continue;
+        }
+        if (char === ';') {
+            // Comment to the end of the line
+            inLineComment = true;
+            endToken();
+            continue;
+        }
+        if (char >= '0' && char <= '9') {
+            let end = i;
+            while (end < body.length && body[end] >= '0' && body[end] <= '9') end++;
+            if (body[end] === '.') {
+                // Move numbers, also when attached: "1.e4"
+                while (end < body.length && body[end] === '.') end++;
+                endToken();
+                i = end - 1;
+                continue;
+            }
+        }
+        if (char === '$') {
+            // Annotation codes "$1"; a lone "$" is left as a token like before
+            let end = i + 1;
+            while (end < body.length && body[end] >= '0' && body[end] <= '9') end++;
+            if (end > i + 1) {
+                endToken();
+                i = end - 1;
+                continue;
+            }
+        }
+        if (/\s/.test(char)) {
+            endToken();
+            continue;
+        }
+        token += char;
+    }
+    endToken();
+
+    return tokens.filter((value) => !['1-0', '0-1', '1/2-1/2', '*'].includes(value));
 }
 
 /**
@@ -1711,10 +1786,10 @@ function pgnMoveTokens(text) {
  * Undo reopens it. Of several games in the text, the first is loaded.
  * @param {string} text
  * @param {boolean} validateOnly - Check the moves without replacing the game.
+ * @param {string[]} [tokens] - Already tokenized moves, to avoid tokenizing again.
  * @returns {{ok: boolean, error?: string, moves?: number}}
  */
-function importPGN(text, validateOnly = false) {
-    const tokens = pgnMoveTokens(text);
+function importPGN(text, validateOnly = false, tokens = pgnMoveTokens(text)) {
     if (tokens.length === 0) return { ok: false, error: 'No moves found in the text.' };
 
     let position = {
@@ -1781,11 +1856,16 @@ function closeImportDialog() {
 
 /** Loads the pasted game. A game in progress needs a confirming second click first. */
 function handleImportLoad() {
-    if (pgnMoveTokens(importText.value).length === 0) {
+    if (importText.value.length > MAX_PGN_LENGTH) {
+        importError.textContent = 'That PGN is too long to load. Paste a single game under 200 KB.';
+        return;
+    }
+    const tokens = pgnMoveTokens(importText.value);
+    if (tokens.length === 0) {
         importError.textContent = 'Paste a game in PGN format first.';
         return;
     }
-    const validation = importPGN(importText.value, true);
+    const validation = importPGN(importText.value, true, tokens);
     if (!validation.ok) {
         cancelConfirm(importLoadButton);
         importError.textContent = validation.error + ' The current game was not changed.';
@@ -1795,7 +1875,7 @@ function handleImportLoad() {
     if (isGameInProgress() && !confirmSecondClick(importLoadButton, 'Discard current game?')) {
         return;
     }
-    const result = importPGN(importText.value);
+    const result = importPGN(importText.value, false, tokens);
     if (!result.ok) {
         importError.textContent = `${result.error} The current game was not changed.`;
         return;

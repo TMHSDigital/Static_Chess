@@ -15,6 +15,27 @@ describe('reading PGN', () => {
     expect(g.game.pgnMoveTokens(pgn)).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6']);
   });
 
+  test('handles 100,000 unclosed braces in linear time', () => {
+    const g = loadGame();
+    const start = Date.now();
+    expect(g.game.pgnMoveTokens('{'.repeat(100000))).toEqual([]);
+    expect(Date.now() - start).toBeLessThan(1000);
+  });
+
+  test('handles 100,000 blank lines in linear time', () => {
+    const g = loadGame();
+    const start = Date.now();
+    expect(g.game.pgnMoveTokens('\n'.repeat(100000) + 'e4')).toEqual(['e4']);
+    expect(Date.now() - start).toBeLessThan(1000);
+  });
+
+  test('handles deeply nested parentheses in linear time', () => {
+    const g = loadGame();
+    const start = Date.now();
+    expect(g.game.pgnMoveTokens('('.repeat(50000) + ')'.repeat(50000))).toEqual([]);
+    expect(Date.now() - start).toBeLessThan(1000);
+  });
+
   test('an exported game loads back to the same moves and position', () => {
     const first = loadGame();
     first.play('e2e4', 'e7e5', 'g1f3', 'b8c6', 'f1c4', 'g8f6', 'e1g1', 'f8c5', 'd2d3', 'e8g8');
@@ -311,6 +332,16 @@ describe('the Load PGN dialog', () => {
     expect(notations(g)).toEqual(['d4']);
     el(g, 'import-load').click();
     expect(notations(g)).toEqual(['e4', 'e5']);
+  });
+
+  test('refuses a paste that is too large', () => {
+    const g = loadGame();
+    el(g, 'import-button').click();
+    el(g, 'import-text').value = '1. e4 e5 ' + 'x'.repeat(200001);
+    el(g, 'import-load').click();
+    expect(el(g, 'import-error').textContent).toContain('too long to load');
+    expect(el(g, 'import-dialog').hidden).toBe(false);
+    expect(g.game.moveHistory).toHaveLength(0);
   });
 
   test('shows the error and stays open', () => {

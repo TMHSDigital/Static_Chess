@@ -21,6 +21,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Load PGN: malformed text such as unclosed braces, deeply nested variations or many blank lines is cleaned up in one linear pass instead of freezing the tab, and a paste over 200 KB is refused with a message
 - On narrow screens the side panel was wider than the screen and its edges were cut off
 - Light theme: the card around the board stayed black with an unreadable title, and the move list, status and settings boxes were grey
 - The pawn promotion chooser ran off the edge of very narrow screens
