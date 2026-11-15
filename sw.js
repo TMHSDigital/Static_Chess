@@ -4,7 +4,8 @@
  * shows up at once when online; the copy is only used when the network fails.
  */
 
-const CACHE_NAME = 'static-chess-v1'; // Change only to throw every saved copy away
+const CACHE_PREFIX = 'static-chess-'; // Only caches under this prefix belong to this app
+const CACHE_NAME = `${CACHE_PREFIX}v1`; // Change only to throw every saved copy away
 
 // Everything the app needs. tests/unit/offline.test.js checks this list
 // against index.html and the files on disk.
@@ -58,7 +59,10 @@ self.addEventListener('activate', (event) => {
             .keys()
             .then((names) =>
                 Promise.all(
-                    names.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name))
+                    // Cache Storage is shared by the whole origin, so leave another app's caches alone.
+                    names
+                        .filter((name) => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME)
+                        .map((name) => caches.delete(name))
                 )
             )
             .then(() => self.clients.claim())

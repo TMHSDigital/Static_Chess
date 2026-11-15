@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const root = path.join(__dirname, '..', '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
@@ -11,7 +12,56 @@ function appFiles() {
   return [...list.matchAll(/'([^']+)'/g)].map((match) => match[1]);
 }
 
+/**
+ * Runs sw.js against a fake Cache Storage, the way a browser would, and returns
+ * the listeners it registered and the cache names its activate handler deleted.
+ */
+function loadServiceWorker(cacheNames) {
+  const listeners = {};
+  const deleted = [];
+  const cache = { addAll: () => Promise.resolve(), put: () => Promise.resolve() };
+  const sandbox = {
+    self: {
+      addEventListener: (type, listener) => {
+        listeners[type] = listener;
+      },
+      skipWaiting: () => Promise.resolve(),
+      clients: { claim: () => Promise.resolve() },
+      location: { origin: 'https://example.test' },
+    },
+    caches: {
+      keys: () => Promise.resolve([...cacheNames]),
+      delete: (name) => {
+        deleted.push(name);
+        return Promise.resolve(true);
+      },
+      open: () => Promise.resolve(cache),
+      match: () => Promise.resolve(undefined),
+    },
+    fetch: () => Promise.resolve({ ok: false }),
+    Response: { error: () => ({}) },
+    URL,
+  };
+  vm.runInNewContext(read('sw.js'), sandbox);
+  return {
+    listeners,
+    deleted,
+    activate: async () => {
+      let work;
+      listeners.activate({ waitUntil: (promise) => (work = promise) });
+      await work;
+    },
+  };
+}
+
 describe('offline support', () => {
+  test("activation removes only this app's old caches", async () => {
+    const worker = loadServiceWorker(['static-chess-v1', 'static-chess-v0', 'another-app-cache']);
+    await worker.activate();
+    // Cache Storage is shared by the whole origin, so a cache under another name is not ours to delete.
+    expect(worker.deleted).toEqual(['static-chess-v0']);
+  });
+
   test('every file the service worker saves exists', () => {
     const files = appFiles().filter((file) => file !== './');
     expect(files.length).toBeGreaterThan(20);
