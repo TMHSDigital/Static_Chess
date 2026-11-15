@@ -31,6 +31,7 @@ All notable changes to this project will be documented in this file.
 - The pawn promotion chooser ran off the edge of very narrow screens
 - Switches showed no keyboard focus, and white text on the teal buttons and the running clock was below AA contrast
 - Load PGN: text that cannot be played now shows its error on the first click, instead of first asking to discard the current game
+- Load: damaged text, such as thousands of unclosed braces, nested parentheses or blank lines, no longer freezes the page, and text over 200,000 characters is refused with a message
 - The computer's reply no longer waits for a search that was abandoned, for example a hint that was overtaken by a move or a move that was undone while the computer was thinking
 - In a very narrow window with a scrollbar that takes up room, the board card no longer runs over the page padding or past the window edge
 - Offline support: a new version of the service worker removes only this app's own old caches, not those of other apps served from the same host

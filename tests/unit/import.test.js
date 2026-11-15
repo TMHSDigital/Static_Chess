@@ -271,6 +271,87 @@ describe('reading PGN', () => {
   });
 });
 
+describe('damaged or oversized text', () => {
+  const N = 100000;
+  /** Runs fn and fails if it takes a second or more; a real game takes about a millisecond. */
+  const quickly = (fn) => {
+    const started = Date.now();
+    const result = fn();
+    expect(Date.now() - started).toBeLessThan(1000);
+    return result;
+  };
+
+  test.each([
+    ['braces that are never closed', `${'{'.repeat(N)} 1. e4 e5`],
+    ['blank lines', `${'\n'.repeat(N)}1. e4 e5`],
+    ['spaces and blank lines', `${' \n'.repeat(N / 2)}1. e4 e5`],
+    ['deeply nested variations', `1. e4 ${'('.repeat(N / 2)}1. d4${')'.repeat(N / 2)} e5`],
+    ['parentheses that are never closed', `1. e4 e5 ${'('.repeat(N)}`],
+    ['closing parentheses on their own', `${')'.repeat(N)} 1. e4 e5`],
+    ['a long run of tag-like lines', `${'[\n'.repeat(N / 2)}1. e4 e5`],
+  ])('%s are read without a long wait', (_name, text) => {
+    const g = loadGame();
+    quickly(() => g.game.pgnMoveTokens(text));
+    quickly(() => g.game.pgnResult(text));
+    quickly(() => g.game.importPGN(text, true));
+  });
+
+  test('the same text gives the same moves as before', () => {
+    const { game } = loadGame();
+    // Nested variations go, with the comments inside them
+    expect(game.pgnMoveTokens('1. e4 (1. d4 d5 (1... Nf6 {Indian}) 2. c4) e5 2. Nf3')).toEqual([
+      'e4',
+      'e5',
+      'Nf3',
+    ]);
+    // A parenthesis inside a comment does not open a variation
+    expect(game.pgnMoveTokens('1. e4 {best (by test} e5 ) 2. Nf3')).toEqual([
+      'e4',
+      'e5',
+      ')',
+      'Nf3',
+    ]);
+    // What is never closed stays in the text, so the move after it is named in the error
+    expect(game.importPGN('1. e4 {a comment e5 2. Nf3', true).error).toBe(
+      'Move 1... {a cannot be played.'
+    );
+    expect(game.importPGN('1. e4 (1. d4 e5', true).error).toBe('Move 1... ( cannot be played.');
+    expect(game.pgnMoveTokens(`${'\n'.repeat(1000)}1. e4 e5`)).toEqual(['e4', 'e5']);
+  });
+
+  test('the result is still found at the end of long text', () => {
+    const { game } = loadGame();
+    const padding = '\n'.repeat(N);
+    expect(game.pgnResult(`1. e4 e5 {White resigned. Black wins.} 0-1${padding}`)).toEqual({
+      result: '0-1',
+      status: 'White resigned. Black wins.',
+    });
+    expect(game.pgnResult(`${padding}[Result "1/2-1/2"]\n\n1. e4 e5`).result).toBe('1/2-1/2');
+  });
+
+  test('text over the size limit is refused with a message', () => {
+    const g = loadGame();
+    const limit = global.CONFIG.IMPORT_MAX_LENGTH;
+    expect(limit).toBe(200000);
+    const tooLong = `1. e4 e5 ${' '.repeat(limit)}`;
+    const message = 'That text is too long to be a game (over 200,000 characters).';
+    expect(g.game.importPGN(tooLong)).toEqual({ ok: false, error: message });
+    expect(g.game.importFEN(`${START_FEN}${' '.repeat(limit)}`)).toEqual({
+      ok: false,
+      error: message,
+    });
+    expect(g.game.importPGN(`1. e4 e5${' '.repeat(limit - 8)}`).ok).toBe(true); // Exactly at the limit
+
+    g.game.resetGame();
+    g.play('d2d4');
+    el(g, 'import-button').click();
+    el(g, 'import-text').value = tooLong;
+    el(g, 'import-load').click();
+    expect(el(g, 'import-error').textContent).toBe(`${message} The current game was not changed.`);
+    expect(notations(g)).toEqual(['d4']);
+  });
+});
+
 describe('the Load PGN dialog', () => {
   test('opens, loads a game and closes', () => {
     const g = loadGame();

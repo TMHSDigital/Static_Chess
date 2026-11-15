@@ -143,6 +143,10 @@ const CONFIG = {
         GAME_ARCHIVE: 'chessGameArchive',
     },
 
+    // Longest text the Load dialog reads, in characters. A long game with
+    // comments is a few thousand; this only keeps a mistaken paste from being worked on.
+    IMPORT_MAX_LENGTH: 200000,
+
     // How many past games are kept; the oldest make room for new ones
     ARCHIVE_LIMIT: 20,
 

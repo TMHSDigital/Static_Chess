@@ -1895,6 +1895,9 @@ function copyOrDownload(text, button, label, filename) {
 
 // --- Loading a game from PGN ---
 
+const IMPORT_NO_MOVES = 'No moves found in the text.';
+const IMPORT_TOO_LONG = `That text is too long to be a game (over ${CONFIG.IMPORT_MAX_LENGTH.toLocaleString('en-US')} characters).`;
+
 /**
  * @param {string} text - PGN that may hold several games.
  * @returns {string} The first game: everything up to the tags of a second one.
@@ -1918,14 +1921,19 @@ function firstPGNGame(text) {
  * @returns {{result: string, status: string}|null} Null for a game in progress.
  */
 function pgnResult(text) {
-    const game = firstPGNGame(text);
-    const RESULT = '1-0|0-1|1\\/2-1\\/2';
-    const closing = new RegExp(`(?:\\{([^}]*)\\}\\s*)?(?:^|\\s)(${RESULT}|\\*)\\s*$`).exec(game);
-    const tag = new RegExp(`^\\s*\\[Result\\s+"(${RESULT})"\\]`, 'm').exec(game);
-    const result = closing ? closing[2] : tag && tag[1];
-    if (!result || result === '*') return null;
+    const game = firstPGNGame(text).trimEnd();
+    // The result is the last word of the game; the comment, if any, stands right before it
+    const closing = /(?:^|\s)(1-0|0-1|1\/2-1\/2|\*)$/.exec(game.slice(-8));
+    const tagged = pgnTag(game, 'Result');
+    const result = closing ? closing[1] : tagged;
+    if (!['1-0', '0-1', '1/2-1/2'].includes(result)) return null;
 
-    const comment = closing && closing[1] ? closing[1].trim() : '';
+    let comment = '';
+    if (closing) {
+        const before = game.slice(0, game.length - closing[1].length).trimEnd();
+        const open = before.endsWith('}') ? before.lastIndexOf('{') : -1;
+        if (open !== -1) comment = before.slice(open + 1, -1).trim();
+    }
     const ownWording =
         /^(?:(?:White|Black) resigned\. (?:White|Black) wins\.|Draw by agreement\.|(?:White|Black) ran out of time[.,] .+)$/;
     const fallback = {
@@ -1937,17 +1945,79 @@ function pgnResult(text) {
 }
 
 /**
+ * @param {string} game - One game as PGN.
+ * @param {string} name - A tag name, such as "Result" or "FEN".
+ * @returns {string|null} The value of that tag, or null if the game has none.
+ */
+function pgnTag(game, name) {
+    for (const line of game.split('\n')) {
+        const tag = /^\s*\[(\w+)\s+"([^"]*)"\]/.exec(line);
+        if (tag && tag[1] === name) return tag[2];
+    }
+    return null;
+}
+
+/**
+ * Removes comments in braces. A brace that is never closed is left as it is,
+ * so the text after it is not silently dropped.
+ */
+function stripBraceComments(text) {
+    const kept = [];
+    let position = 0;
+    for (;;) {
+        const open = text.indexOf('{', position);
+        const close = open === -1 ? -1 : text.indexOf('}', open);
+        if (close === -1) break;
+        kept.push(text.slice(position, open));
+        position = close + 1;
+    }
+    kept.push(text.slice(position));
+    return kept.join(' ');
+}
+
+/**
+ * Removes variations: everything between a parenthesis and the one that
+ * closes it, however deeply nested. A parenthesis without a partner is left
+ * as it is.
+ */
+function stripVariations(text) {
+    // First find the partner of every opening parenthesis that has one
+    const closes = new Map();
+    const unclosed = [];
+    for (let i = 0; i < text.length; i++) {
+        if (text[i] === '(') unclosed.push(i);
+        else if (text[i] === ')' && unclosed.length > 0) closes.set(unclosed.pop(), i);
+    }
+    if (closes.size === 0) return text;
+
+    const kept = [];
+    let position = 0;
+    for (let i = 0; i < text.length; i++) {
+        if (!closes.has(i)) continue;
+        kept.push(text.slice(position, i));
+        i = closes.get(i); // Skips whatever is nested inside as well
+        position = i + 1;
+    }
+    kept.push(text.slice(position));
+    return kept.join(' ');
+}
+
+/**
  * Takes the moves out of PGN text: tags, comments, variations, annotation
- * codes, move numbers and the result are dropped.
+ * codes, move numbers and the result are dropped. Every step reads the text
+ * once from start to end, so damaged text (braces or parentheses that are
+ * never closed, thousands of blank lines) takes no longer than a real game.
  * @param {string} text
  * @returns {string[]} The moves in standard algebraic notation.
  */
 function pgnMoveTokens(text) {
-    let body = firstPGNGame(text)
-        .replace(/^\s*\[[^\]\n]*\]\s*$/gm, ' ') // Tag pairs
-        .replace(/\{[^}]*\}/g, ' ') // Comments in braces
-        .replace(/;[^\n]*/g, ' '); // Comments to the end of the line
-    while (/\([^()]*\)/.test(body)) body = body.replace(/\([^()]*\)/g, ' '); // Variations, innermost first
+    const withoutTags = firstPGNGame(text)
+        .split('\n')
+        .filter((line) => !/^\s*\[[^\]]*\]\s*$/.test(line)) // Tag pairs
+        .join('\n');
+    const body = stripVariations(
+        stripBraceComments(withoutTags).replace(/;[^\n]*/g, ' ') // Comments to the end of the line
+    );
     return body
         .replace(/\$\d+/g, ' ') // Annotation codes
         .replace(/\d+\.+/g, ' ') // Move numbers, also when attached: "1.e4"
@@ -1966,14 +2036,16 @@ function pgnMoveTokens(text) {
  * @returns {{ok: boolean, error?: string, moves?: number}}
  */
 function importPGN(text, validateOnly = false) {
+    if (String(text).length > CONFIG.IMPORT_MAX_LENGTH)
+        return { ok: false, error: IMPORT_TOO_LONG };
     const tokens = pgnMoveTokens(text);
-    if (tokens.length === 0) return { ok: false, error: 'No moves found in the text.' };
+    if (tokens.length === 0) return { ok: false, error: IMPORT_NO_MOVES };
 
     // The game begins from the usual position unless a FEN tag says otherwise
     let start = { ...STANDARD_START, position: initialPosition() };
-    const fenTag = /^\s*\[FEN\s+"([^"]*)"\]/m.exec(firstPGNGame(text));
-    if (fenTag) {
-        start = positionFromFEN(fenTag[1]);
+    const fenTag = pgnTag(firstPGNGame(text), 'FEN');
+    if (fenTag !== null) {
+        start = positionFromFEN(fenTag);
         if (start.error) return { ok: false, error: `The FEN tag cannot be used. ${start.error}` };
     }
 
@@ -2029,6 +2101,8 @@ function looksLikeFEN(text) {
  * @returns {{ok: boolean, error?: string}}
  */
 function importFEN(text, validateOnly = false) {
+    if (String(text).length > CONFIG.IMPORT_MAX_LENGTH)
+        return { ok: false, error: IMPORT_TOO_LONG };
     const start = positionFromFEN(text);
     if (start.error) return { ok: false, error: start.error };
     if (validateOnly) return { ok: true };
@@ -2083,14 +2157,13 @@ function closeImportDialog() {
  */
 function handleImportLoad() {
     const load = looksLikeFEN(importText.value) ? importFEN : importPGN;
-    if (load === importPGN && pgnMoveTokens(importText.value).length === 0) {
-        importError.textContent = 'Paste a game in PGN format, or a position in FEN, first.';
-        return;
-    }
     const validation = load(importText.value, true);
     if (!validation.ok) {
         cancelConfirm(importLoadButton);
-        importError.textContent = validation.error + ' The current game was not changed.';
+        importError.textContent =
+            validation.error === IMPORT_NO_MOVES
+                ? 'Paste a game in PGN format, or a position in FEN, first.'
+                : `${validation.error} The current game was not changed.`;
         return;
     }
     importError.textContent = '';
