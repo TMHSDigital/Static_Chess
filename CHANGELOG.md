@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- Links in the side panel to the GitHub source repository and issue tracker (#78)
 - **Captured pieces**: The pieces each side has taken are shown with the material lead
 - **Game review**: Click a move in the list, or use the arrow keys, Home and End there, to see the position after it; "Back to game" returns to the live position and nothing in the game is changed
 - **Past games**: A game that is replaced by a new or a loaded one is kept. The last 20 are listed in the Load dialog with their date, opponent and result, and a click opens one again
