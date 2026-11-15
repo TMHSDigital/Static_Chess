@@ -24,6 +24,7 @@ All notable changes to this project will be documented in this file.
 - Light theme: the card around the board stayed black with an unreadable title, and the move list, status and settings boxes were grey
 - The pawn promotion chooser ran off the edge of very narrow screens
 - Switches showed no keyboard focus, and white text on the teal buttons and the running clock was below AA contrast
+- Load PGN: text that cannot be played now shows its error on the first click, instead of first asking to discard the current game
 
 ### Changed
 
