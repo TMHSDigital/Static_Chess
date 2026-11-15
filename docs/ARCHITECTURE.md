@@ -327,7 +327,7 @@ SAN generation with disambiguation is implemented:
 ### 15. Offline Support and Install
 
 1. `sw.js` is a service worker registered by `main.js` when the page is served over http(s). On install it saves the files in its `APP_FILES` list
-2. It always tries the network first and saves a copy of each successful response, so a new release shows up at once when online. The saved copy is used when the network fails, or when it has not answered after three seconds (`NETWORK_WAIT_MS`); an answer that arrives later is still saved for the next visit
+2. It always tries the network first and saves a copy of each successful response, so a new release shows up at once when online. The request is made with `cache: 'no-cache'`: the server is asked every time, also while the browser's HTTP cache holds a fresh entry, so the scripts of two releases are never mixed; an unchanged file costs a `304`. The saved copy is used when the network fails, or when it has not answered after three seconds (`NETWORK_WAIT_MS`); an answer that arrives later is still saved for the next visit
 3. `manifest.webmanifest` and the icons under `assets/icons/` make the page installable
 4. When a file is added, renamed or removed, `APP_FILES` has to follow; see `docs/RELEASE.md`. `tests/unit/offline.test.js` checks the list against `index.html` and the files on disk, and `tests/unit/service-worker.test.js` runs the handlers
 

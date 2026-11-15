@@ -30,6 +30,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- After a release, a returning visitor could get some scripts new and some from the browser's cache for up to ten minutes, which could leave the page without a board; the service worker now asks the server for every file
 - On narrow screens the side panel was wider than the screen and its edges were cut off
 - Light theme: the card around the board stayed black with an unreadable title, and the move list, status and settings boxes were grey
 - The pawn promotion chooser ran off the edge of very narrow screens

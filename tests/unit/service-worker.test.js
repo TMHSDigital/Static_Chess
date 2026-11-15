@@ -134,6 +134,18 @@ describe('service worker', () => {
     expect(saved.get(request.url)).toEqual({ ok: true, body: 'new version', copy: true });
   });
 
+  test("the server is asked every time, past the browser's own HTTP cache", async () => {
+    const network = jest.fn(async () => response(true, 'new version'));
+    const sw = startServiceWorker(network);
+    await sw.lifecycle('install');
+    const request = get(`${PAGE}js/rules.js`);
+
+    await sw.fetchEvent(request);
+    // 'no-cache' revalidates with the server instead of trusting a fresh entry
+    expect(network).toHaveBeenCalledTimes(1);
+    expect(network).toHaveBeenCalledWith(request, { cache: 'no-cache' });
+  });
+
   test('a failed response is returned but not saved', async () => {
     const missing = response(false, 'not found');
     const sw = startServiceWorker(async () => missing);

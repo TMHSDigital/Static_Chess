@@ -97,7 +97,12 @@ self.addEventListener('fetch', (event) => {
                 });
             }, NETWORK_WAIT_MS);
 
-            fetch(request)
+            // 'no-cache' asks the server every time, also while the browser's
+            // own HTTP cache still holds a copy it considers fresh. Without it
+            // "the network" can be that copy, each file with its own age, and
+            // a page can run new scripts next to old ones after a release. An
+            // unchanged file costs a 304 with no body.
+            fetch(request, { cache: 'no-cache' })
                 .then((response) => {
                     clearTimeout(waiting);
                     if (response.ok) {
