@@ -56,6 +56,8 @@ const importText = document.getElementById('import-text');
 const importError = document.getElementById('import-error');
 const importLoadButton = document.getElementById('import-load');
 const importCancelButton = document.getElementById('import-cancel');
+const archiveSection = document.getElementById('archive-section');
+const archiveList = document.getElementById('archive-list');
 const RESET_LABEL = resetButton ? resetButton.textContent : 'New Game';
 let resetConfirmTimer = null; // Set while the New Game button is waiting for a second click
 
@@ -126,6 +128,10 @@ function initializeGame() {
     if (stepButtons) {
         stepButtons.removeEventListener('click', handleStepClick);
         stepButtons.addEventListener('click', handleStepClick);
+    }
+    if (archiveList) {
+        archiveList.removeEventListener('click', handleArchiveClick);
+        archiveList.addEventListener('click', handleArchiveClick);
     }
     if (resignButton) {
         resignButton.removeEventListener('click', handleResignClick);
@@ -216,6 +222,7 @@ function handleBoardClickEvent(event) {
  */
 function startGameFrom(position = initialPosition(), player = WHITE, startClock = 0, fullmove = 1) {
     cancelAIMove();
+    archiveCurrentGame(); // The game being replaced stays in the list of past games
     const fen = positionToFEN(position, player, startClock, fullmove);
     const usual = fen === positionToFEN(initialPosition(), WHITE, 0, 1);
     gameStart = { player, halfmoveClock: startClock, fullmove, fen: usual ? null : fen };
@@ -1389,6 +1396,116 @@ function loadGameState() {
     return true;
 }
 
+// --- Past games ---
+
+const ARCHIVE_KEY = CONFIG.STORAGE_KEYS.GAME_ARCHIVE;
+
+/**
+ * Reads the past games from localStorage. A missing or damaged value gives an
+ * empty list, and entries that are not complete are left out.
+ * @returns {Array<{pgn: string, result: string, opponent: string, date: string, moves: number}>}
+ *   Newest first.
+ */
+function readArchive() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(ARCHIVE_KEY));
+        if (!Array.isArray(saved)) return [];
+        return saved
+            .filter(
+                (entry) =>
+                    entry &&
+                    typeof entry.pgn === 'string' &&
+                    typeof entry.result === 'string' &&
+                    typeof entry.opponent === 'string' &&
+                    typeof entry.date === 'string' &&
+                    !Number.isNaN(Date.parse(entry.date)) &&
+                    Number.isInteger(entry.moves)
+            )
+            .slice(0, CONFIG.ARCHIVE_LIMIT);
+    } catch {
+        return [];
+    }
+}
+
+/** @returns {string} The moves and result of a PGN, without its tags. */
+function pgnMovetext(pgn) {
+    return pgn.trim().split('\n').pop();
+}
+
+/**
+ * Puts the current game at the top of the past games, if it has any moves.
+ * Only the newest CONFIG.ARCHIVE_LIMIT games are kept, as PGN text of about a
+ * kilobyte each, so the storage quota is not at risk.
+ */
+function archiveCurrentGame() {
+    if (moveHistory.length === 0) return;
+    const pgn = buildPGN();
+    const same = (entry) => pgnMovetext(entry.pgn) === pgnMovetext(pgn);
+    const archive = readArchive();
+    // A game opened from the list and put back keeps its entry instead of appearing twice
+    const entry = archive.find(same) || {
+        pgn,
+        result: (isGameOver && gameResult) || '*',
+        opponent: computerColor() ? `Computer (${opponentLevel})` : 'Two players',
+        date: new Date().toISOString(),
+        moves: moveHistory.length,
+    };
+    const updated = [entry, ...archive.filter((past) => !same(past))];
+    try {
+        localStorage.setItem(ARCHIVE_KEY, JSON.stringify(updated.slice(0, CONFIG.ARCHIVE_LIMIT)));
+    } catch (e) {
+        console.error('Error saving past games:', e);
+    }
+}
+
+/** @returns {string} One line about a past game: date, opponent, result and length. */
+function describeArchivedGame(entry) {
+    const results = { '1-0': 'White won', '0-1': 'Black won', '1/2-1/2': 'Draw' };
+    const date = new Date(entry.date).toLocaleDateString(undefined, {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+    });
+    const moves = Math.ceil(entry.moves / 2);
+    return [
+        date,
+        entry.opponent,
+        results[entry.result] || 'Not finished',
+        `${moves} ${moves === 1 ? 'move' : 'moves'}`,
+    ].join(' \u00b7 ');
+}
+
+/** Fills the list of past games in the Load dialog; the section is hidden while there are none. */
+function showArchive() {
+    if (!archiveSection || !archiveList) return;
+    const archive = readArchive();
+    archiveSection.hidden = archive.length === 0;
+    archiveList.innerHTML = '';
+    archive.forEach((entry, index) => {
+        const item = document.createElement('li');
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.classList.add('btn');
+        button.dataset.index = index;
+        button.textContent = describeArchivedGame(entry);
+        item.appendChild(button);
+        archiveList.appendChild(item);
+    });
+}
+
+/** A click on a past game loads it. The game it replaces goes into the list itself. */
+function handleArchiveClick(event) {
+    const button = event.target.closest ? event.target.closest('button[data-index]') : null;
+    if (!button) return;
+    const entry = readArchive()[Number(button.dataset.index)];
+    const result = entry ? importPGN(entry.pgn) : { ok: false, error: 'That game is gone.' };
+    if (!result.ok) {
+        importError.textContent = `${result.error} The current game was not changed.`;
+        return;
+    }
+    closeImportDialog();
+}
+
 // --- UI Updates ---
 
 /**
@@ -1835,6 +1952,7 @@ function importPGN(text, validateOnly = false) {
 function openImportDialog() {
     if (!importDialog) return;
     importError.textContent = '';
+    showArchive();
     importDialog.hidden = false;
     importText.focus();
 }
@@ -1972,6 +2090,8 @@ if (typeof module !== 'undefined' && module.exports) {
         importPGN,
         pgnMoveTokens,
         pgnResult,
+        readArchive,
+        openImportDialog,
         buildFEN,
         setTimeControl,
         clockRemaining,

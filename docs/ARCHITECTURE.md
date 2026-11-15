@@ -109,6 +109,7 @@ Static_Chess/
 Everything is kept in `localStorage` under the keys in `CONFIG.STORAGE_KEYS`:
 
 - `chessGameState`: the game. It holds a `version` field, the position (`boardState`, `currentPlayer`, `isGameOver`, `kingPositions`, `currentStatus`, `enPassantTarget`, `halfmoveClock`), the move list (`moveHistory`), the undo stack (`positionHistory`), the result (`gameResult`, and `endedWithoutMove` for a resignation, an agreed draw or a loss on time), how the game began (`gameStart`) and the `clock` object when the game is timed
+- `chessGameArchive`: the past games, newest first, at most `CONFIG.ARCHIVE_LIMIT`. Each entry is `{ pgn, result, opponent, date, moves }`; `readArchive()` ignores a damaged value and drops incomplete entries
 - One key per setting: `showCoords`, `showPossibleMoves`, `showLastMove`, `enableSounds`, `flipBoard`, `opponent`, `playerSide`, `timeControl`, `boardTheme`, `pageTheme`
 
 A saved game is validated before it is used (`validateSavedGame()`); anything unusable is discarded and a fresh game starts. Fields added later are optional there, so older saves still load. Changing a key name orphans what players have saved under the old one.
@@ -247,14 +248,16 @@ Undo is implemented using a pre-move snapshot stack:
 3. The stack is saved with the game, so Undo still works after a reload
 4. `index.html` includes an Undo button, which is disabled when there is nothing to undo
 
-### 7. Multiple Saved Games
+### 7. Past Games
 
-Not implemented: there is one save slot. To implement multiple saved games:
+There is one live game, saved under `chessGameState`, and an archive of the games before it:
 
-1. Modify save/load functions to support named game slots
-2. Create a game selection/management UI
-3. Implement `saveCurrentGame(name)` and `loadGame(name)` functions
-4. Update `config.js` to define the saved games storage structure
+1. `startGameFrom()` calls `archiveCurrentGame()` before it clears the game, so a game with moves that is replaced by New Game or by a loaded game goes into the archive, finished or not
+2. An entry holds the game as PGN text (`buildPGN()`), which keeps it near a kilobyte; the newest `CONFIG.ARCHIVE_LIMIT` are kept
+3. The Load dialog lists them (`showArchive()`). A click loads the entry with `importPGN()`, which restores its result
+4. A game opened from the list and replaced again keeps its one entry and moves to the top
+
+Not implemented: named slots, deleting entries, and keeping more than one game in progress with its clock and undo stack.
 
 ### 8. Draw Detection
 

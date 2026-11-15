@@ -53,7 +53,7 @@ Features are prioritized as follows:
 | Feature                  | Complexity | Dependencies | Description                                                              | Status       |
 | ------------------------ | ---------- | ------------ | ------------------------------------------------------------------------ | ------------ |
 | **AI Opponent**          | High       | None         | Computer opponent with three levels (alpha-beta search)                  | ✅ Completed |
-| **Multiple Saved Games** | Medium     | None         | Save and load multiple games                                             | Planned      |
+| **Multiple Saved Games** | Medium     | None         | The last 20 games are kept and can be reopened; named slots are to do    | In progress  |
 | **Game Import/Export**   | Medium     | None         | PGN import and export, FEN export; loading a FEN position is still to do | In progress  |
 | **Game Analysis**        | High       | AI Opponent  | Basic position evaluation and move suggestions                           | Planned      |
 

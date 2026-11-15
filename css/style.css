@@ -790,3 +790,38 @@ body.coords-visible {
 .import-panel .buttons-row {
     justify-content: flex-end;
 }
+
+/* Past games, under the box for pasting one */
+.archive-section {
+    margin-top: var(--space-4);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border-color);
+}
+
+.archive-section[hidden] {
+    display: none;
+}
+
+.archive-section h4 {
+    margin: 0 0 var(--space-2);
+    font-size: 0.95rem;
+}
+
+.archive-list {
+    list-style: none;
+    margin: 0;
+    padding: 2px; /* Room for the focus ring */
+    max-height: min(13rem, 30vh); /* Keeps the dialog on a short phone screen */
+    overflow-y: auto;
+    display: grid;
+    gap: var(--space-2);
+}
+
+.archive-list .btn {
+    display: block;
+    width: 100%;
+    padding: var(--space-2) 14px;
+    text-align: left;
+    font-weight: 500;
+    line-height: 1.3;
+}

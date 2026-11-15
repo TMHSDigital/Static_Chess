@@ -140,7 +140,11 @@ const CONFIG = {
         TIME_CONTROL: 'timeControl',
         BOARD_THEME: 'boardTheme',
         PAGE_THEME: 'pageTheme',
+        GAME_ARCHIVE: 'chessGameArchive',
     },
+
+    // How many past games are kept; the oldest make room for new ones
+    ARCHIVE_LIMIT: 20,
 
     // Debug mode: when true, debugLog() prints to the console
     DEBUG: false,
