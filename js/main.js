@@ -13,21 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const body = document.body;
     const rootStyle = document.documentElement.style;
 
-    // Storage can be blocked by the browser; settings then fall back to defaults
-    const readSetting = (key) => {
-        try {
-            return localStorage.getItem(key);
-        } catch {
-            return null;
-        }
-    };
-    const writeSetting = (key, value) => {
-        try {
-            localStorage.setItem(key, value);
-        } catch {
-            // Setting still applies for this visit; it just is not remembered
-        }
-    };
+    // Storage can be blocked by the browser: a setting then falls back to its
+    // default, and a change still applies for this visit without being remembered
+    const readSetting = readStored;
+    const writeSetting = writeStored;
 
     // Load saved settings or set defaults
     const KEYS = CONFIG.STORAGE_KEYS;

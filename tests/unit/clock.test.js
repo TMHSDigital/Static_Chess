@@ -205,6 +205,26 @@ describe('Chess clock', () => {
     expect(g.game.currentStatus).toBe('Black ran out of time, but White cannot checkmate. Draw.');
   });
 
+  test('who could still give mate is decided by the rules, not by the game', () => {
+    const g = loadGame();
+    const mates = (placement, color = 'w') => {
+      g.setPosition({ e1: 'wk*', e8: 'bk*', ...placement });
+      return g.rules.canDeliverMate(g.game.boardState, color);
+    };
+    expect(mates({})).toBe(false); // A lone king
+    expect(mates({ b1: 'wn*' })).toBe(false);
+    expect(mates({ c1: 'wb*' })).toBe(false);
+    expect(mates({ c1: 'wb*', a3: 'wb*' })).toBe(false); // Two bishops on dark squares
+    expect(mates({ c1: 'wb*', f1: 'wb*' })).toBe(true); // One on each colour
+    expect(mates({ b1: 'wn*', g1: 'wn*' })).toBe(true);
+    expect(mates({ a2: 'wp*' })).toBe(true);
+    expect(mates({ a1: 'wr*' })).toBe(true);
+    expect(mates({ a1: 'wr*' }, 'b')).toBe(false); // Black has only its king
+    // A board on which nobody can mate is one on which neither side can
+    g.setPosition({ e1: 'wk*', e8: 'bk*', c1: 'wb*', a3: 'wb*' });
+    expect(g.rules.hasInsufficientMaterial(g.game.boardState)).toBe(true);
+  });
+
   test('the clock stops when the game ends on the board or by resignation', () => {
     const g = timedGame('5+0');
     g.play('f2f3', 'e7e5', 'g2g4', 'd8h4');

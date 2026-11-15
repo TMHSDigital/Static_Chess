@@ -110,8 +110,8 @@ function isPseudoLegalMove(piece, startRow, startCol, endRow, endCol, isCapture)
 
         case KING:
             // Move one square in any direction.
-            // Castling is not a pseudo-legal move: game.js adds it only when
-            // canCastle() allows it, and it must never count as an attack.
+            // Castling is not a pseudo-legal move: rules.js adds it only when
+            // canCastleIn() allows it, and it must never count as an attack.
             return absRowDiff <= 1 && absColDiff <= 1;
 
         default:
@@ -119,9 +119,6 @@ function isPseudoLegalMove(piece, startRow, startCol, endRow, endCol, isCapture)
             return false;
     }
 }
-
-// Add functions here for special moves like en passant, promotion, castling checks
-// These often require board state, so might live partially in game.js or be passed board state.
 
 /**
  * Gets the initial piece setup for a standard chess game.

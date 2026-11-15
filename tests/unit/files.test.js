@@ -236,5 +236,7 @@ describe('saving the game as a file', () => {
       'static-chess-game.pgn',
       'static-chess-position.fen',
     ]);
+    // Each file is offered as what it is
+    expect(saved.map((file) => file.blob.type)).toEqual(['application/x-chess-pgn', 'text/plain']);
   });
 });

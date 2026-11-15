@@ -114,12 +114,6 @@ function isPromotionChooserOpen() {
     return promotionRequest !== null;
 }
 
-if (typeof window !== 'undefined') {
-    window.showPromotionChooser = showPromotionChooser;
-    window.closePromotionChooser = closePromotionChooser;
-    window.isPromotionChooserOpen = isPromotionChooserOpen;
-}
-
 // Export for Node/Jest tests (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { showPromotionChooser, closePromotionChooser, isPromotionChooserOpen };

@@ -30,6 +30,34 @@ function startApp(options = {}) {
   return { ...g, doc, boardSelect, pageSelect, choose, cssVar, stored };
 }
 
+describe('values that are written down twice', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const css = (file) => fs.readFileSync(path.join(__dirname, '..', '..', 'css', file), 'utf8');
+
+  // The stylesheet has to hold the default colours itself, so the first paint is
+  // right before any script has run. config.js holds them again for the theme
+  // selector. These tests are what keeps the two copies from drifting apart.
+  test('the classic board theme in config.js is the default in style.css', () => {
+    const { CONFIG } = require('../../js/config');
+    const root = css('style.css').match(/:root \{([\s\S]*?)\n\}/)[1];
+    const colours = CONFIG.BOARD_THEMES[CONFIG.DEFAULT_SETTINGS.BOARD_THEME].colors;
+    expect(Object.keys(colours).length).toBeGreaterThanOrEqual(5);
+    for (const [property, value] of Object.entries(colours)) {
+      const declared = root.match(new RegExp(`${property}:\\s*([^;]+);`));
+      expect([property, declared && declared[1].trim()]).toEqual([property, value]);
+    }
+  });
+
+  test('the move animation lasts as long in pieces.css as config.js says', () => {
+    const { CONFIG } = require('../../js/config');
+    const seconds = css('pieces.css').match(
+      /\.piece\.moved \{\s*animation: move-piece ([\d.]+)s/
+    )[1];
+    expect(Number(seconds) * 1000).toBe(CONFIG.ANIMATIONS.PIECE_MOVE);
+  });
+});
+
 describe('board themes', () => {
   test('every theme sets the same five colours', () => {
     const themes = require('../../js/config').CONFIG.BOARD_THEMES;

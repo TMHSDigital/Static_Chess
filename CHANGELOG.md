@@ -36,6 +36,9 @@ All notable changes to this project will be documented in this file.
 - Load PGN: text that cannot be played now shows its error on the first click, instead of first asking to discard the current game
 - Offline support: on a connection that is up but delivers nothing, the app opens from its saved copy after three seconds instead of waiting for the browser to give up
 - Load: damaged text, such as thousands of unclosed braces, nested parentheses or blank lines, no longer freezes the page, and text over 200,000 characters is refused with a message
+- New Game: a "Discard game?" question that was still showing when a move was played (for example the computer's reply) is withdrawn, as it already was for Resign, so the next click no longer discards the game
+- Copy FEN: where the clipboard is not available, the position is saved as a plain text file, not marked as a PGN file
+- On the clock, two bishops on squares of one colour no longer count as enough to win when the other side runs out of time
 - The computer's reply no longer waits for a search that was abandoned, for example a hint that was overtaken by a move or a move that was undone while the computer was thinking
 - In a very narrow window with a scrollbar that takes up room, the board card no longer runs over the page padding or past the window edge
 - Offline support: a new version of the service worker removes only this app's own old caches, not those of other apps served from the same host

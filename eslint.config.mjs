@@ -15,7 +15,9 @@ const appGlobals = {
     'algebraicToCoords',
     'coordsToAlgebraic',
     'isWithinBounds',
-    'deepClone',
+    'readStored',
+    'writeStored',
+    'removeStored',
     'playSound',
     'debugLog',
   ]),
@@ -48,6 +50,7 @@ const appGlobals = {
     'allLegalCaptures',
     'positionKey',
     'hasInsufficientMaterial',
+    'canDeliverMate',
     'findSANMove',
     'positionToFEN',
     'positionFromFEN',
@@ -75,9 +78,10 @@ const appGlobals = {
   ...shared(['initDragAndDrop']),
   // promotion.js
   ...shared(['showPromotionChooser', 'closePromotionChooser', 'isPromotionChooserOpen']),
-  // game.js (the two state variables are reassigned there)
+  // game.js
   ...shared([
     'initializeGame',
+    'isOwnPiece',
     'generateLegalMovesForPiece',
     'playChosenMove',
     'refreshBoardVisuals',
@@ -85,7 +89,6 @@ const appGlobals = {
     'setOpponent',
     'setTimeControl',
   ]),
-  ...shared(['boardState', 'currentPlayer'], 'writable'),
 };
 
 export default [

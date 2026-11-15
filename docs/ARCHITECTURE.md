@@ -84,8 +84,8 @@ Static_Chess/
 
 6. **utils.js**: Helper functions
    - Coordinate conversions (algebraic notation)
-   - Deep cloning, sound playback, debug logging
-   - `saveToLocalStorage` / `loadFromLocalStorage` helpers (not used yet; `game.js` and `main.js` guard their own storage calls)
+   - Sound playback, debug logging
+   - `readStored`, `writeStored` and `removeStored`: the one way the app reaches `localStorage`. Storage that is blocked or full reads as empty and never throws
 
 7. **config.js**: Centralized configuration
    - Feature flags (see the table below)
@@ -121,7 +121,7 @@ The scripts are plain `<script>` files in one global scope, loaded in the order 
 - `rules.js` depends only on `pieces.js` and `utils.js`; `ai.js` builds on `rules.js` (`allLegalMoves`, `allLegalCaptures`, `applyMove`, `isInCheck`, `positionKey`). Neither touches the DOM, which is what lets `ai-worker.js` load them in a Web Worker
 - `board.js` owns the selection (`getSelectedSquare()`, `getPossibleMoves()` and their setters) and renders what it is given; it reads nothing from `game.js`. The last move to highlight is an argument of `updateBoardVisuals()`
 - `game.js` owns the game state and calls into `board.js`, `rules.js`, `promotion.js` and `ai.js`
-- `drag.js` calls `board.js` for the selection and `game.js` for `isBoardLocked()`, `generateLegalMovesForPiece()`, `playChosenMove()` and `refreshBoardVisuals()`
+- `drag.js` calls `board.js` for the selection and `game.js` for `isBoardLocked()`, `isOwnPiece()`, `generateLegalMovesForPiece()`, `playChosenMove()` and `refreshBoardVisuals()`; it reads no state of the game directly
 - Cross-file calls are direct, with no `window.` lookups or `typeof` guards, so a missing script is a `ReferenceError` rather than a click that does nothing. The names involved are listed once in `eslint.config.mjs`
 - The one shared flag on `window` is `dragJustEnded`, which lets the click handler ignore the click that follows a drag
 
@@ -292,8 +292,8 @@ SAN generation with disambiguation is implemented:
 ### 11. Resign, Draw by Agreement and the Result
 
 1. `endGameWithoutMove(result, status)` ends a game that no move ended: resignation, an agreed draw or a loss on time. It sets `gameResult` and `endedWithoutMove`
-2. Resign needs a confirming second click (`confirmSecondClick()`). Against the computer it is the person who resigns
-3. With two players "Offer draw" becomes "Accept draw?" for the other side, and playing a move declines. The computer accepts unless it is at least `AI_DRAW_MARGIN` ahead
+2. Resign needs a confirming second click (`confirmSecondClick()`, which New Game, Load and "Play from here" use as well; the question is withdrawn after `CONFIG.CONFIRM_MS` or when the game moves on). Against the computer it is the person who resigns
+3. With two players "Offer draw" becomes "Accept draw?" for the other side, and playing a move declines. The computer accepts unless it is at least `CONFIG.AI_DRAW_MARGIN` ahead
 4. Undo reopens a game ended this way without taking a move back
 5. `gameResult` is `'1-0'`, `'0-1'` or `'1/2-1/2'` once the game is over. It is saved with the game and written to the PGN
 

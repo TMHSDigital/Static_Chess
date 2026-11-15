@@ -66,11 +66,11 @@ describe('board rendering', () => {
   test('the last move is highlighted from the argument, not from game state', () => {
     const g = loadGame();
     const lastMove = { from: { row: 6, col: 3 }, to: { row: 4, col: 3 } };
-    g.board.updateBoardVisuals(g.game.boardState, null, lastMove);
+    g.board.updateBoardVisuals(null, lastMove);
     expect(g.board.getSquareElement(6, 3).classList.contains('last-move-from')).toBe(true);
     expect(g.board.getSquareElement(4, 3).classList.contains('last-move-to')).toBe(true);
 
-    g.board.updateBoardVisuals(g.game.boardState, null, null);
+    g.board.updateBoardVisuals(null, null);
     expect(g.window.document.querySelectorAll('.last-move-from, .last-move-to')).toHaveLength(0);
   });
 

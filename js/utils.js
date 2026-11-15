@@ -53,68 +53,44 @@ function isWithinBounds(row, col) {
 }
 
 /**
- * Creates a deep clone of an object or array.
- * @param {object|array} source - The source object or array to clone.
- * @returns {object|array} A deep clone of the source.
+ * The one way the app reaches localStorage. A browser can block storage or
+ * have it full; reading then gives null, writing and removing do nothing, and
+ * the game goes on without remembering.
+ * @param {string} key
+ * @returns {string|null} The stored text, or null if there is none or it cannot be read.
  */
-function deepClone(source) {
-    if (source === null || typeof source !== 'object') {
-        return source;
+function readStored(key) {
+    try {
+        return localStorage.getItem(key);
+    } catch {
+        return null;
     }
-
-    // Handle Date
-    if (source instanceof Date) {
-        return new Date(source.getTime());
-    }
-
-    // Handle Array
-    if (Array.isArray(source)) {
-        return source.map((item) => deepClone(item));
-    }
-
-    // Handle Object
-    const clone = {};
-    Object.keys(source).forEach((key) => {
-        clone[key] = deepClone(source[key]);
-    });
-
-    return clone;
 }
 
 /**
- * Save data to localStorage with error handling.
- * @param {string} key - The key to store under.
- * @param {any} data - Data to store (will be JSON serialized).
- * @returns {boolean} True if successful, false if failed.
+ * @param {string} key
+ * @param {string} value
+ * @returns {boolean} False if the value could not be stored.
  */
-function saveToLocalStorage(key, data) {
+function writeStored(key, value) {
     try {
-        const serialized = JSON.stringify(data);
-        localStorage.setItem(key, serialized);
+        localStorage.setItem(key, value);
         return true;
-    } catch (err) {
-        console.error('Error saving to localStorage:', err);
+    } catch {
         return false;
     }
 }
 
 /**
- * Load data from localStorage with error handling.
- * @param {string} key - The key to retrieve.
- * @param {any} defaultValue - Default value if key doesn't exist or error occurs.
- * @returns {any} The retrieved data or defaultValue.
- * @exports loadFromLocalStorage
+ * @param {string} key
+ * @returns {boolean} False if storage could not be reached.
  */
-function loadFromLocalStorage(key, defaultValue = null) {
+function removeStored(key) {
     try {
-        const serialized = localStorage.getItem(key);
-        if (serialized === null) {
-            return defaultValue;
-        }
-        return JSON.parse(serialized);
-    } catch (err) {
-        console.error('Error loading from localStorage:', err);
-        return defaultValue;
+        localStorage.removeItem(key);
+        return true;
+    } catch {
+        return false;
     }
 }
 
@@ -178,9 +154,9 @@ if (typeof module !== 'undefined' && module.exports) {
         algebraicToCoords,
         coordsToAlgebraic,
         isWithinBounds,
-        deepClone,
-        saveToLocalStorage,
-        loadFromLocalStorage,
+        readStored,
+        writeStored,
+        removeStored,
         playSound,
         debugLog,
     };

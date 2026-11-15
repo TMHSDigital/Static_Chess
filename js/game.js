@@ -9,7 +9,7 @@ let gameStart = STANDARD_START; // How this game began; fen is its first positio
 
 let boardState = initialPosition().board;
 let currentPlayer = WHITE;
-let moveHistory = []; // Array of move objects { from: {row, col}, to: {row, col}, piece: Piece, captured: Piece|null }
+let moveHistory = []; // The moves played: each is the record applyMove returns, plus its notation and check flags
 let isGameOver = false;
 let kingPositions = initialPosition().kingPositions; // Kept for check detection
 let currentStatus = "White's turn";
@@ -64,8 +64,6 @@ const importFileButton = document.getElementById('import-file-button');
 const importFile = document.getElementById('import-file');
 const archiveSection = document.getElementById('archive-section');
 const archiveList = document.getElementById('archive-list');
-const RESET_LABEL = resetButton ? resetButton.textContent : 'New Game';
-let resetConfirmTimer = null; // Set while the New Game button is waiting for a second click
 
 // Computer opponent
 let opponentLevel = null; // null for two players, otherwise a key of AI_LEVELS ('easy', 'medium', 'hard')
@@ -74,8 +72,6 @@ let aiRequestId = 0; // Goes up whenever a pending computer move must be dropped
 let aiThinking = false;
 let aiWorker = null; // The Web Worker, or false once it has proved unavailable
 let aiWorkerBusy = false; // True from a request to the worker until its answer
-const AI_DRAW_MARGIN = 50; // The computer agrees to a draw unless it is at least half a pawn ahead
-const AI_HURRY_BELOW_MS = 10000; // With less than this on its clock the computer moves without its usual pause
 
 /**
  * The live position as one record. These two functions are the only places
@@ -226,7 +222,7 @@ function initializeGame() {
  */
 function handleBoardClickEvent(event) {
     // Ignore clicks that happen right after a drag operation
-    if (typeof window.dragJustEnded !== 'undefined' && window.dragJustEnded) {
+    if (window.dragJustEnded) {
         return;
     }
 
@@ -358,7 +354,7 @@ function refreshBoardVisuals(kingInCheck) {
     if (kingInCheck === undefined || viewPly !== null) {
         kingInCheck = isInCheck(shown, shown.player) ? shown.kingPositions[shown.player] : null;
     }
-    updateBoardVisuals(shown.board, kingInCheck, moveHistory[shown.ply - 1] || null);
+    updateBoardVisuals(kingInCheck, moveHistory[shown.ply - 1] || null);
     showHintOnBoard();
 }
 
@@ -544,6 +540,12 @@ function handleStepClick(event) {
 function focusCurrentMove() {
     const entry = moveHistoryElement.querySelector('button[tabindex="0"]');
     if (entry) entry.focus();
+}
+
+/** @returns {boolean} True if the square holds a piece of the side to move. */
+function isOwnPiece(row, col) {
+    const piece = boardState[row][col];
+    return !!piece && piece.color === currentPlayer;
 }
 
 /** @returns {object} The live game as a position for the functions in rules.js. */
@@ -756,7 +758,7 @@ function confirmSecondClick(button, question) {
     }
     pendingConfirms.set(button, {
         label: button.textContent,
-        timer: setTimeout(() => cancelConfirm(button), CONFIG.RESET_CONFIRM_MS),
+        timer: setTimeout(() => cancelConfirm(button), CONFIG.CONFIRM_MS),
     });
     button.textContent = question;
     button.classList.add('confirming');
@@ -843,7 +845,7 @@ function handleDrawClick() {
     if (!isGameInProgress()) return;
     const computer = computerColor();
     if (computer) {
-        if (evaluatePosition(livePosition(), computer) < AI_DRAW_MARGIN) {
+        if (evaluatePosition(livePosition(), computer) < CONFIG.AI_DRAW_MARGIN) {
             endGameWithoutMove('1/2-1/2', 'Draw by agreement.');
         } else {
             announce('The computer declines the draw.');
@@ -860,14 +862,9 @@ function handleDrawClick() {
     announce(`${currentPlayer === WHITE ? 'White' : 'Black'} offers a draw.`);
 }
 
-/** @returns {boolean} True while the promotion chooser is waiting for an answer. */
-function isPromotionPending() {
-    return isPromotionChooserOpen();
-}
-
 /** Closes the promotion chooser without playing the held move. */
 function cancelPendingPromotion() {
-    if (isPromotionPending()) closePromotionChooser(null);
+    if (isPromotionChooserOpen()) closePromotionChooser(null);
 }
 
 // --- Computer opponent ---
@@ -881,7 +878,10 @@ function computerColor() {
 /** @returns {boolean} True while the player cannot move: game over, chooser open, or the computer's turn. */
 function isBoardLocked() {
     return (
-        isGameOver || viewPly !== null || isPromotionPending() || currentPlayer === computerColor()
+        isGameOver ||
+        viewPly !== null ||
+        isPromotionChooserOpen() ||
+        currentPlayer === computerColor()
     );
 }
 
@@ -951,7 +951,8 @@ function requestAIMove() {
     aiThinking = true;
     updateStatusDisplay();
     // Short of time on its own clock, the computer does not pause before it moves
-    const pause = clock && clockRemaining(color) < AI_HURRY_BELOW_MS ? 0 : CONFIG.AI_MOVE_DELAY_MS;
+    const pause =
+        clock && clockRemaining(color) < CONFIG.AI_HURRY_BELOW_MS ? 0 : CONFIG.AI_MOVE_DELAY_MS;
 
     const id = askEngine(livePosition(), color, opponentLevel, (move) => {
         // A short pause, so the reply does not land in the same instant as the player's move
@@ -1080,7 +1081,7 @@ function updateClockDisplay() {
         const running = clock.turnStartedAt !== null && color === currentPlayer;
         element.textContent = formatClock(left);
         element.classList.toggle('running', running);
-        element.classList.toggle('low', left < 20000);
+        element.classList.toggle('low', left < Math.max(...CONFIG.LOW_TIME_WARNINGS));
         // A timer is not read out on every change; the label is there when asked for
         element.setAttribute(
             'aria-label',
@@ -1150,20 +1151,6 @@ function warnIfTimeIsLow() {
     } catch {
         /* ignore sound errors */
     }
-}
-
-/**
- * @returns {boolean} False if that side could never checkmate: a lone king, or
- * a king with a single bishop or knight.
- */
-function canDeliverMate(board, color) {
-    const others = [];
-    for (const row of board) {
-        for (const piece of row) {
-            if (piece && piece.color === color && piece.type !== KING) others.push(piece.type);
-        }
-    }
-    return !(others.length === 0 || (others.length === 1 && [BISHOP, KNIGHT].includes(others[0])));
 }
 
 /** Saves a game that has started; used when the page is being closed. */
@@ -1306,15 +1293,6 @@ function isStalemate(playerColor) {
     return !isInCheck(position, playerColor) && allLegalMoves(position, playerColor).length === 0;
 }
 
-/**
- * @param {string} playerColor
- * @param {'kingside' | 'queenside'} side
- * @returns {boolean} True if that castling move is legal right now.
- */
-function canCastle(playerColor, side) {
-    return canCastleIn(livePosition(), playerColor, side);
-}
-
 // --- Persistence ---
 
 const SAVED_GAME_KEY = CONFIG.STORAGE_KEYS.GAME_STATE;
@@ -1341,20 +1319,14 @@ function saveGameState() {
         },
         positionHistory: positionHistory, // Undo stack, so Undo still works after a reload
     };
-    try {
-        localStorage.setItem(SAVED_GAME_KEY, JSON.stringify(gameState));
-    } catch (e) {
-        console.error('Error saving game state:', e);
+    if (!writeStored(SAVED_GAME_KEY, JSON.stringify(gameState))) {
+        console.error('The game could not be saved: storage is blocked or full.');
     }
 }
 
 /** Removes the saved game. Storage may be unavailable, which must not stop the game. */
 function clearSavedGame() {
-    try {
-        localStorage.removeItem(SAVED_GAME_KEY);
-    } catch (e) {
-        console.error('Error clearing saved game:', e);
-    }
+    removeStored(SAVED_GAME_KEY);
 }
 
 /** @returns {boolean} True for a {row, col} pair that is on the board. */
@@ -1522,9 +1494,9 @@ function validateSavedGame(saved) {
  */
 function loadGameState() {
     let state = null;
+    const savedState = readStored(SAVED_GAME_KEY);
+    if (!savedState) return false;
     try {
-        const savedState = localStorage.getItem(SAVED_GAME_KEY);
-        if (!savedState) return false;
         state = validateSavedGame(JSON.parse(savedState));
     } catch (e) {
         console.error('Error loading game state:', e);
@@ -1556,7 +1528,7 @@ const ARCHIVE_KEY = CONFIG.STORAGE_KEYS.GAME_ARCHIVE;
  */
 function readArchive() {
     try {
-        const saved = JSON.parse(localStorage.getItem(ARCHIVE_KEY));
+        const saved = JSON.parse(readStored(ARCHIVE_KEY));
         if (!Array.isArray(saved)) return [];
         return saved
             .filter(
@@ -1600,10 +1572,8 @@ function archiveCurrentGame() {
         moves: moveHistory.length,
     };
     const updated = [entry, ...archive.filter((past) => !same(past))];
-    try {
-        localStorage.setItem(ARCHIVE_KEY, JSON.stringify(updated.slice(0, CONFIG.ARCHIVE_LIMIT)));
-    } catch (e) {
-        console.error('Error saving past games:', e);
+    if (!writeStored(ARCHIVE_KEY, JSON.stringify(updated.slice(0, CONFIG.ARCHIVE_LIMIT)))) {
+        console.error('The past games could not be saved: storage is blocked or full.');
     }
 }
 
@@ -1868,31 +1838,15 @@ function updateStatusDisplay() {
     }
 }
 
-/** Puts the New Game button back to its normal state. */
-function cancelResetConfirm() {
-    if (resetConfirmTimer !== null) {
-        clearTimeout(resetConfirmTimer);
-        resetConfirmTimer = null;
-    }
-    resetButton.textContent = RESET_LABEL;
-    resetButton.classList.remove('confirming');
-}
-
 /**
  * Handles the New Game button. A game in progress needs a second click within
  * a few seconds, so a mis-tap next to Undo cannot wipe it. With no moves played,
  * or once the game is over, there is nothing to lose and it resets at once.
+ * Like the other confirmations, the question is withdrawn when the game moves on.
  */
 function handleResetClick() {
-    const gameInProgress = moveHistory.length > 0 && !isGameOver;
-    if (gameInProgress && resetConfirmTimer === null) {
-        resetButton.textContent = 'Discard game?';
-        resetButton.classList.add('confirming');
-        resetConfirmTimer = setTimeout(cancelResetConfirm, CONFIG.RESET_CONFIRM_MS);
-        return;
-    }
-    cancelResetConfirm();
-    resetGame();
+    if (isGameInProgress() && !confirmSecondClick(resetButton, 'Discard game?')) return;
+    resetGame(); // Also puts the button back to normal
     announce(`New game. ${currentStatus}`);
 }
 
@@ -1989,10 +1943,11 @@ function copyOrDownload(text, button, label, filename) {
     }
 }
 
-/** Hands text to the browser as a file to save. */
+/** Hands text to the browser as a file to save: a PGN file as such, anything else as plain text. */
 function downloadText(text, filename) {
+    const type = filename.endsWith('.pgn') ? 'application/x-chess-pgn' : 'text/plain';
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(new Blob([text], { type: 'application/x-chess-pgn' }));
+    link.href = URL.createObjectURL(new Blob([text], { type }));
     link.download = filename;
     document.body.appendChild(link);
     link.click();
@@ -2005,7 +1960,7 @@ function flashButton(button, notice, label) {
     button.textContent = notice;
     setTimeout(() => {
         button.textContent = label;
-    }, 1500);
+    }, CONFIG.NOTICE_MS);
 }
 
 // --- Loading a game from PGN ---
@@ -2429,7 +2384,6 @@ if (typeof module !== 'undefined' && module.exports) {
         isKingInCheck,
         isCheckmate,
         isStalemate,
-        canCastle,
         generateNotationWithDisambiguation,
         handleResetClick,
         buildPGN,
@@ -2459,6 +2413,7 @@ if (typeof module !== 'undefined' && module.exports) {
         handleResignClick,
         handleDrawClick,
         playFromHere,
+        isOwnPiece,
         get gameStart() {
             return gameStart;
         },

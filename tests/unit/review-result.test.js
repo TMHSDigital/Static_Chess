@@ -151,7 +151,7 @@ describe('Looking back through the move list', () => {
         el(g, 'play-here-button').click();
         expect(el(g, 'play-here-button').textContent).toBe('Drop later moves?');
         expect(g.game.moveHistory).toHaveLength(4); // Nothing yet
-        jest.advanceTimersByTime(global.CONFIG.RESET_CONFIRM_MS);
+        jest.advanceTimersByTime(global.CONFIG.CONFIRM_MS);
         expect(el(g, 'play-here-button').textContent).toBe('Play from here');
 
         el(g, 'play-here-button').click();
@@ -513,7 +513,7 @@ describe('Resigning', () => {
       const g = loadGame();
       g.play('e2e4');
       el(g, 'resign-button').click();
-      jest.advanceTimersByTime(global.CONFIG.RESET_CONFIRM_MS + 1);
+      jest.advanceTimersByTime(global.CONFIG.CONFIRM_MS + 1);
       expect(el(g, 'resign-button').textContent).toBe('Resign');
       el(g, 'resign-button').click();
       expect(g.game.isGameOver).toBe(false);

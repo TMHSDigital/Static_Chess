@@ -1,7 +1,7 @@
 const { JSDOM } = globalThis; // Provided by tests/helpers/jsdom-environment.js
 
 describe('utils', () => {
-  let algebraicToCoords, coordsToAlgebraic, isWithinBounds, deepClone;
+  let algebraicToCoords, coordsToAlgebraic, isWithinBounds;
 
   beforeEach(() => {
     const dom = new JSDOM(`<!DOCTYPE html><body></body>`, { url: 'http://localhost' });
@@ -13,12 +13,7 @@ describe('utils', () => {
     const config = require('../../js/config');
     global.CONFIG = config.CONFIG;
 
-    ({
-      algebraicToCoords,
-      coordsToAlgebraic,
-      isWithinBounds,
-      deepClone,
-    } = require('../../js/utils'));
+    ({ algebraicToCoords, coordsToAlgebraic, isWithinBounds } = require('../../js/utils'));
 
     // Invalid input is reported with console.error; keep the test output clean
     jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -61,21 +56,29 @@ describe('utils', () => {
     expect(isWithinBounds(8, 0)).toBe(false);
   });
 
-  test('deepClone makes an independent copy of a nested board', () => {
-    const board = [
-      [{ type: 'r', color: 'w', hasMoved: false }, null],
-      [null, { type: 'k', color: 'b', hasMoved: true }],
-    ];
-    const copy = deepClone(board);
-    expect(copy).toEqual(board);
-    expect(copy).not.toBe(board);
-    expect(copy[0]).not.toBe(board[0]);
-    expect(copy[0][0]).not.toBe(board[0][0]);
+  describe('storage', () => {
+    let readStored, writeStored, removeStored;
+    beforeEach(() => {
+      ({ readStored, writeStored, removeStored } = require('../../js/utils'));
+    });
 
-    copy[0][0].hasMoved = true;
-    copy[1][0] = { type: 'p', color: 'w' };
-    expect(board[0][0].hasMoved).toBe(false);
-    expect(board[1][0]).toBeNull();
+    test('reads back what was written, and null once it is removed', () => {
+      expect(readStored('colour')).toBeNull();
+      expect(writeStored('colour', 'green')).toBe(true);
+      expect(readStored('colour')).toBe('green');
+      expect(removeStored('colour')).toBe(true);
+      expect(readStored('colour')).toBeNull();
+    });
+
+    test('blocked storage reads as empty and never throws', () => {
+      const blocked = () => {
+        throw new Error('storage is blocked');
+      };
+      global.localStorage = { getItem: blocked, setItem: blocked, removeItem: blocked };
+      expect(readStored('colour')).toBeNull();
+      expect(writeStored('colour', 'green')).toBe(false);
+      expect(removeStored('colour')).toBe(false);
+    });
   });
 });
 

@@ -235,11 +235,10 @@ function getSquareElement(row, col) {
 
 /**
  * Updates the visual state of the board (selection, possible moves, checks).
- * @param {Array<Array<Piece|null>>} boardState - Current board state.
  * @param {{row: number, col: number} | null} kingInCheckCoords - Coordinates of the king in check, or null.
  * @param {{from: {row, col}, to: {row, col}} | null} lastMove - The move to highlight as the last one played, or null.
  */
-function updateBoardVisuals(boardState, kingInCheckCoords = null, lastMove = null) {
+function updateBoardVisuals(kingInCheckCoords = null, lastMove = null) {
     // Clear previous visual states
     document
         .querySelectorAll(
@@ -302,10 +301,6 @@ function updateBoardVisuals(boardState, kingInCheckCoords = null, lastMove = nul
             toElement.classList.add('last-move-to');
         }
     }
-
-    // Re-render pieces to ensure they are on top of highlights if needed
-    // (Commented out for performance, only needed if highlights obscure pieces)
-    // renderPieces(boardState);
 }
 
 /**

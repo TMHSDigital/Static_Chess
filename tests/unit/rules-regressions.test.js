@@ -4,7 +4,7 @@ describe('castling', () => {
   test('an unmoved king is not offered a two-square move over its own piece', () => {
     const g = loadGame();
     g.play('g1f3', 'a7a6');
-    expect(g.game.canCastle('w', 'kingside')).toBe(false);
+    expect(g.rules.canCastleIn(g.game.livePosition(), 'w', 'kingside')).toBe(false);
     expect(g.movesFrom('e1')).toEqual([]);
   });
 
@@ -47,14 +47,14 @@ describe('castling', () => {
   test('queenside castling is allowed when only the b-file square is attacked', () => {
     const g = loadGame();
     g.setPosition({ e1: 'wk', a1: 'wr', b8: 'br*', e8: 'bk*' });
-    expect(g.game.canCastle('w', 'queenside')).toBe(true);
+    expect(g.rules.canCastleIn(g.game.livePosition(), 'w', 'queenside')).toBe(true);
     expect(g.movesFrom('e1')).toContain('c1');
   });
 
   test('queenside castling is refused when the d-file square is attacked', () => {
     const g = loadGame();
     g.setPosition({ e1: 'wk', a1: 'wr', d8: 'br*', e8: 'bk*' });
-    expect(g.game.canCastle('w', 'queenside')).toBe(false);
+    expect(g.rules.canCastleIn(g.game.livePosition(), 'w', 'queenside')).toBe(false);
   });
 
   test('an unmoved king does not attack squares two files away', () => {
@@ -91,7 +91,7 @@ describe('undo', () => {
     expect(g.at('h1').type).toBe('r');
     expect(g.at('h1').hasMoved).toBe(false);
     expect(g.at('f1')).toBeNull();
-    expect(g.game.canCastle('w', 'kingside')).toBe(true);
+    expect(g.rules.canCastleIn(g.game.livePosition(), 'w', 'kingside')).toBe(true);
   });
 
   test('after en passant, the captured pawn returns and the capture is still available', () => {

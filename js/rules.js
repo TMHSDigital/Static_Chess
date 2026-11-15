@@ -191,6 +191,23 @@ function applyMove(position, from, to, promotionType = QUEEN) {
 }
 
 /**
+ * @param {Array<Array<object|null>>} board
+ * @param {string} color
+ * @param {'kingside' | 'queenside'} side
+ * @returns {boolean} True if that side still has the right to castle on that
+ * wing: its king and that rook are on their first squares and neither has
+ * moved. Whether castling is possible right now is for canCastleIn.
+ */
+function hasCastlingRight(board, color, side) {
+    const row = color === WHITE ? 7 : 0;
+    const unmoved = (col, type) => {
+        const piece = board[row][col];
+        return !!piece && piece.type === type && piece.color === color && !piece.hasMoved;
+    };
+    return unmoved(4, KING) && unmoved(side === 'kingside' ? 7 : 0, ROOK);
+}
+
+/**
  * Checks if castling is legal: king and rook unmoved, the squares between them
  * empty, and the king not in check on, or passing over, an attacked square.
  * @param {object} position
@@ -201,20 +218,7 @@ function applyMove(position, from, to, promotionType = QUEEN) {
 function canCastleIn(position, color, side) {
     const board = position.board;
     const kingRow = color === WHITE ? 7 : 0;
-    const kingCol = 4;
-    const king = board[kingRow][kingCol];
-    if (
-        !king ||
-        king.type !== KING ||
-        king.color !== color ||
-        king.hasMoved ||
-        isInCheck(position, color)
-    ) {
-        return false;
-    }
-
-    const rook = board[kingRow][side === 'kingside' ? 7 : 0];
-    if (!rook || rook.type !== ROOK || rook.color !== color || rook.hasMoved) {
+    if (!hasCastlingRight(board, color, side) || isInCheck(position, color)) {
         return false;
     }
 
@@ -366,15 +370,8 @@ function positionKey(board, player, epTarget) {
         }
     }
     for (const color of [WHITE, BLACK]) {
-        const row = color === WHITE ? 7 : 0;
-        const king = board[row][4];
-        const kingReady = !!king && king.type === KING && king.color === color && !king.hasMoved;
-        for (const col of [7, 0]) {
-            const rook = board[row][col];
-            key +=
-                kingReady && rook && rook.type === ROOK && rook.color === color && !rook.hasMoved
-                    ? '1'
-                    : '0';
+        for (const side of ['kingside', 'queenside']) {
+            key += hasCastlingRight(board, color, side) ? '1' : '0';
         }
     }
     // The en passant square only matters if a pawn is placed to capture on it
@@ -404,6 +401,28 @@ function hasInsufficientMaterial(board) {
     if (others.length === 0) return true;
     if (others.length === 1) return others[0].type === BISHOP || others[0].type === KNIGHT;
     return others.every((p) => p.type === BISHOP && p.shade === others[0].shade);
+}
+
+/**
+ * @param {Array<Array<object|null>>} board
+ * @param {string} color
+ * @returns {boolean} False if that side could never give checkmate with what
+ * it has: a lone king, a king with one knight, or a king with bishops that
+ * all stand on one colour. Used when the other side runs out of time.
+ */
+function canDeliverMate(board, color) {
+    const others = [];
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const piece = board[r][c];
+            if (piece && piece.color === color && piece.type !== KING) {
+                others.push({ type: piece.type, shade: (r + c) % 2 });
+            }
+        }
+    }
+    if (others.length === 0) return false;
+    if (others.length === 1 && others[0].type === KNIGHT) return false;
+    return !others.every((p) => p.type === BISHOP && p.shade === others[0].shade);
 }
 
 /**
@@ -487,14 +506,8 @@ function positionToFEN(position, player, halfmoveClock, fullmove) {
 
     let castling = '';
     for (const color of [WHITE, BLACK]) {
-        const row = color === WHITE ? 7 : 0;
-        const unmoved = (col, type) => {
-            const piece = board[row][col];
-            return !!piece && piece.type === type && piece.color === color && !piece.hasMoved;
-        };
-        if (!unmoved(4, KING)) continue;
-        if (unmoved(7, ROOK)) castling += color === WHITE ? 'K' : 'k';
-        if (unmoved(0, ROOK)) castling += color === WHITE ? 'Q' : 'q';
+        if (hasCastlingRight(board, color, 'kingside')) castling += color === WHITE ? 'K' : 'k';
+        if (hasCastlingRight(board, color, 'queenside')) castling += color === WHITE ? 'Q' : 'q';
     }
 
     const target = position.enPassantTarget;
@@ -621,5 +634,7 @@ if (typeof module !== 'undefined' && module.exports) {
         allLegalCaptures,
         positionKey,
         hasInsufficientMaterial,
+        canDeliverMate,
+        hasCastlingRight,
     };
 }

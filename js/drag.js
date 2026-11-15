@@ -97,8 +97,7 @@ function handleDragStart(event) {
     const col = parseInt(squareElement.dataset.col, 10);
 
     // Only the side to move can pick up its pieces
-    const piece = boardState[row][col];
-    if (!piece || piece.color !== currentPlayer) {
+    if (!isOwnPiece(row, col)) {
         return;
     }
 
@@ -173,11 +172,11 @@ function handleDragMove(event) {
 
     dragState.currentPos = { x: clientX, y: clientY };
 
-    // The drag only starts once the pointer has moved significantly (more than 5px)
+    // The drag only starts once the pointer has moved a few pixels
     if (!dragState.hasMoved) {
         const deltaX = Math.abs(clientX - dragState.startPos.x);
         const deltaY = Math.abs(clientY - dragState.startPos.y);
-        if (deltaX <= 5 && deltaY <= 5) return;
+        if (deltaX <= CONFIG.DRAG_THRESHOLD_PX && deltaY <= CONFIG.DRAG_THRESHOLD_PX) return;
         beginDrag();
     }
 
@@ -294,7 +293,7 @@ function handleDragEnd(event) {
     dragJustEnded = true;
     setTimeout(() => {
         dragJustEnded = false;
-    }, 100);
+    }, CONFIG.DRAG_CLICK_GUARD_MS);
     event.stopPropagation();
     if (event.cancelable) event.preventDefault();
 }

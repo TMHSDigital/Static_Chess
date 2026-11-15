@@ -31,12 +31,37 @@ describe('New Game button', () => {
       const g = loadGame();
       g.play('e2e4');
       button(g).click();
-      jest.advanceTimersByTime(global.CONFIG.RESET_CONFIRM_MS + 1);
+      jest.advanceTimersByTime(global.CONFIG.CONFIRM_MS + 1);
       expect(button(g).textContent).toBe('New Game');
       expect(g.game.moveHistory).toHaveLength(1);
       // The next click asks again rather than discarding
       button(g).click();
       expect(g.game.moveHistory).toHaveLength(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('a move withdraws the question, as it does for Resign', () => {
+    jest.useFakeTimers();
+    try {
+      const g = loadGame();
+      g.game.setOpponent('easy', 'w');
+      g.play('e2e4');
+      button(g).click();
+      expect(button(g).textContent).toBe('Discard game?');
+
+      jest.runAllTimers(); // The computer replies before the second click
+      expect(g.game.moveHistory).toHaveLength(2);
+      expect(button(g).textContent).toBe('New Game');
+      expect(button(g).classList.contains('confirming')).toBe(false);
+
+      button(g).click(); // So this click asks again instead of discarding the game
+      expect(g.game.moveHistory).toHaveLength(2);
+      expect(button(g).textContent).toBe('Discard game?');
+      g.game.undoLastMove(); // Undo withdraws it too
+      expect(button(g).textContent).toBe('New Game');
+      g.game.setOpponent(null);
     } finally {
       jest.useRealTimers();
     }

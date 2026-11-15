@@ -89,11 +89,25 @@ const CONFIG = {
     // Shortest time between the player's move and the computer's reply (ms)
     AI_MOVE_DELAY_MS: 400,
 
+    // The computer agrees to a draw unless it is at least this far ahead (hundredths of a pawn)
+    AI_DRAW_MARGIN: 50,
+
+    // With less than this on its own clock the computer moves without its usual pause (ms)
+    AI_HURRY_BELOW_MS: 10000,
+
+    // How long "Copied!", "Downloaded" and "Saved" stay on a button (ms)
+    NOTICE_MS: 1500,
+
+    // How far a pressed piece has to be moved before it counts as a drag (px), and how
+    // long after a drop the click the browser may still send is ignored (ms)
+    DRAG_THRESHOLD_PX: 5,
+    DRAG_CLICK_GUARD_MS: 100,
+
     // The level the engine plays at when asked for a hint
     HINT_LEVEL: 'hard',
 
-    // How long the New Game button waits for a confirming second click (ms)
-    RESET_CONFIRM_MS: 4000,
+    // How long New Game, Resign, Load and Play from here wait for a confirming second click (ms)
+    CONFIRM_MS: 4000,
 
     // Animation durations (ms)
     ANIMATIONS: {
