@@ -56,7 +56,6 @@ const importText = document.getElementById('import-text');
 const importError = document.getElementById('import-error');
 const importLoadButton = document.getElementById('import-load');
 const importCancelButton = document.getElementById('import-cancel');
-let replaying = false; // True while a loaded game's moves are being played in
 const RESET_LABEL = resetButton ? resetButton.textContent : 'New Game';
 let resetConfirmTimer = null; // Set while the New Game button is waiting for a second click
 
@@ -67,6 +66,35 @@ let aiRequestId = 0; // Goes up whenever a pending computer move must be dropped
 let aiThinking = false;
 let aiWorker = null; // The Web Worker, or false once it has proved unavailable
 const AI_DRAW_MARGIN = 50; // The computer agrees to a draw unless it is at least half a pawn ahead
+
+/**
+ * The live position as one record. These two functions are the only places
+ * that list its fields: the undo stack, saving, loading and a new game all go
+ * through them.
+ * @returns {object}
+ */
+function currentSnapshot() {
+    return {
+        boardState,
+        currentPlayer,
+        isGameOver,
+        kingPositions,
+        currentStatus,
+        enPassantTarget,
+        halfmoveClock,
+    };
+}
+
+/** Makes a record from currentSnapshot the live position. */
+function restoreSnapshot(snapshot) {
+    boardState = snapshot.boardState;
+    currentPlayer = snapshot.currentPlayer;
+    isGameOver = snapshot.isGameOver;
+    kingPositions = snapshot.kingPositions;
+    currentStatus = snapshot.currentStatus;
+    enPassantTarget = snapshot.enPassantTarget;
+    halfmoveClock = snapshot.halfmoveClock || 0;
+}
 
 /**
  * Initializes the game state, either from scratch or localStorage.
@@ -179,23 +207,25 @@ function handleBoardClickEvent(event) {
 }
 
 /**
- * Resets the game to the initial state.
+ * Puts the game back to the starting position without drawing it or asking
+ * the computer for a move.
  */
-function resetGame() {
-    debugLog('Resetting game...');
+function clearGame() {
     cancelAIMove();
-    boardState = getInitialPieces();
-    currentPlayer = WHITE;
+    restoreSnapshot({
+        boardState: getInitialPieces(),
+        currentPlayer: WHITE,
+        isGameOver: false,
+        kingPositions: {
+            [WHITE]: { row: 7, col: 4 },
+            [BLACK]: { row: 0, col: 4 },
+        },
+        currentStatus: "White's turn",
+        enPassantTarget: null,
+        halfmoveClock: 0,
+    });
     moveHistory = [];
-    isGameOver = false;
-    kingPositions = {
-        [WHITE]: { row: 7, col: 4 },
-        [BLACK]: { row: 0, col: 4 },
-    };
-    currentStatus = "White's turn";
-    enPassantTarget = null;
     positionHistory = [];
-    halfmoveClock = 0;
     gameResult = null;
     endedWithoutMove = false;
     drawOffered = false;
@@ -207,6 +237,14 @@ function resetGame() {
     clearSelectedSquare();
     clearPossibleMoves();
     clearSavedGame();
+}
+
+/**
+ * Resets the game to the initial state.
+ */
+function resetGame() {
+    debugLog('Resetting game...');
+    clearGame();
     // Re-render board and pieces
     renderPieces(boardState);
     updateStatusDisplay();
@@ -291,15 +329,15 @@ function refreshBoardVisuals(kingInCheck) {
  * @returns {{board: Array, kingPositions: object, player: string, ply: number}}
  */
 function shownPosition() {
-    if (viewPly === null) {
-        return { board: boardState, kingPositions, player: currentPlayer, ply: moveHistory.length };
-    }
-    const past = positionHistory[viewPly]; // The snapshot taken before move number viewPly + 1
+    // While looking back: the snapshot taken before move number viewPly + 1
+    const shown = viewPly === null ? currentSnapshot() : positionHistory[viewPly];
     return {
-        board: past.boardState,
-        kingPositions: past.kingPositions,
-        player: past.currentPlayer,
-        ply: viewPly,
+        board: shown.boardState,
+        kingPositions: shown.kingPositions,
+        enPassantTarget: shown.enPassantTarget,
+        halfmoveClock: shown.halfmoveClock || 0,
+        player: shown.currentPlayer,
+        ply: viewPly === null ? moveHistory.length : viewPly,
     };
 }
 
@@ -394,9 +432,10 @@ function livePosition() {
 }
 
 /**
- * Plays a move in the live game: applies it, records it, works out whether the
- * game has ended, and then updates the page. The move is not checked for
- * legality; callers pick it from generateLegalMovesForPiece.
+ * Plays a move in the live game and then updates the page: clock, board, move
+ * list, announcement, sound, the saved game and the computer's reply. The
+ * move is not checked for legality; callers pick it from
+ * generateLegalMovesForPiece. A finished game takes no more moves.
  * @param {number} startRow
  * @param {number} startCol
  * @param {number} endRow
@@ -404,8 +443,7 @@ function livePosition() {
  * @param {string} [promotionType] - Piece a pawn reaching the last rank becomes; queen by default.
  */
 function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
-    if (isGameOver) return; // Nothing is added to a finished game
-    if (!boardState[startRow][startCol]) return; // Should not happen if logic is correct
+    if (isGameOver || !boardState[startRow][startCol]) return;
     viewPly = null; // A move (for example the computer's reply) brings the live game back
     drawOffered = false; // Playing on declines a draw offer
     clearHint();
@@ -416,18 +454,35 @@ function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
         clock.turnStartedAt = null;
     }
 
+    const { move, kingInCheck } = playMove(startRow, startCol, endRow, endCol, promotionType);
+    endIfAutomaticDraw(move);
+    debugLog(move.notation, '-', currentStatus);
+    if (clock && !isGameOver) clock.turnStartedAt = Date.now(); // The other side is on the clock
+    runClockTimer();
+
+    showMoveResult(move, kingInCheck);
+    saveGameState();
+    requestAIMove();
+}
+
+/**
+ * The change a move makes to the game itself: applies it, records it for the
+ * move list and for undo, and ends the game on checkmate or stalemate.
+ * Nothing on the page changes and nothing is saved, so a loaded game can be
+ * played in through this alone. A draw by repetition, the fifty-move rule or
+ * lack of material is for the caller to declare (endIfAutomaticDraw).
+ * @returns {{move: object, kingInCheck: {row: number, col: number}|null}|null}
+ *   The move as recorded and the square of a king it checks; null if the game
+ *   is over or the start square is empty.
+ */
+function playMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
+    if (isGameOver) return null; // Nothing is added to a finished game
+    if (!boardState[startRow][startCol]) return null; // Should not happen if logic is correct
+
     // --- Save snapshot for undo ---
     // applyMove builds a new position and leaves the old one untouched, so the
     // snapshot can keep the current objects as they are.
-    const before = {
-        boardState,
-        currentPlayer,
-        isGameOver,
-        kingPositions,
-        currentStatus,
-        enPassantTarget,
-        halfmoveClock,
-    };
+    const before = currentSnapshot();
     positionHistory.push(before);
 
     // --- Apply the move ---
@@ -471,15 +526,7 @@ function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
     if (!isGameOver) {
         currentStatus = `${currentPlayer === WHITE ? 'White' : 'Black'}'s turn`;
     }
-    // A loaded game may play on through a draw nobody claimed: importPGN checks once, at the end
-    if (!replaying) endIfAutomaticDraw(move);
-    debugLog(move.notation, '-', currentStatus);
-    if (clock && !isGameOver) clock.turnStartedAt = Date.now(); // The other side is on the clock
-    runClockTimer();
-
-    showMoveResult(move, opponentKingInCheck);
-    saveGameState();
-    requestAIMove();
+    return { move, kingInCheck: opponentKingInCheck };
 }
 
 /**
@@ -503,7 +550,6 @@ function endIfAutomaticDraw(move) {
  * @param {{row: number, col: number}|null} kingInCheck - Square of a checked king, if any.
  */
 function showMoveResult(move, kingInCheck) {
-    if (replaying) return; // The page is redrawn once, after the last move
     renderPieces(boardState, move.to);
     updateStatusDisplay();
     updateMoveHistoryDisplay();
@@ -545,15 +591,8 @@ function undoLastMove() {
     gameResult = null;
     endedWithoutMove = false;
     const takeBack = () => {
-        const snapshot = positionHistory.pop();
-        boardState = snapshot.boardState;
-        currentPlayer = snapshot.currentPlayer;
+        restoreSnapshot(positionHistory.pop());
         moveHistory.pop(); // Each snapshot is taken right before exactly one move is recorded
-        isGameOver = snapshot.isGameOver;
-        kingPositions = snapshot.kingPositions;
-        currentStatus = snapshot.currentStatus;
-        enPassantTarget = snapshot.enPassantTarget;
-        halfmoveClock = snapshot.halfmoveClock || 0;
     };
     if (reopen) {
         isGameOver = false;
@@ -768,7 +807,7 @@ function getAIWorker() {
  */
 function requestAIMove() {
     const color = computerColor();
-    if (replaying || !color || isGameOver || currentPlayer !== color) return;
+    if (!color || isGameOver || currentPlayer !== color) return;
 
     const started = Date.now();
     aiThinking = true;
@@ -1109,17 +1148,10 @@ const SAVED_GAME_VERSION = 1;
  * Saves the current game state to localStorage.
  */
 function saveGameState() {
-    if (replaying) return;
     const gameState = {
         version: SAVED_GAME_VERSION,
-        boardState: boardState,
-        currentPlayer: currentPlayer,
+        ...currentSnapshot(),
         moveHistory: moveHistory,
-        isGameOver: isGameOver,
-        kingPositions: kingPositions,
-        currentStatus: currentStatus,
-        enPassantTarget: enPassantTarget,
-        halfmoveClock: halfmoveClock,
         gameResult: gameResult,
         endedWithoutMove: endedWithoutMove,
         // Times as of now. After a reload the side to move gets back on the clock.
@@ -1193,14 +1225,39 @@ function findKingPositions(board) {
 }
 
 /**
+ * Checks a position record read from storage, either the saved game itself or
+ * an entry of its undo stack.
+ * @param {object} saved
+ * @param {string} statusIfMissing - Status line to use when none was saved.
+ * @returns {object|null} A record for restoreSnapshot, or null if it cannot be trusted.
+ */
+function cleanSnapshot(saved, statusIfMissing) {
+    if (!saved || typeof saved !== 'object') return null;
+    if (!isValidBoard(saved.boardState)) return null;
+    if (saved.currentPlayer !== WHITE && saved.currentPlayer !== BLACK) return null;
+    const target = saved.enPassantTarget === undefined ? null : saved.enPassantTarget;
+    if (target !== null && !isValidCoords(target)) return null;
+    return {
+        boardState: saved.boardState,
+        currentPlayer: saved.currentPlayer,
+        isGameOver: !!saved.isGameOver,
+        kingPositions: findKingPositions(saved.boardState),
+        currentStatus:
+            typeof saved.currentStatus === 'string' ? saved.currentStatus : statusIfMissing,
+        enPassantTarget: target,
+        halfmoveClock: cleanClock(saved.halfmoveClock),
+    };
+}
+
+/**
  * Checks a parsed saved game and returns a clean state object, or null if it
  * cannot be trusted. Nothing in the live game is touched here.
  */
 function validateSavedGame(saved) {
     if (!saved || typeof saved !== 'object') return null;
     if (saved.version !== undefined && saved.version !== SAVED_GAME_VERSION) return null;
-    if (!isValidBoard(saved.boardState)) return null;
-    if (saved.currentPlayer !== WHITE && saved.currentPlayer !== BLACK) return null;
+    const position = cleanSnapshot(saved, 'Game loaded');
+    if (!position) return null;
 
     const history = saved.moveHistory === undefined ? [] : saved.moveHistory;
     if (!Array.isArray(history)) return null;
@@ -1215,35 +1272,18 @@ function validateSavedGame(saved) {
         }
     }
 
-    const target = saved.enPassantTarget === undefined ? null : saved.enPassantTarget;
-    if (target !== null && !isValidCoords(target)) return null;
-
     // The undo stack is optional: saves from older versions do not have one.
     // If it is missing or damaged the game still loads, with nothing to undo.
     let undoStack = [];
     if (Array.isArray(saved.positionHistory) && saved.positionHistory.length === history.length) {
-        const usable = saved.positionHistory.every(
-            (s) =>
-                s &&
-                isValidBoard(s.boardState) &&
-                (s.currentPlayer === WHITE || s.currentPlayer === BLACK) &&
-                (s.enPassantTarget === null || isValidCoords(s.enPassantTarget))
+        const snapshots = saved.positionHistory.map((entry) =>
+            entry && entry.enPassantTarget !== undefined ? cleanSnapshot(entry, '') : null
         );
-        if (usable) {
-            undoStack = saved.positionHistory.map((s) => ({
-                boardState: s.boardState,
-                currentPlayer: s.currentPlayer,
-                isGameOver: !!s.isGameOver,
-                kingPositions: findKingPositions(s.boardState),
-                currentStatus: typeof s.currentStatus === 'string' ? s.currentStatus : '',
-                enPassantTarget: s.enPassantTarget,
-                halfmoveClock: cleanClock(s.halfmoveClock),
-            }));
-        }
+        if (snapshots.every(Boolean)) undoStack = snapshots;
     }
 
     // Saves from before results were stored: work the result out from the last move
-    const over = !!saved.isGameOver;
+    const over = position.isGameOver;
     let result = null;
     if (over) {
         const last = history[history.length - 1];
@@ -1272,18 +1312,11 @@ function validateSavedGame(saved) {
     }
 
     return {
+        ...position,
         clock: savedClock,
         gameResult: result,
         endedWithoutMove: over && saved.endedWithoutMove === true,
-        boardState: saved.boardState,
-        currentPlayer: saved.currentPlayer,
         moveHistory: history,
-        isGameOver: over,
-        kingPositions: findKingPositions(saved.boardState),
-        currentStatus:
-            typeof saved.currentStatus === 'string' ? saved.currentStatus : 'Game loaded',
-        enPassantTarget: target,
-        halfmoveClock: cleanClock(saved.halfmoveClock),
         positionHistory: undoStack,
     };
 }
@@ -1307,14 +1340,8 @@ function loadGameState() {
         return false;
     }
 
-    boardState = state.boardState;
-    currentPlayer = state.currentPlayer;
+    restoreSnapshot(state);
     moveHistory = state.moveHistory;
-    isGameOver = state.isGameOver;
-    kingPositions = state.kingPositions;
-    currentStatus = state.currentStatus;
-    enPassantTarget = state.enPassantTarget;
-    halfmoveClock = state.halfmoveClock;
     positionHistory = state.positionHistory;
     gameResult = state.gameResult;
     endedWithoutMove = state.endedWithoutMove;
@@ -1597,16 +1624,7 @@ function copyFEN() {
 /** @returns {string} The position on screen in Forsyth-Edwards Notation. */
 function buildFEN() {
     const shown = shownPosition();
-    const past = viewPly === null ? null : positionHistory[viewPly];
-    return positionToFEN(
-        {
-            board: shown.board,
-            enPassantTarget: past ? past.enPassantTarget : enPassantTarget,
-        },
-        shown.player,
-        past ? past.halfmoveClock || 0 : halfmoveClock,
-        Math.floor(shown.ply / 2) + 1
-    );
+    return positionToFEN(shown, shown.player, shown.halfmoveClock, Math.floor(shown.ply / 2) + 1);
 }
 
 /**
@@ -1737,24 +1755,21 @@ function importPGN(text, validateOnly = false) {
 
     if (validateOnly) return { ok: true, moves: moves.length };
 
-    replaying = true; // No sounds, saving or computer replies while the moves go in
-    try {
-        resetGame();
-        clock = null; // A loaded game is not played on the clock: its moves took no time here
-        runClockTimer();
-        for (const move of moves) {
-            makeMove(move.from.row, move.from.col, move.to.row, move.to.col, move.promotion);
-        }
-        endIfAutomaticDraw(moveHistory[moveHistory.length - 1]);
-        const ending = isGameOver ? null : pgnResult(text);
-        if (ending) {
-            isGameOver = true;
-            gameResult = ending.result;
-            endedWithoutMove = true;
-            currentStatus = ending.status;
-        }
-    } finally {
-        replaying = false;
+    // The moves go in without sounds, saving or computer replies; the page is drawn once at the end
+    clearGame();
+    clock = null; // A loaded game is not played on the clock: its moves took no time here
+    runClockTimer();
+    for (const move of moves) {
+        playMove(move.from.row, move.from.col, move.to.row, move.to.col, move.promotion);
+    }
+    // A game may play on through a draw nobody claimed, so that is looked at only now
+    endIfAutomaticDraw(moveHistory[moveHistory.length - 1]);
+    const ending = isGameOver ? null : pgnResult(text);
+    if (ending) {
+        isGameOver = true;
+        gameResult = ending.result;
+        endedWithoutMove = true;
+        currentStatus = ending.status;
     }
     redraw();
     saveGameState();

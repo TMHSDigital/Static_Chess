@@ -29,6 +29,24 @@ describe('saving and restoring', () => {
     expect(second.game.kingPositions.w).toEqual({ row: 6, col: 4 });
   });
 
+  test('every position on the way back to the start is the one that was played', () => {
+    const moves = ['e2e4', 'd7d5', 'e4d5', 'd8d5', 'b1c3', 'd5a5', 'g1f3', 'c8g4', 'f1e2', 'e7e6'];
+    const first = loadGame();
+    const played = [first.snapshot()];
+    for (const move of moves) {
+      first.play(move);
+      played.push(first.snapshot());
+    }
+
+    const second = loadGame({ storage: { [KEY]: first.window.localStorage.getItem(KEY) } });
+    for (let ply = moves.length; ply >= 0; ply--) {
+      expect(second.snapshot()).toEqual(played[ply]);
+      expect(second.game.isGameOver).toBe(false);
+      second.game.undoLastMove();
+    }
+    expect(second.game.moveHistory).toHaveLength(0);
+  });
+
   test('undo works after a reload', () => {
     const { second } = reloadAfter('e2e4', 'e7e5');
     expect(second.window.document.getElementById('undo-button').disabled).toBe(false);

@@ -57,7 +57,8 @@ Static_Chess/
 
 2. **game.js**: The live game
    - Holds the game state (board, side to move, history, undo stack)
-   - `makeMove()` applies a move through `rules.js`, records it, detects the end of the game, then calls `showMoveResult()` for the page updates
+   - `makeMove()` plays a move in the live game. The change to the game itself is `playMove()`: it applies the move through `rules.js`, records it and detects checkmate and stalemate, and it refuses a finished game. `makeMove()` adds what only a move made on the page needs: the clock, automatic draws, `showMoveResult()` for the page updates, saving and the computer's reply. Load PGN plays its moves in through `playMove()` alone
+   - `currentSnapshot()` and `restoreSnapshot()` are the one place that lists the fields of a position; the undo stack, saving, loading and a new game go through them
    - Delegates rendering to board.js
 
 3. **rules.js**: The rules of chess
@@ -222,8 +223,8 @@ Sound effects are feature-flagged and user-toggleable:
 
 Undo is implemented using a pre-move snapshot stack:
 
-1. At the start of `makeMove()`, `game.js` pushes the current board, side to move, king positions, en passant target and half-move clock to `positionHistory`. No copy is needed, because `applyMove()` builds a new position instead of changing the old one
-2. `undoLastMove()` restores the previous snapshot, removes the last move from the move list and rerenders
+1. Before a move is applied, `playMove()` pushes `currentSnapshot()` (board, side to move, king positions, en passant target, half-move clock, status) to `positionHistory`. No copy is needed, because `applyMove()` builds a new position instead of changing the old one
+2. `undoLastMove()` restores the previous snapshot with `restoreSnapshot()`, removes the last move from the move list and rerenders
 3. The stack is saved with the game, so Undo still works after a reload
 4. `index.html` includes an Undo button, which is disabled when there is nothing to undo
 
