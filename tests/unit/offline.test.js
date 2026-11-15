@@ -63,6 +63,28 @@ describe('offline support', () => {
     expect(page).toContain('<meta name="robots" content="noindex" />');
   });
 
+  test('the page has what a link preview needs, and the preview image is 1200x630', () => {
+    const page = read('index.html');
+    const site = 'https://tmhsdigital.github.io/Static_Chess/';
+    const meta = (property) => {
+      const tag = new RegExp(`<meta\\s+(?:property|name)="${property}"\\s+content="([^"]*)"`);
+      return (page.match(tag) || [])[1];
+    };
+    expect(page).toContain(`<link rel="canonical" href="${site}" />`);
+    expect(meta('og:type')).toBe('website');
+    expect(meta('og:title')).toBe('Static Chess');
+    expect(meta('og:description')).toBe(meta('description'));
+    expect(meta('og:url')).toBe(site);
+    expect(meta('twitter:card')).toBe('summary_large_image');
+
+    const image = meta('og:image');
+    expect(image.startsWith(site)).toBe(true); // Open Graph images need an absolute URL
+    const png = fs.readFileSync(path.join(root, image.slice(site.length)));
+    expect(png.toString('latin1', 1, 4)).toBe('PNG');
+    expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1200, 630]);
+    expect([meta('og:image:width'), meta('og:image:height')]).toEqual(['1200', '630']);
+  });
+
   test('the manifest is valid and its icons exist', () => {
     const manifest = JSON.parse(read('manifest.webmanifest'));
     expect(manifest.name).toBe('Static Chess');
