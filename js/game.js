@@ -44,8 +44,15 @@ let chosenTimeControl = null; // Key of CONFIG.TIME_CONTROLS for the next game; 
 let clock = null;
 let clockTimer = null; // Interval that redraws a running clock
 const hintButton = document.getElementById('hint-button');
-let hintMove = null; // The move the engine suggested for the current position, if asked
+let hintMove = null; // The move the engine suggested, if asked
 let hintPending = false; // True while the engine is working out a hint
+let hintPly = null; // Moves played in the position the hint is for
+let hintChannel = 'play'; // The engine channel the hint was asked on
+// Engine channels for review, apart from 'play' so that neither can cancel the computer's move
+const REVIEW_HINT_CHANNEL = 'review-hint';
+const REVIEW_SCORES_CHANNEL = 'review-scores';
+let gameScores = null; // Once the game is over: what the engine makes of every position, first to last
+let scoredGame = null; // The finished game (gameSignature) gameScores was asked for, or null
 let announcerElement = document.getElementById('announcer'); // Live region read out by screen readers
 const resetButton = document.getElementById('reset-button');
 const undoButton = document.getElementById('undo-button');
@@ -404,21 +411,109 @@ function viewMove(ply) {
  */
 function showReviewScore() {
     if (!reviewScoreElement || viewPly === null) return;
-    const shown = shownPosition();
+    // After a finished game has been gone through: also what the move that led here cost
+    const cost = viewPly > 0 ? moveCostText(viewPly - 1) : null;
+    const score = positionScoreText(shownPosition());
+    reviewScoreElement.textContent = cost ? `${score} ${cost}` : score;
+}
+
+/**
+ * @param {object} shown - A position as shownPosition() gives it.
+ * @returns {string} What the engine makes of it, as a sentence.
+ */
+function positionScoreText(shown) {
     const { score, mate, over } = assessPosition(shown, shown.player);
     const ahead = score > 0 ? 'White' : 'Black';
     const pawns = Math.abs(score) / 100;
-    let text;
-    if (over) {
-        text = mate ? 'Checkmate.' : 'Stalemate.';
-    } else if (mate) {
-        text = `Engine thinks ${ahead} can force mate.`;
-    } else if (pawns < 0.3) {
-        text = 'Engine thinks the position is about equal.';
-    } else {
-        text = `Engine thinks ${ahead} is ahead by ${pawns.toFixed(1)}.`;
+    if (over) return mate ? 'Checkmate.' : 'Stalemate.';
+    if (mate) return `Engine thinks ${ahead} can force mate.`;
+    if (pawns < 0.3) return 'Engine thinks the position is about equal.';
+    return `Engine thinks ${ahead} is ahead by ${pawns.toFixed(1)}.`;
+}
+
+// --- Review of a finished game ---
+
+/** @returns {string} Tells one finished game from another: how it began and its moves. */
+function gameSignature() {
+    return `${gameStart.fen || ''}|${moveHistory.map((move) => move.notation).join(' ')}`;
+}
+
+/** @returns {object} A snapshot of this game as a position for the functions in rules.js. */
+function snapshotPosition(snapshot) {
+    return {
+        board: snapshot.boardState,
+        kingPositions: snapshot.kingPositions,
+        enPassantTarget: snapshot.enPassantTarget,
+    };
+}
+
+/**
+ * Once a game is over, asks the engine what it makes of every position in it,
+ * so the move list can mark the moves that lost ground. It is asked once per
+ * game, on a channel of its own, and forgotten when the game goes on (Undo,
+ * Play from here) or another one starts.
+ */
+function scoreFinishedGame() {
+    const wanted =
+        isGameOver && moveHistory.length > 0 && positionHistory.length === moveHistory.length;
+    if (!wanted) {
+        if (scoredGame !== null) dropEngineRequests(REVIEW_SCORES_CHANNEL);
+        scoredGame = null;
+        gameScores = null;
+        return;
     }
-    reviewScoreElement.textContent = text;
+    const signature = gameSignature();
+    if (scoredGame === signature) return;
+    scoredGame = signature;
+    gameScores = null;
+    const positions = [...positionHistory, currentSnapshot()].map((snapshot) => ({
+        position: snapshotPosition(snapshot),
+        color: snapshot.currentPlayer,
+    }));
+    const id = askEngineForScores(
+        positions,
+        (scores) => {
+            if (!isLatestEngineRequest(id, REVIEW_SCORES_CHANNEL) || scoredGame !== signature) {
+                return;
+            }
+            gameScores = scores;
+            updateMoveHistoryDisplay();
+            showReviewScore();
+        },
+        REVIEW_SCORES_CHANNEL
+    );
+}
+
+/**
+ * What a move cost the side that played it, by the engine's count: the score
+ * before it less the score after it. Only for a finished game that has been
+ * gone through, and only when the loss reaches CONFIG.REVIEW_MISTAKE_DROP.
+ * @param {number} index - How many moves were played before it.
+ * @returns {{lost: number, allowedMate: boolean, missedMate: boolean}|null}
+ *   lost is in hundredths of a pawn; null when the move is not marked.
+ */
+function moveCost(index) {
+    if (!gameScores || gameScores.length !== moveHistory.length + 1) return null;
+    const before = gameScores[index];
+    const after = gameScores[index + 1];
+    const side = moveHistory[index].piece.color === WHITE ? 1 : -1;
+    const lost = (before.score - after.score) * side;
+    if (lost < CONFIG.REVIEW_MISTAKE_DROP) return null;
+    return {
+        lost,
+        allowedMate: after.mate && after.score * side < 0,
+        missedMate: before.mate && before.score * side > 0,
+    };
+}
+
+/** @returns {string|null} moveCost as a sentence, or null when the move is not marked. */
+function moveCostText(index) {
+    const cost = moveCost(index);
+    if (!cost) return null;
+    const label = moveLabel(index + 1);
+    if (cost.allowedMate) return `Engine thinks ${label} allowed a forced mate.`;
+    if (cost.missedMate) return `Engine thinks ${label} missed a forced mate.`;
+    return `Engine thinks ${label} lost about ${(cost.lost / 100).toFixed(1)}.`;
 }
 
 /** Handles "Play from here", which needs a confirming second click because it drops the later moves. */
@@ -907,8 +1002,12 @@ function setOpponent(level, color = WHITE) {
 function cancelAIMove() {
     dropEngineRequests();
     aiThinking = false;
-    hintPending = false; // A hint being worked out shares the engine and is dropped with it
+    // A hint being worked out for the live game shares the engine and is dropped
+    // with it; one for a position being reviewed has to be dropped on its own
+    if (hintPending && hintChannel !== 'play') dropEngineRequests(hintChannel);
+    hintPending = false;
     hintMove = null;
+    hintPly = null;
 }
 
 /**
@@ -958,19 +1057,29 @@ function requestAIMove() {
  * @param {string} color - The side to find a move for.
  * @param {string} level - A key of AI_LEVELS.
  * @param {(move: object|null) => void} onMove - Called with the engine's move.
+ * @param {string} [channel] - The engine channel; 'play' for the live game.
+ * @param {number} [ply] - Moves played before the position; the live one by default.
  * @returns {number} The id of the request, for isLatestEngineRequest.
  */
-function askEngineAbout(position, color, level, onMove) {
-    const seen = positionHistory.map((past) =>
-        positionKey(past.boardState, past.currentPlayer, past.enPassantTarget)
-    );
+function askEngineAbout(
+    position,
+    color,
+    level,
+    onMove,
+    channel = 'play',
+    ply = moveHistory.length
+) {
+    const seen = positionHistory
+        .slice(0, ply)
+        .map((past) => positionKey(past.boardState, past.currentPlayer, past.enPassantTarget));
     // Only the computer's own move is budgeted against the clock. A hint is for
-    // the player, whose clock is running: it gets the level's usual time
-    const onItsClock = clock && color === computerColor();
+    // the player, whose clock is running, or for a position being reviewed: it
+    // gets the level's usual time
+    const onItsClock = channel === 'play' && clock && color === computerColor();
     const budgetMs = onItsClock
         ? searchBudget(clockRemaining(color), clock.increment, level)
         : null;
-    return askEngine({ position, color, level, seen, budgetMs }, onMove);
+    return askEngine({ position, color, level, seen, budgetMs }, onMove, channel);
 }
 
 // --- Clock ---
@@ -1044,6 +1153,8 @@ function stopAllTimers() {
         clockTimer = null;
     }
     cancelAIMove();
+    dropEngineRequests(REVIEW_HINT_CHANNEL);
+    dropEngineRequests(REVIEW_SCORES_CHANNEL);
     cancelConfirms();
 }
 
@@ -1107,44 +1218,77 @@ function saveGameInProgress() {
 // --- Hint ---
 
 /**
- * Asks the engine what it would play for the side to move and marks that move
- * on the board. Nothing is played. The marks stay until the position changes.
+ * @returns {boolean} True if a hint can be asked for the position on screen:
+ *   in the live game on the player's own turn, and for any earlier position
+ *   while looking back (there the engine says what it would have played).
+ */
+function canHint() {
+    if (hintPending || isPromotionChooserOpen()) return false;
+    return viewPly !== null || !isBoardLocked();
+}
+
+/**
+ * Asks the engine for its move in the position on screen and marks it on the
+ * board. Nothing is played. For an earlier position the question goes out on
+ * a channel of its own, so a computer move being worked out is not disturbed.
  */
 function requestHint() {
-    if (isBoardLocked() || hintPending) return;
+    if (!canHint()) return;
+    const reviewing = viewPly !== null;
+    const shown = shownPosition();
+    const channel = reviewing ? REVIEW_HINT_CHANNEL : 'play';
     hintPending = true;
     hintMove = null;
+    hintPly = shown.ply;
+    hintChannel = channel;
     updateStatusDisplay();
     refreshBoardVisuals();
-    const position = livePosition();
-    const id = askEngineAbout(position, currentPlayer, CONFIG.HINT_LEVEL, (move) => {
-        if (!isLatestEngineRequest(id)) return;
-        hintPending = false;
-        hintMove = move;
-        updateStatusDisplay();
-        refreshBoardVisuals();
-        if (move) {
-            const piece = position.board[move.from.row][move.from.col];
-            const from = coordsToAlgebraic(move.from.row, move.from.col);
-            const to = coordsToAlgebraic(move.to.row, move.to.col);
-            announce(`Hint: ${PIECE_NAMES[piece.type]} from ${from} to ${to}.`);
-        }
-    });
+    const position = reviewing ? snapshotPosition(positionHistory[shown.ply]) : livePosition();
+    const id = askEngineAbout(
+        position,
+        shown.player,
+        CONFIG.HINT_LEVEL,
+        (move) => {
+            if (!isLatestEngineRequest(id, channel)) return;
+            hintPending = false;
+            hintMove = move;
+            updateStatusDisplay();
+            refreshBoardVisuals();
+            if (move) {
+                const piece = position.board[move.from.row][move.from.col];
+                const from = coordsToAlgebraic(move.from.row, move.from.col);
+                const to = coordsToAlgebraic(move.to.row, move.to.col);
+                const suggestion = `${PIECE_NAMES[piece.type]} from ${from} to ${to}.`;
+                // Asked while looking back, the hint is also the request to hear the score
+                announce(
+                    reviewing
+                        ? `${positionScoreText(shown)} Best move here: ${suggestion}`
+                        : `Hint: ${suggestion}`
+                );
+            }
+        },
+        channel,
+        shown.ply
+    );
 }
 
 /** Removes the hint, and drops one that is still being worked out. */
 function clearHint() {
-    if (hintPending) dropEngineRequests();
+    if (hintPending) dropEngineRequests(hintChannel);
     hintPending = false;
     hintMove = null;
+    hintPly = null;
 }
 
-/** Marks the hinted move's two squares, or removes the marks when there is no hint. */
+/**
+ * Marks the hinted move's two squares while the position it was asked for is
+ * on the board, and removes the marks otherwise.
+ */
 function showHintOnBoard() {
     boardElement
         .querySelectorAll('.hint-from, .hint-to')
         .forEach((el) => el.classList.remove('hint-from', 'hint-to'));
-    if (!hintMove || viewPly !== null) return;
+    if (!hintMove || hintPly !== shownPosition().ply) return;
     const from = getSquareElement(hintMove.from.row, hintMove.from.col);
     const to = getSquareElement(hintMove.to.row, hintMove.to.col);
     if (from) from.classList.add('hint-from');
@@ -1444,6 +1588,13 @@ function updateMoveHistoryDisplay() {
         entry.dataset.ply = ply;
         entry.tabIndex = -1;
         entry.disabled = !canView;
+        const cost = moveCostText(index);
+        if (cost) {
+            // The "?" comes from the stylesheet; the reason is in the name and the tooltip
+            entry.classList.add('lost-ground');
+            entry.title = cost;
+            entry.setAttribute('aria-label', `${move.notation}. ${cost}`);
+        }
         if (ply === shownPly) {
             entry.setAttribute('aria-current', 'true');
             current = entry;
@@ -1606,7 +1757,7 @@ function updateStatusDisplay() {
         resignButton.disabled = !isGameInProgress();
     }
     if (hintButton) {
-        hintButton.disabled = isBoardLocked() || hintPending;
+        hintButton.disabled = !canHint();
         hintButton.textContent = hintPending ? 'Thinking' : 'Hint';
     }
     if (drawButton) {
@@ -1614,6 +1765,8 @@ function updateStatusDisplay() {
         drawButton.textContent = drawOffered ? 'Accept draw?' : 'Offer draw';
         drawButton.classList.toggle('confirming', drawOffered);
     }
+    // Every way a game ends or goes on again passes through here
+    scoreFinishedGame();
 }
 
 /**
@@ -1995,6 +2148,10 @@ if (typeof module !== 'undefined' && module.exports) {
         get hintMove() {
             return hintMove;
         },
+        get gameScores() {
+            return gameScores;
+        },
+        moveCost,
         resign,
         handleResignClick,
         handleDrawClick,

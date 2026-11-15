@@ -14,6 +14,8 @@ All notable changes to this project will be documented in this file.
 - **Open and save files**: "Open file" in the Load dialog reads a PGN or FEN file (a file can also be dropped on the dialog), and "Save PGN" saves the game as a file
 - **Play from here**: While an earlier position is on the board, "Play from here" drops the later moves and continues the game from that position, also in a finished game and in one played on the clock. The game as it was goes into the past games
 - **Engine score in review**: While an earlier position is on the board, a line under the move list says who the engine thinks is ahead and by how much, or that a mate is there
+- **Hint in review**: While an earlier position is on the board, Hint marks the move the engine would have played there and reads out the score with it. It does not disturb a move the computer is working out
+- **Moves that lost ground**: Once a game is over, the engine goes through it and the move list marks with a "?" each move that, by its count, lost a pawn and a half or more or allowed a forced mate. The reason is in the move's tooltip and is shown under the list when the move is looked at
 - **Link previews**: A link to the game shared in chat or on social media now shows a preview with an image of the board
 - **404 page**: An address that does not exist on the site now shows a page in the game's style with a link back to the game
 - **Step buttons**: Four buttons under the move list go to the starting position, the previous move, the next move and the latest move, so a game can be stepped through without a keyboard

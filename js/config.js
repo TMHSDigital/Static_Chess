@@ -106,6 +106,10 @@ const CONFIG = {
     // The level the engine plays at when asked for a hint
     HINT_LEVEL: 'hard',
 
+    // After a game, a move is marked in the move list when the engine's score for
+    // the side that played it fell by at least this much (hundredths of a pawn)
+    REVIEW_MISTAKE_DROP: 150,
+
     // How long New Game, Resign, Load and Play from here wait for a confirming second click (ms)
     CONFIRM_MS: 4000,
 

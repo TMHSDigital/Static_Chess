@@ -87,7 +87,8 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 - **Chess Clock:** Five time controls, with a warning at 20 and 10 seconds; the computer budgets its time against it
 - **Game Review:** Step back through the game from the move list or with the step buttons, see what the engine makes of each position, and go on playing from any of them with "Play from here"
 - **Resign and Draw Offer:** End a game by resignation or by agreement; the result is saved and exported
-- **Hint:** Shows the move the engine would play, without playing it
+- **Hint:** Shows the move the engine would play, without playing it, also for an earlier position while looking back
+- **Moves that lost ground:** After a game, the move list marks the moves the engine thinks cost a pawn and a half or more
 - **PGN and FEN:** Copy or save the game as PGN, copy the position as FEN, and load a game or a position from pasted text or a file
 - **Past Games:** The last 20 games are kept and can be opened again
 - **Captured Pieces:** Each player's bar shows what they have taken and the material lead
@@ -178,7 +179,8 @@ That's it! No build process or dependencies are required.
     - "Resign" ends the game after a second click. "Offer draw" is accepted by the other side with a second click, or answered at once by the computer. Undo reopens a game ended this way
     - "Load" replaces the game with a PGN game you paste, keeping its result (a resigned, drawn or timed-out game stays finished; Undo reopens it), or starts a new game from a FEN position you paste. "Open file" in that dialog reads a `.pgn` or `.fen` file instead, and a file can also be dropped on the dialog. It also lists your last 20 games under "Past games" (a game goes there when you start or load another); click one to open it again
     - "Copy FEN" copies the position on the board
-    - "Hint" marks the move the built-in engine would play for the side to move; nothing is played
+    - "Hint" marks the move the built-in engine would play for the side to move; nothing is played. While you look back it works on the position on screen
+    - When a game is over, moves marked "?" in the Move History are ones the engine thinks lost ground; hover over one, or look at it, to read why. The engine only looks a few moves ahead, so take it as an opinion
     - The pieces each side has captured, and the material lead, are shown in that player's bar beside the board
 11. Keyboard: Tab to the board, move between squares with the arrow keys, and press Enter or Space to select a piece or move it
 12. With a clock, a player who has 20 and then 10 seconds left is warned by an announcement for screen readers and, with sound effects on, a double beep
@@ -279,7 +281,7 @@ The project follows a clear separation of concerns:
   - `board.js`: DOM rendering, keyboard navigation, and diff-based updates
   - `game.js`: Game state and move flow, undo, saving, status and announcements
   - `notation.js`, `saved-game.js`, `clock.js`: SAN and PGN text, saved-game validation and clock arithmetic, with no DOM access
-  - `engine-bridge.js`: Sends a position to the engine and brings its move back
+  - `engine-bridge.js`: Sends positions to the engine and brings its move or its scores back
   - `main.js`: Bootstraps the application
   - `drag.js`: Drag and drop integrated via existing click handlers
   - `promotion.js`: Dialog for choosing the promotion piece
@@ -342,7 +344,7 @@ See the [Development Roadmap](docs/ROADMAP.md) for a detailed plan of upcoming f
 - **Stronger Computer Opponent:** Faster move generation and a transposition table, to search deeper in the same time
 - **Sound Effects:** Recorded sounds as an alternative to the built-in synthesized tones
 - **Named Saved Games:** Keep several games in progress under names; today the last 20 games are kept as past games
-- **Game Analysis:** Mark the moves where the engine's score drops
+- **Game Analysis:** Deeper analysis than the quick look the engine now takes at each move of a finished game
 
 </details>
 

@@ -57,12 +57,12 @@ Features are prioritized as follows:
 
 ### Tier 3: Advanced Features
 
-| Feature                  | Complexity | Dependencies | Description                                                                        | Status       |
-| ------------------------ | ---------- | ------------ | ---------------------------------------------------------------------------------- | ------------ |
-| **AI Opponent**          | High       | None         | Computer opponent with three levels (alpha-beta search)                            | ✅ Completed |
-| **Multiple Saved Games** | Medium     | None         | The last 20 games are kept and can be reopened; named slots are to do              | In progress  |
-| **Game Import/Export**   | Medium     | None         | PGN and FEN, both ways: copy, paste, and start from a position                     | ✅ Completed |
-| **Game Analysis**        | High       | AI Opponent  | A score for the position being reviewed and Hint are in; marking mistakes is to do | In progress  |
+| Feature                  | Complexity | Dependencies | Description                                                                               | Status       |
+| ------------------------ | ---------- | ------------ | ----------------------------------------------------------------------------------------- | ------------ |
+| **AI Opponent**          | High       | None         | Computer opponent with three levels (alpha-beta search)                                   | ✅ Completed |
+| **Multiple Saved Games** | Medium     | None         | The last 20 games are kept and can be reopened; named slots are to do                     | In progress  |
+| **Game Import/Export**   | Medium     | None         | PGN and FEN, both ways: copy, paste, and start from a position                            | ✅ Completed |
+| **Game Analysis**        | High       | AI Opponent  | A score and Hint for the position being reviewed, and marks on the moves that lost ground | Complete     |
 
 ## Implementation Timeline
 
@@ -92,7 +92,7 @@ This is a rough guideline for feature implementation:
 ### Phase 4: Final Polish (Ongoing)
 
 - [ ] **AI Opponent (advanced)**
-- [ ] **Game Analysis** _(the Hint button and a score for the position being reviewed are in; marking mistakes is to do)_
+- [x] **Game Analysis** _(a score and Hint for the position being reviewed; after a game the moves that lost ground are marked)_
 - [ ] **Mobile App Conversion**
 - [ ] **Multiplayer Support**
 

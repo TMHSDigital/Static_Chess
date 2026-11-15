@@ -587,6 +587,19 @@ body.coords-visible {
     background-color: var(--hover-bg);
 }
 
+/* After a game: a move the engine thinks lost ground. The reason is in the
+   button's name and tooltip, and under the list when the move is looked at. */
+.move-history li button.move.lost-ground::after {
+    content: '?';
+    margin-left: 1px;
+    font-weight: 700;
+    color: var(--danger-text);
+}
+
+.move-history li button.move.lost-ground[aria-current='true']::after {
+    color: inherit; /* On the accent fill the danger colour is too faint */
+}
+
 /* The move whose position is on the board */
 .move-history li button.move[aria-current='true'] {
     background-color: var(--accent-fill);

@@ -126,7 +126,7 @@ The scripts are plain `<script>` files in one global scope, loaded in the order 
 - `board.js` owns the selection (`getSelectedSquare()`, `getPossibleMoves()` and their setters) and renders what it is given; it reads nothing from `game.js`. The last move to highlight is an argument of `updateBoardVisuals()`
 - `game.js` owns the game state and calls into `board.js`, `rules.js`, `promotion.js` and the four files below
 - `notation.js`, `saved-game.js` and `clock.js` hold what needs no page: writing SAN and reading PGN text, validating a saved game, and clock arithmetic. They take what they work on as arguments and can be loaded and tested with no document (`tests/unit/no-dom.test.js`)
-- `engine-bridge.js` is the only file that talks to the worker. It knows nothing about the game: `game.js` hands it a position and gets a move back
+- `engine-bridge.js` is the only file that talks to the worker. It knows nothing about the game: `game.js` hands it a position and gets a move back, or a list of positions and gets a score for each. Requests travel on named channels, each with a worker of its own; only the latest request on a channel counts, and channels do not affect each other
 - `drag.js` calls `board.js` for the selection and `game.js` for `isBoardLocked()`, `isOwnPiece()`, `generateLegalMovesForPiece()`, `playChosenMove()` and `refreshBoardVisuals()`; it reads no state of the game directly
 - Cross-file calls are direct, with no `window.` lookups or `typeof` guards, so a missing script is a `ReferenceError` rather than a click that does nothing. The names involved are listed once in `eslint.config.mjs`
 - The one shared flag on `window` is `dragJustEnded`, which lets the click handler ignore the click that follows a drag
@@ -291,9 +291,10 @@ SAN generation with disambiguation is implemented:
 2. `shownPosition()` returns the position to draw: the live one, or the undo-stack snapshot taken before move `viewPly + 1`. The board, the captured pieces, the last-move highlight and Copy FEN all follow it
 3. The moves in the list are buttons. A click, the arrow keys, Home and End in the list, and the four step buttons under it all call `viewMove()`; "Back to game" calls `returnToLiveGame()`
 4. `showReviewScore()` writes what the engine makes of the position on screen under the move list. It calls `assessPosition()` in `ai.js`, a search two half-moves deep, on the page's own thread, so the worker and a computer move it may be working on are left alone. The line is not a live region
-5. "Play from here" (`playFromHere()`, after a confirming second click) makes the position on screen the live one: it archives the game as it was, restores the undo-stack snapshot for that ply, cuts the move list and the undo stack to it, and clears the result and the clock
-6. `isBoardLocked()` is true while looking back. A move, such as the computer's reply, returns to the live game
-7. A save from an older version without an undo stack has no positions to show, so its move buttons and the step buttons are disabled
+5. Once a game is over, `scoreFinishedGame()` sends every position of it to the engine on the `review-scores` channel (`askEngineForScores()`), once per game. `moveCost()` compares the score before and after each move from the mover's side; a move that lost at least `CONFIG.REVIEW_MISTAKE_DROP`, or allowed or missed a forced mate, gets the class `lost-ground` in the move list (a "?" from the stylesheet), a tooltip and an accessible name that say why, and a second sentence in the line under the list when it is looked at. The scores are dropped when the game goes on again (Undo, Play from here) or another game starts. Without a worker the scoring runs on the page: about 0.4 s for 120 positions
+6. "Play from here" (`playFromHere()`, after a confirming second click) makes the position on screen the live one: it archives the game as it was, restores the undo-stack snapshot for that ply, cuts the move list and the undo stack to it, and clears the result and the clock
+7. `isBoardLocked()` is true while looking back, except that a hint can still be asked. A move, such as the computer's reply, returns to the live game
+8. A save from an older version without an undo stack has no positions to show, so its move buttons and the step buttons are disabled
 
 ### 11. Resign, Draw by Agreement and the Result
 
@@ -305,7 +306,7 @@ SAN generation with disambiguation is implemented:
 
 ### 12. Hint
 
-1. `requestHint()` asks the engine, at `CONFIG.HINT_LEVEL`, for the move it would play for the side to move, through the same `askEngineAbout()` the computer opponent uses
+1. `requestHint()` asks the engine, at `CONFIG.HINT_LEVEL`, for the move it would play for the side to move, through the same `askEngineAbout()` the computer opponent uses. While an earlier position is on the board it asks about that position instead, on the `review-hint` channel, so a computer move being worked out on the `play` channel is neither cancelled nor delayed. The hint remembers the position it was asked for (`hintPly`) and its marks show only there; asked while looking back, the announcement also gives the score
 2. The move is not played. `showHintOnBoard()` marks its two squares and `announce()` reads it out
 3. The hint is dropped when the position changes, and a hint still being worked out is cancelled with the engine request it shares
 

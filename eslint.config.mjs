@@ -93,7 +93,7 @@ const appGlobals = {
   // clock.js
   ...shared(['makeClock', 'timeLeft', 'formatClock']),
   // engine-bridge.js
-  ...shared(['askEngine', 'dropEngineRequests', 'isLatestEngineRequest']),
+  ...shared(['askEngine', 'askEngineForScores', 'dropEngineRequests', 'isLatestEngineRequest']),
   // game.js
   ...shared([
     'initializeGame',
