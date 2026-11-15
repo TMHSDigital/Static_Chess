@@ -32,6 +32,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- A move played after the player's time had run out was accepted, and the increment was credited, when the move landed before the next clock tick; such a move now ends the game on time
 - After a release, a returning visitor could get some scripts new and some from the browser's cache for up to ten minutes, which could leave the page without a board; the service worker now asks the server for every file
 - The copy of the game saved for offline use could hold files of two releases when it was saved within ten minutes of a release; it is now fetched from the server in full
 - On narrow screens the side panel was wider than the screen and its edges were cut off
