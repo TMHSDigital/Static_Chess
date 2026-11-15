@@ -10,97 +10,46 @@
     min-height: 0; /* Prevents overflow */
 }
 
-/* Add board coordinates */
-.chess-board::before,
-.chess-board::after,
-.square::before,
-.square::after {
+/* Coordinates: file letters along the rank nearest the player and rank numbers
+   down the left edge, 16 labels in all. board.js puts a label element in every
+   square of the four outer lines; which two lines show depends on which way
+   round the board is. They are elements of their own, not ::before or ::after,
+   so the last-move tint and the move dot never replace them. */
+.coord {
+    display: none;
     position: absolute;
-    color: rgba(0, 0, 0, 0.5);
-    font-size: 0.7rem;
-    font-weight: normal;
     z-index: 2;
-    pointer-events: none;
-    padding: 0 2px;
-    border-radius: 2px;
-    background-color: rgba(255, 255, 255, 0.3);
+    font-size: 0.7rem;
+    font-weight: 600;
     line-height: 1;
-    display: var(--show-coords, none);
+    pointer-events: none;
+    user-select: none;
 }
 
-/* Adjust color specifically for dark squares */
-.square.dark::before,
-.square.dark::after {
-    color: rgba(255, 255, 255, 0.6);
-    background-color: rgba(0, 0, 0, 0.2);
-}
-
-/* File coordinates (a-h) - Positioned slightly inside */
-.square::before {
+.coord-file {
+    right: 3px;
     bottom: 2px;
-    left: 2px;
-}
-.square[data-col='0']::before {
-    content: 'a';
-}
-.square[data-col='1']::before {
-    content: 'b';
-}
-.square[data-col='2']::before {
-    content: 'c';
-}
-.square[data-col='3']::before {
-    content: 'd';
-}
-.square[data-col='4']::before {
-    content: 'e';
-}
-.square[data-col='5']::before {
-    content: 'f';
-}
-.square[data-col='6']::before {
-    content: 'g';
-}
-.square[data-col='7']::before {
-    content: 'h';
 }
 
-/* Rank coordinates (1-8) - Positioned slightly inside */
-.square::after {
+.coord-rank {
     top: 2px;
-    right: 2px;
-}
-.square[data-row='7']::after {
-    content: '1';
-}
-.square[data-row='6']::after {
-    content: '2';
-}
-.square[data-row='5']::after {
-    content: '3';
-}
-.square[data-row='4']::after {
-    content: '4';
-}
-.square[data-row='3']::after {
-    content: '5';
-}
-.square[data-row='2']::after {
-    content: '6';
-}
-.square[data-row='1']::after {
-    content: '7';
-}
-.square[data-row='0']::after {
-    content: '8';
+    left: 3px;
 }
 
-/* Hide file coordinate on a1 and rank coordinate on h8 for less clutter */
-.square[data-row='7'][data-col='0']::before {
-    display: none !important;
+/* On each square in the colour of the other squares, as on a printed board */
+.square.light .coord {
+    color: var(--dark-square);
 }
-.square[data-row='0'][data-col='7']::after {
-    display: none !important;
+
+.square.dark .coord {
+    color: var(--light-square);
+}
+
+.chess-board:not(.flipped) .square[data-row='7'] .coord-file,
+.chess-board.flipped .square[data-row='0'] .coord-file,
+.chess-board:not(.flipped) .square[data-col='0'] .coord-rank,
+.chess-board.flipped .square[data-col='7'] .coord-rank {
+    display: var(--show-coords, none);
 }
 
 .square {
@@ -183,16 +132,14 @@
 }
 
 /* Last move: a tint over the square it left and the square it reached. It sits
-   under the piece, and uses ::before only, so the move dot and the rank number
-   (both ::after) still show on these squares. */
+   under the piece, and uses ::before only, so the move dot (::after) still
+   shows on these squares. */
 .square.last-move-from::before,
 .square.last-move-to::before {
     content: '';
     position: absolute;
     inset: 0;
     z-index: 0;
-    padding: 0;
-    border-radius: 0;
     background-color: var(--last-move-square);
     display: var(--show-last-move); /* Control visibility */
 }

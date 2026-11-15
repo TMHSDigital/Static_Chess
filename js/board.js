@@ -31,6 +31,11 @@ function createBoard() {
             square.dataset.col = col;
             square.setAttribute('role', 'gridcell');
             square.setAttribute('tabindex', '-1');
+            // Coordinate labels on the outer ranks and files; CSS shows the two
+            // lines nearest the player when "Show coordinates" is on
+            const name = coordsToAlgebraic(row, col);
+            if (row === 0 || row === 7) square.appendChild(coordinateLabel('coord-file', name[0]));
+            if (col === 0 || col === 7) square.appendChild(coordinateLabel('coord-rank', name[1]));
             rowElement.appendChild(square);
         }
         boardElement.appendChild(rowElement);
@@ -48,6 +53,20 @@ function createBoard() {
     boardElement.addEventListener('keydown', handleBoardKeydown);
     boardElement.removeEventListener('focusin', handleBoardFocus);
     boardElement.addEventListener('focusin', handleBoardFocus);
+}
+
+/**
+ * @param {string} kind - 'coord-file' or 'coord-rank'.
+ * @param {string} text - The file letter or rank number.
+ * @returns {HTMLElement} A label for the corner of a square. Screen readers get
+ *   the square's name from its aria-label, so the label is hidden from them.
+ */
+function coordinateLabel(kind, text) {
+    const label = document.createElement('span');
+    label.classList.add('coord', kind);
+    label.setAttribute('aria-hidden', 'true');
+    label.textContent = text;
+    return label;
 }
 
 /**

@@ -5,6 +5,43 @@ const squareNames = (g) =>
     g.utils.coordsToAlgebraic(Number(s.dataset.row), Number(s.dataset.col))
   );
 
+describe('coordinate labels', () => {
+  const labels = (g, kind) =>
+    Array.from(g.window.document.querySelectorAll(`#chess-board .${kind}`)).map((label) => {
+      const square = label.closest('.square');
+      return `${square.dataset.row},${square.dataset.col}:${label.textContent}`;
+    });
+
+  test('file letters are on the first and eighth ranks, rank numbers on the a- and h-files', () => {
+    const g = loadGame();
+    const files = 'abcdefgh'.split('');
+    expect(labels(g, 'coord-file').sort()).toEqual(
+      [...files.map((f, col) => `0,${col}:${f}`), ...files.map((f, col) => `7,${col}:${f}`)].sort()
+    );
+    const ranks = [8, 7, 6, 5, 4, 3, 2, 1];
+    expect(labels(g, 'coord-rank').sort()).toEqual(
+      [...ranks.map((n, row) => `${row},0:${n}`), ...ranks.map((n, row) => `${row},7:${n}`)].sort()
+    );
+    for (const label of g.window.document.querySelectorAll('#chess-board .coord')) {
+      expect(label.getAttribute('aria-hidden')).toBe('true');
+    }
+  });
+
+  test('stay in place through moves, highlights and a flipped board', () => {
+    const g = loadGame();
+    const count = () => g.window.document.querySelectorAll('#chess-board .coord').length;
+    expect(count()).toBe(32);
+    g.play('e2e4', 'e7e5', 'e1e2', 'a7a5'); // A piece leaves and reaches labelled squares
+    g.game.handleBoardClick(7, 6); // Select the g1 knight: move dots appear
+    g.board.setBoardFlipped(true);
+    g.board.setBoardFlipped(false);
+    expect(count()).toBe(32);
+    expect(labels(g, 'coord-file')).toContain('7,4:e');
+    expect(g.board.getSquareElement(7, 4).querySelector('.piece')).toBeNull();
+    expect(g.board.getSquareElement(6, 4).querySelector('.piece')).not.toBeNull();
+  });
+});
+
 describe('board rendering', () => {
   test('64 squares, a8 first and h1 last, with 32 pieces', () => {
     const g = loadGame();
