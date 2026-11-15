@@ -38,7 +38,7 @@ The release will be created automatically within minutes of pushing the tag.
 
 ## Offline copy
 
-The service worker (`sw.js`) saves the files listed in its `APP_FILES` so the game works without a connection. It always tries the network first, so a release needs no cache version bump. When a file is added, renamed or removed, update `APP_FILES`; `tests/unit/offline.test.js` fails if the list and the files disagree.
+The service worker (`sw.js`) saves the files listed in its `APP_FILES` so the game works without a connection. It tries the network first, but after 2.5 seconds a saved response wins if one is available. With no saved response it keeps waiting for the network. A release needs no cache version bump. When a file is added, renamed or removed, update `APP_FILES`; `tests/unit/offline.test.js` fails if the list and the files disagree.
 
 ## Versioning
 

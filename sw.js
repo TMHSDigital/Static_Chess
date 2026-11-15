@@ -1,9 +1,10 @@
 /**
  * @fileoverview Service worker: keeps a copy of the app so it opens and plays
  * without a connection. The network is always tried first, so a new release
- * shows up at once when online; the copy is only used when the network fails.
+ * shows up at once when online; a saved copy also handles stalled connections.
  */
 
+const NETWORK_TIMEOUT_MS = 2500;
 const CACHE_NAME = 'static-chess-v1'; // Change only to throw every saved copy away
 
 // Everything the app needs. tests/unit/offline.test.js checks this list
@@ -69,19 +70,34 @@ self.addEventListener('fetch', (event) => {
     const request = event.request;
     if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
 
+    const controller = new AbortController();
+    const saved = caches.match(request, { ignoreSearch: true }).catch(() => undefined);
+    let timer;
+    const cachedAfterDeadline = new Promise((resolve) => {
+        timer = setTimeout(() => {
+            saved
+                .then((response) => {
+                    if (response) {
+                        resolve(response);
+                        controller.abort();
+                    }
+                })
+                .catch(() => {});
+        }, NETWORK_TIMEOUT_MS);
+    });
+
     event.respondWith(
-        fetch(request)
-            .then((response) => {
+        Promise.race([
+            fetch(request, { signal: controller.signal }).then((response) => {
                 if (response.ok) {
                     const copy = response.clone();
                     caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
                 }
                 return response;
-            })
-            .catch(() =>
-                caches
-                    .match(request, { ignoreSearch: true })
-                    .then((saved) => saved || Response.error())
-            )
+            }),
+            cachedAfterDeadline,
+        ])
+            .catch(() => saved.then((response) => response || Response.error()))
+            .finally(() => clearTimeout(timer))
     );
 });
