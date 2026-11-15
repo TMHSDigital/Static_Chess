@@ -163,6 +163,14 @@ describe('promotion and notation', () => {
     g.play('a1a3');
     expect(g.game.moveHistory.at(-1).notation).toBe('Raa3');
   });
+
+  test('a pinned twin piece does not force disambiguation', () => {
+    const g = loadGame();
+    // The bishop on b4 pins the c3 knight, so only the g5 knight can reach e4
+    g.play('d2d4', 'e7e6', 'b1c3', 'f8b4', 'g1h3', 'd7d6', 'h3g5', 'h7h6', 'g5e4');
+    expect(g.movesFrom('c3')).not.toContain('e4');
+    expect(g.game.moveHistory.at(-1).notation).toBe('Ne4');
+  });
 });
 
 describe('clicking', () => {

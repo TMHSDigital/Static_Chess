@@ -42,6 +42,18 @@ describe('reading PGN', () => {
     expect(mate.game.gameResult).toBe('0-1');
   });
 
+  test('a game with a pinned twin piece survives the round trip', () => {
+    const first = loadGame();
+    first.play('d2d4', 'e7e6', 'b1c3', 'f8b4', 'g1h3', 'd7d6', 'h3g5', 'h7h6', 'g5e4');
+    const pgn = first.game.buildPGN();
+    expect(pgn).toContain('5. Ne4');
+
+    const g = loadGame();
+    expect(g.game.importPGN(pgn)).toEqual({ ok: true, moves: 9 });
+    expect(notations(g)).toEqual(notations(first));
+    expect(g.game.moveHistory.at(-1).notation).toBe('Ne4');
+  });
+
   test('a loaded game has no clock, whatever time control is selected', () => {
     jest.useFakeTimers(); // A clock would otherwise tick on after the test
     try {

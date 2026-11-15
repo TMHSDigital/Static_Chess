@@ -525,14 +525,19 @@ function playMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
     enPassantTarget = result.position.enPassantTarget;
     halfmoveClock = move.piece.type === PAWN || move.captured ? 0 : halfmoveClock + 1; // Fifty-move rule counter
     switchPlayer();
-    move.notation = generateNotationWithDisambiguation(move, before.boardState);
+    const opponentKingInCheck = findKingInCheck(currentPlayer);
+    const checkmate = opponentKingInCheck && isCheckmate(currentPlayer);
+    move.notation = generateNotationWithDisambiguation(
+        move,
+        before,
+        opponentKingInCheck ? (checkmate ? '#' : '+') : ''
+    );
     moveHistory.push(move);
 
     // --- Has the game ended? ---
-    const opponentKingInCheck = findKingInCheck(currentPlayer);
     if (opponentKingInCheck) {
         move.isCheck = true;
-        if (isCheckmate(currentPlayer)) {
+        if (checkmate) {
             move.isCheckmate = true;
             isGameOver = true;
             gameResult = currentPlayer === WHITE ? '0-1' : '1-0';
@@ -1883,7 +1888,7 @@ function handleImportKeydown(event) {
 /**
  * Generate SAN with basic disambiguation using pre-move board state
  */
-function generateNotationWithDisambiguation(move, boardBefore) {
+function generateNotationWithDisambiguation(move, positionBefore, checkSuffix = '') {
     const piece = move.piece;
     const toAlg = coordsToAlgebraic(move.to.row, move.to.col);
     if (move.isCastling) {
@@ -1892,32 +1897,26 @@ function generateNotationWithDisambiguation(move, boardBefore) {
 
     let disambiguation = '';
     if (piece.type !== PAWN) {
-        const rivals = []; // Other pieces of the same type that could also reach the square
-        // Check for same-type pieces that could also move to the destination
-        for (let r = 0; r < 8; r++) {
-            for (let c = 0; c < 8; c++) {
-                if (r === move.from.row && c === move.from.col) continue;
-                const other = boardBefore[r][c];
-                if (other && other.type === piece.type && other.color === piece.color) {
-                    const targetSquare = boardBefore[move.to.row][move.to.col];
-                    const isCapture = !!targetSquare && targetSquare.color !== piece.color;
-                    if (isPseudoLegalMove(other, r, c, move.to.row, move.to.col, isCapture)) {
-                        if ([ROOK, BISHOP, QUEEN].includes(other.type)) {
-                            // Respect obstructions on pre-move board
-                            if (isPathObstructed(r, c, move.to.row, move.to.col, boardBefore))
-                                continue;
-                        }
-                        rivals.push({ row: r, col: c });
-                    }
-                }
-            }
-        }
+        const boardBefore = positionBefore.boardState;
+        // Other pieces of the same type whose legal moves also reach the square
+        const position = {
+            board: boardBefore,
+            kingPositions: positionBefore.kingPositions,
+            enPassantTarget: positionBefore.enPassantTarget,
+        };
+        const rivals = allLegalMoves(position, piece.color).filter(
+            ({ from, to }) =>
+                !(from.row === move.from.row && from.col === move.from.col) &&
+                to.row === move.to.row &&
+                to.col === move.to.col &&
+                boardBefore[from.row][from.col].type === piece.type
+        );
         // SAN rule: the file if it is enough to tell the pieces apart, else the
         // rank, else both.
         if (rivals.length > 0) {
             const from = coordsToAlgebraic(move.from.row, move.from.col);
-            if (!rivals.some((o) => o.col === move.from.col)) disambiguation = from[0];
-            else if (!rivals.some((o) => o.row === move.from.row)) disambiguation = from[1];
+            if (!rivals.some((o) => o.from.col === move.from.col)) disambiguation = from[0];
+            else if (!rivals.some((o) => o.from.row === move.from.row)) disambiguation = from[1];
             else disambiguation = from;
         }
     }
@@ -1934,9 +1933,7 @@ function generateNotationWithDisambiguation(move, boardBefore) {
     }
     notation += toAlg;
     if (move.promotion) notation += '=' + move.promotion.toUpperCase();
-    const nextPlayer = currentPlayer;
-    if (isCheckmate(nextPlayer)) notation += '#';
-    else if (isKingInCheck(nextPlayer, boardState)) notation += '+';
+    notation += checkSuffix;
     if (move.isEnPassant) notation += ' e.p.';
     return notation;
 }
