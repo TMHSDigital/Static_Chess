@@ -3,15 +3,15 @@
  * the page updates that follow. The rules of chess themselves are in rules.js.
  */
 
-let boardState = getInitialPieces();
+// How a game begins unless it is started from another position: White to move, move 1
+const STANDARD_START = { player: WHITE, halfmoveClock: 0, fullmove: 1, fen: null };
+let gameStart = STANDARD_START; // How this game began; fen is its first position unless that is the usual one
+
+let boardState = initialPosition().board;
 let currentPlayer = WHITE;
 let moveHistory = []; // Array of move objects { from: {row, col}, to: {row, col}, piece: Piece, captured: Piece|null }
 let isGameOver = false;
-let kingPositions = {
-    // Keep track of king positions for check detection
-    [WHITE]: { row: 7, col: 4 },
-    [BLACK]: { row: 0, col: 4 },
-};
+let kingPositions = initialPosition().kingPositions; // Kept for check detection
 let currentStatus = "White's turn";
 let enPassantTarget = null; // Stores coords {row, col} of square vulnerable to en passant, or null
 let positionHistory = []; // Undo stack: one pre-move snapshot per move played
@@ -207,22 +207,26 @@ function handleBoardClickEvent(event) {
 }
 
 /**
- * Puts the game back to the starting position without drawing it or asking
- * the computer for a move.
+ * Starts a game from a position, by default the usual one, without drawing it
+ * or asking the computer for a move.
+ * @param {object} [position] - A rules.js position.
+ * @param {string} [player] - The side to move.
+ * @param {number} [startClock] - Half-moves since the last pawn move or capture.
+ * @param {number} [fullmove] - Number of the move about to be played.
  */
-function clearGame() {
+function startGameFrom(position = initialPosition(), player = WHITE, startClock = 0, fullmove = 1) {
     cancelAIMove();
+    const fen = positionToFEN(position, player, startClock, fullmove);
+    const usual = fen === positionToFEN(initialPosition(), WHITE, 0, 1);
+    gameStart = { player, halfmoveClock: startClock, fullmove, fen: usual ? null : fen };
     restoreSnapshot({
-        boardState: getInitialPieces(),
-        currentPlayer: WHITE,
+        boardState: position.board,
+        currentPlayer: player,
         isGameOver: false,
-        kingPositions: {
-            [WHITE]: { row: 7, col: 4 },
-            [BLACK]: { row: 0, col: 4 },
-        },
-        currentStatus: "White's turn",
-        enPassantTarget: null,
-        halfmoveClock: 0,
+        kingPositions: position.kingPositions,
+        currentStatus: `${player === WHITE ? 'White' : 'Black'}'s turn`,
+        enPassantTarget: position.enPassantTarget,
+        halfmoveClock: startClock,
     });
     moveHistory = [];
     positionHistory = [];
@@ -244,7 +248,7 @@ function clearGame() {
  */
 function resetGame() {
     debugLog('Resetting game...');
-    clearGame();
+    startGameFrom();
     // Re-render board and pieces
     renderPieces(boardState);
     updateStatusDisplay();
@@ -369,10 +373,27 @@ function returnToLiveGame() {
     viewMove(moveHistory.length);
 }
 
+/**
+ * The number a move carries in the move list, in PGN and in FEN. Everything
+ * that numbers moves asks here, so a game need not begin with White's move 1.
+ * @param {number} index - How many moves were played before it.
+ * @param {object} [start] - How the game began; this game by default.
+ * @returns {{number: number, white: boolean}} The move number and whose move it is.
+ */
+function moveNumberAt(index, start = gameStart) {
+    const halfMoves = index + (start.player === BLACK ? 1 : 0);
+    return { number: start.fullmove + Math.floor(halfMoves / 2), white: halfMoves % 2 === 0 };
+}
+
+/** @returns {string} A move number as written before the move: "12." for White, "12..." for Black. */
+function moveNumberText(index, start = gameStart) {
+    const { number, white } = moveNumberAt(index, start);
+    return `${number}${white ? '.' : '...'}`;
+}
+
 /** @returns {string} A move with its number, such as "12. Nf3" or "12... Nf6". */
 function moveLabel(ply) {
-    const dots = ply % 2 === 1 ? '.' : '...';
-    return `${Math.ceil(ply / 2)}${dots} ${moveHistory[ply - 1].notation}`;
+    return `${moveNumberText(ply - 1)} ${moveHistory[ply - 1].notation}`;
 }
 
 /** Redraws everything that depends on the position on screen. */
@@ -1151,6 +1172,7 @@ function saveGameState() {
     const gameState = {
         version: SAVED_GAME_VERSION,
         ...currentSnapshot(),
+        gameStart: gameStart,
         moveHistory: moveHistory,
         gameResult: gameResult,
         endedWithoutMove: endedWithoutMove,
@@ -1311,8 +1333,25 @@ function validateSavedGame(saved) {
         };
     }
 
+    // How the game began is optional: saves from older versions began in the usual way
+    const begun = saved.gameStart;
+    const start =
+        begun &&
+        typeof begun === 'object' &&
+        (begun.player === WHITE || begun.player === BLACK) &&
+        Number.isInteger(begun.fullmove) &&
+        begun.fullmove >= 1
+            ? {
+                  player: begun.player,
+                  halfmoveClock: cleanClock(begun.halfmoveClock),
+                  fullmove: begun.fullmove,
+                  fen: typeof begun.fen === 'string' ? begun.fen : null,
+              }
+            : STANDARD_START;
+
     return {
         ...position,
+        gameStart: start,
         clock: savedClock,
         gameResult: result,
         endedWithoutMove: over && saved.endedWithoutMove === true,
@@ -1341,6 +1380,7 @@ function loadGameState() {
     }
 
     restoreSnapshot(state);
+    gameStart = state.gameStart;
     moveHistory = state.moveHistory;
     positionHistory = state.positionHistory;
     gameResult = state.gameResult;
@@ -1363,13 +1403,21 @@ function updateMoveHistoryDisplay() {
 
     moveHistory.forEach((move, index) => {
         const ply = index + 1;
-        if (index % 2 === 0) {
+        const { number, white } = moveNumberAt(index);
+        if (white || index === 0) {
             // White's move starts a new row
             listItem = document.createElement('li');
             const turnSpan = document.createElement('span');
             turnSpan.classList.add('turn-number');
-            turnSpan.textContent = `${index / 2 + 1}.`;
+            turnSpan.textContent = `${number}.`;
             listItem.appendChild(turnSpan);
+            if (!white) {
+                // The game began with Black to move: White's place in the first row stays empty
+                const gap = document.createElement('span');
+                gap.classList.add('move', 'white-move');
+                gap.textContent = '...';
+                listItem.appendChild(gap);
+            }
             moveHistoryElement.appendChild(listItem);
         }
 
@@ -1377,7 +1425,7 @@ function updateMoveHistoryDisplay() {
         // in the tab order; the arrow keys step between them.
         const entry = document.createElement('button');
         entry.type = 'button';
-        entry.classList.add('move', index % 2 === 0 ? 'white-move' : 'black-move');
+        entry.classList.add('move', white ? 'white-move' : 'black-move');
         entry.textContent = move.notation;
         entry.dataset.ply = ply;
         entry.tabIndex = -1;
@@ -1592,11 +1640,20 @@ function buildPGN() {
         ['Black', computerColor() === BLACK ? `Computer (${opponentLevel})` : 'Black'],
         ['Result', result],
         ...(clock ? [['TimeControl', `${clock.base / 1000}+${clock.increment / 1000}`]] : []),
+        // A game that did not begin from the usual position says where it began
+        ...(gameStart.fen
+            ? [
+                  ['SetUp', '1'],
+                  ['FEN', gameStart.fen],
+              ]
+            : []),
     ].map(([name, value]) => `[${name} "${value}"]`);
 
     const moves = moveHistory.map((move, index) => {
         const san = move.notation.replace(' e.p.', ''); // Not valid in PGN
-        return index % 2 === 0 ? `${index / 2 + 1}. ${san}` : san;
+        // White's moves carry their number, and so does a first move by Black
+        const numbered = moveNumberAt(index).white || index === 0;
+        return numbered ? `${moveNumberText(index)} ${san}` : san;
     });
 
     // A resignation or agreed draw is not visible in the moves, so say it in a comment
@@ -1624,7 +1681,7 @@ function copyFEN() {
 /** @returns {string} The position on screen in Forsyth-Edwards Notation. */
 function buildFEN() {
     const shown = shownPosition();
-    return positionToFEN(shown, shown.player, shown.halfmoveClock, Math.floor(shown.ply / 2) + 1);
+    return positionToFEN(shown, shown.player, shown.halfmoveClock, moveNumberAt(shown.ply).number);
 }
 
 /**
@@ -1735,17 +1792,13 @@ function importPGN(text, validateOnly = false) {
     const tokens = pgnMoveTokens(text);
     if (tokens.length === 0) return { ok: false, error: 'No moves found in the text.' };
 
-    let position = {
-        board: getInitialPieces(),
-        kingPositions: { [WHITE]: { row: 7, col: 4 }, [BLACK]: { row: 0, col: 4 } },
-        enPassantTarget: null,
-    };
+    let position = initialPosition();
     let color = WHITE;
     const moves = [];
     for (const [index, token] of tokens.entries()) {
         const move = findSANMove(position, color, token);
         if (!move) {
-            const number = `${Math.floor(index / 2) + 1}${index % 2 === 0 ? '.' : '...'}`;
+            const number = moveNumberText(index, STANDARD_START); // PGN is read from the usual start
             return { ok: false, error: `Move ${number} ${token} cannot be played.` };
         }
         moves.push(move);
@@ -1756,7 +1809,7 @@ function importPGN(text, validateOnly = false) {
     if (validateOnly) return { ok: true, moves: moves.length };
 
     // The moves go in without sounds, saving or computer replies; the page is drawn once at the end
-    clearGame();
+    startGameFrom();
     clock = null; // A loaded game is not played on the clock: its moves took no time here
     runClockTimer();
     for (const move of moves) {
@@ -1933,6 +1986,10 @@ if (typeof module !== 'undefined' && module.exports) {
         resign,
         handleResignClick,
         handleDrawClick,
+        get gameStart() {
+            return gameStart;
+        },
+        startGameFrom,
         get gameResult() {
             return gameResult;
         },

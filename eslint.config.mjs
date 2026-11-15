@@ -44,6 +44,7 @@ const appGlobals = {
     'canCastleIn',
     'legalMovesFrom',
     'allLegalMoves',
+    'initialPosition',
     'allLegalCaptures',
     'positionKey',
     'hasInsufficientMaterial',

@@ -58,6 +58,7 @@ Static_Chess/
 2. **game.js**: The live game
    - Holds the game state (board, side to move, history, undo stack)
    - `makeMove()` plays a move in the live game. The change to the game itself is `playMove()`: it applies the move through `rules.js`, records it and detects checkmate and stalemate, and it refuses a finished game. `makeMove()` adds what only a move made on the page needs: the clock, automatic draws, `showMoveResult()` for the page updates, saving and the computer's reply. Load PGN plays its moves in through `playMove()` alone
+   - `startGameFrom()` begins a game from a position, by default `initialPosition()` from `rules.js` with White to move. How the game began is kept in `gameStart` and saved with it, and `moveNumberAt()` is the one place that works out move numbers from it for the move list, PGN and FEN
    - `currentSnapshot()` and `restoreSnapshot()` are the one place that lists the fields of a position; the undo stack, saving, loading and a new game go through them
    - Delegates rendering to board.js
 

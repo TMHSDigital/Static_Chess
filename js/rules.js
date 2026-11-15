@@ -17,6 +17,15 @@ function opponentOf(color) {
     return color === WHITE ? BLACK : WHITE;
 }
 
+/** @returns {object} The position every game of chess starts from. */
+function initialPosition() {
+    return {
+        board: getInitialPieces(),
+        kingPositions: { [WHITE]: { row: 7, col: 4 }, [BLACK]: { row: 0, col: 4 } },
+        enPassantTarget: null,
+    };
+}
+
 /**
  * Checks if a path between two squares is obstructed for sliding pieces.
  * Assumes the move is purely horizontal, vertical, or diagonal.
@@ -500,6 +509,7 @@ if (typeof module !== 'undefined' && module.exports) {
         positionToFEN,
         PROMOTION_TYPES,
         opponentOf,
+        initialPosition,
         isPathObstructed,
         isSquareAttacked,
         isInCheck,

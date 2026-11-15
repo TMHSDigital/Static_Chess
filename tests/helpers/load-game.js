@@ -102,26 +102,21 @@ function loadGame(options = {}) {
   /**
    * Replaces the position. placement maps squares to two-letter codes, colour then
    * piece type, with an optional trailing "*" for a piece that has already moved:
-   * setPosition({ e1: 'wk', a1: 'wr', e8: 'bk*' }).
+   * setPosition({ e1: 'wk', a1: 'wr', e8: 'bk*' }). turn is the side to move.
    */
   function setPosition(placement, turn = pieces.WHITE) {
-    if (game.currentPlayer !== pieces.WHITE || game.moveHistory.length > 0) {
-      throw new Error('setPosition must be called on a fresh game');
-    }
-    const b = game.boardState;
-    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) b[r][c] = null;
+    const board = Array.from({ length: 8 }, () => Array(8).fill(null));
+    const kingPositions = rules.initialPosition().kingPositions;
     for (const [square, code] of Object.entries(placement)) {
       const { row, col } = utils.algebraicToCoords(square);
       const piece = new pieces.Piece(code[1], code[0]);
       piece.hasMoved = code.endsWith('*');
-      b[row][col] = piece;
+      board[row][col] = piece;
       if (piece.type === pieces.KING) {
-        game.kingPositions[piece.color] = { row, col };
+        kingPositions[piece.color] = { row, col };
       }
     }
-    if (turn !== pieces.WHITE) {
-      throw new Error('setPosition only supports White to move');
-    }
+    game.startGameFrom({ board, kingPositions, enPassantTarget: null }, turn);
   }
 
   const at = (square) => {

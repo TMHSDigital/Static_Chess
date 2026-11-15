@@ -391,3 +391,105 @@ function boardWith(g, placement) {
 function kings(g, white, black) {
   return { w: g.utils.algebraicToCoords(white), b: g.utils.algebraicToCoords(black) };
 }
+
+describe('move numbers', () => {
+  const movetext = (g) => g.game.buildPGN().trim().split('\n').pop();
+  const rows = (g) =>
+    Array.from(g.window.document.querySelectorAll('#move-history li')).map((row) =>
+      Array.from(row.children)
+        .map((child) => child.textContent)
+        .join(' ')
+    );
+
+  test('FEN and PGN after 0, 1 and 2 moves, and while looking back', () => {
+    const g = loadGame();
+    expect(g.game.buildFEN()).toBe(START_FEN);
+    expect(movetext(g)).toBe('*');
+
+    g.play('e2e4');
+    const afterOne = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1';
+    expect(g.game.buildFEN()).toBe(afterOne);
+    expect(movetext(g)).toBe('1. e4 *');
+    expect(rows(g)).toEqual(['1. e4']);
+
+    g.play('g8f6');
+    const afterTwo = 'rnbqkb1r/pppppppp/5n2/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 1 2';
+    expect(g.game.buildFEN()).toBe(afterTwo);
+    expect(movetext(g)).toBe('1. e4 Nf6 *');
+    expect(rows(g)).toEqual(['1. e4 Nf6']);
+
+    g.game.viewMove(0);
+    expect(g.game.buildFEN()).toBe(START_FEN);
+    g.game.viewMove(1);
+    expect(g.game.buildFEN()).toBe(afterOne);
+    expect(el(g, 'game-status').textContent).toBe('Viewing 1. e4');
+    expect(movetext(g)).toBe('1. e4 Nf6 *'); // The export is the whole game, whatever is on screen
+    g.game.viewMove(2);
+    expect(g.game.buildFEN()).toBe(afterTwo);
+
+    g.play('e4e5');
+    g.game.viewMove(2);
+    expect(el(g, 'game-status').textContent).toBe('Viewing 1... Nf6');
+    expect(rows(g)).toEqual(['1. e4 Nf6', '2. e5']);
+    expect(g.game.buildPGN()).not.toContain('[FEN');
+    expect(g.game.importPGN('1. e4 e5 2. Ke3', true).error).toBe('Move 2. Ke3 cannot be played.');
+    expect(g.game.importPGN('1. e4 Ke7', true).error).toBe('Move 1... Ke7 cannot be played.');
+  });
+
+  test('a game that starts with Black to move is numbered from its first move', () => {
+    const g = loadGame();
+    g.setPosition({ e1: 'wk*', e8: 'bk*', a7: 'bp', h2: 'wp' }, 'b');
+    expect(g.game.currentPlayer).toBe('b');
+    expect(g.game.currentStatus).toBe("Black's turn");
+    expect(g.game.buildFEN()).toBe('4k3/p7/8/8/8/8/7P/4K3 b - - 0 1');
+
+    g.play('a7a5', 'h2h4', 'a5a4');
+    expect(g.game.buildFEN()).toBe('4k3/8/8/8/p6P/8/8/4K3 w - - 0 3');
+    expect(rows(g)).toEqual(['1. ... a5', '2. h4 a4']);
+    expect(movetext(g)).toBe('1... a5 2. h4 a4 *');
+    expect(g.game.buildPGN()).toContain('[SetUp "1"]\n[FEN "4k3/p7/8/8/8/8/7P/4K3 b - - 0 1"]');
+    g.game.viewMove(1);
+    expect(el(g, 'game-status').textContent).toBe('Viewing 1... a5');
+    g.game.viewMove(2);
+    expect(el(g, 'game-status').textContent).toBe('Viewing 2. h4');
+  });
+
+  test('the half-move clock and move number of the start carry through', () => {
+    const g = loadGame();
+    const position = g.rules.initialPosition();
+    g.game.startGameFrom(position, 'w', 12, 30);
+    expect(g.game.buildFEN()).toBe('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 12 30');
+    g.play('g1f3');
+    expect(g.game.buildFEN().split(' ').slice(4)).toEqual(['13', '30']);
+    expect(movetext(g)).toBe('30. Nf3 *');
+    g.play('g8f6');
+    expect(g.game.buildFEN().split(' ').slice(4)).toEqual(['14', '31']);
+  });
+
+  test('how the game began is saved with it', () => {
+    const first = loadGame();
+    first.setPosition({ e1: 'wk*', e8: 'bk*', a7: 'bp', h2: 'wp' }, 'b');
+    first.play('a7a5', 'h2h4');
+    const key = 'chessGameState';
+    const saved = first.window.localStorage.getItem(key);
+
+    const second = loadGame({ storage: { [key]: saved } });
+    expect(rows(second)).toEqual(['1. ... a5', '2. h4']);
+    expect(second.game.buildPGN()).toBe(first.game.buildPGN());
+
+    // A save from before this was stored began in the usual way
+    const older = JSON.parse(saved);
+    delete older.gameStart;
+    const third = loadGame({ storage: { [key]: JSON.stringify(older) } });
+    expect(third.game.gameStart).toEqual({ player: 'w', halfmoveClock: 0, fullmove: 1, fen: null });
+  });
+
+  test('a new game goes back to the usual start', () => {
+    const g = loadGame();
+    g.setPosition({ e1: 'wk*', e8: 'bk*', a7: 'bp' }, 'b');
+    g.game.resetGame();
+    expect(g.game.buildFEN()).toBe(START_FEN);
+    g.play('e2e4');
+    expect(movetext(g)).toBe('1. e4 *');
+  });
+});
