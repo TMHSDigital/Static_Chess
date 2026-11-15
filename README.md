@@ -128,6 +128,12 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 The game features an elegant, professional-looking interface with a dark theme and subtle visual cues:
 
 <p align="center">
+  <img src="assets/screenshots/play-vs-computer.gif" alt="Playing the computer: choosing Computer: medium and White, starting a new game, playing e4, Nc3, Nf3 and Bc4 while the computer replies, asking for a hint, stepping through the moves with the engine's verdict shown, then going back to the game" width="92%">
+</p>
+
+<p align="center"><em>Playing the computer: four opening moves, a hint, then a look back through the game</em></p>
+
+<p align="center">
   <img src="assets/screenshots/game-in-progress.png" alt="A game in progress on the clock against the computer: the board with each player's bar, the game buttons, the move list, and the new-game settings" width="45%" style="margin-right: 2%;" valign="top">
   <img src="assets/screenshots/settings-open.png" alt="Looking back at an earlier move in the light theme with the green board, with Settings open" width="45%" valign="top">
 </p>
@@ -236,6 +242,7 @@ Static_Chess/
 │   ├── social-card.png  # Image shown when a link to the game is shared
 │   ├── screenshots/     # UI screenshots for documentation
 │   │   ├── game-in-progress.png
+│   │   ├── play-vs-computer.gif
 │   │   └── settings-open.png
 │   └── [piece SVGs]     # SVG files for chess pieces
 │       ├── wp.svg, bp.svg   # White and black pawns
