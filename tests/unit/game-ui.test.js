@@ -161,6 +161,50 @@ describe('game-ui.js without a game', () => {
     expect(calls).toEqual(['review', 'reset']);
   });
 
+  test('hands page-wide keys to the game, except on the board, in fields and in dialogs', () => {
+    const keys = [];
+    ui.bindControls({
+      pageKey: (key) => {
+        keys.push(key);
+        return key !== 'x'; // The game has no use for "x"
+      },
+    });
+    const press = (target, key, init = {}) => {
+      const event = new page.KeyboardEvent('keydown', {
+        key,
+        bubbles: true,
+        cancelable: true,
+        ...init,
+      });
+      target.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    const add = (html) => {
+      page.document.body.insertAdjacentHTML('beforeend', html);
+      return page.document.body.lastElementChild;
+    };
+
+    expect(press(page.document.body, 'ArrowLeft')).toBe(true); // Used, so the page does not scroll
+    expect(press(el('hint-button'), 'ArrowRight')).toBe(true);
+    expect(press(page.document.body, 'x')).toBe(false); // Offered, not used
+    expect(keys).toEqual(['ArrowLeft', 'ArrowRight', 'x']);
+
+    keys.length = 0;
+    const board = add('<div id="chess-board"><div class="square" tabindex="0"></div></div>');
+    const field = add('<select><option>a</option></select>');
+    const dialog = add('<div role="dialog"><button>Queen</button></div>');
+    press(board.firstElementChild, 'ArrowLeft'); // Moves between squares
+    press(field, 'ArrowRight'); // Changes the setting
+    press(dialog.firstElementChild, 'Escape'); // Closes the dialog
+    press(page.document.body, 'ArrowLeft', { ctrlKey: true }); // A browser shortcut
+    expect(keys).toEqual([]);
+
+    // A key the move list has already used is not used twice
+    el('move-history').addEventListener('keydown', (event) => event.preventDefault());
+    press(el('move-history'), 'ArrowLeft');
+    expect(keys).toEqual([]);
+  });
+
   test('names the players, marks the side to move and shows who is thinking', () => {
     const name = (id) => el(id).querySelector('.side-name').textContent;
     const thinking = (id) => !el(id).querySelector('.thinking').hidden;

@@ -52,6 +52,33 @@ const archiveList = document.getElementById('archive-list');
 
 // --- Connecting the controls ---
 
+let pageKeyHandler = null; // What the game does with a key pressed outside the board and the form fields
+
+/**
+ * Keys that work anywhere on the page. The board, form fields and dialogs
+ * keep their own keys: there the arrows move between squares, change a
+ * setting or choose a piece. A key another handler has used is left alone.
+ */
+function handlePageKeydown(event) {
+    if (!pageKeyHandler || event.defaultPrevented) return;
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const target = event.target;
+    const own = '#chess-board, input, select, textarea, [role="dialog"], .promotion-backdrop';
+    if (target && target.closest && target.closest(own)) return;
+    if (pageKeyHandler(event.key)) event.preventDefault();
+}
+
+/**
+ * A square pressed with a mouse or a finger does not keep the keyboard focus.
+ * Otherwise the arrow keys would go on walking the board for someone who
+ * never meant to use them there, instead of stepping through the game. A
+ * square reached with the keyboard keeps its focus: no pointer is released.
+ */
+function releaseBoardFocus() {
+    const active = document.activeElement;
+    if (active && active.classList && active.classList.contains('square')) active.blur();
+}
+
 /** Calls a handler for an event on an element, once, however often this is asked for. */
 function listen(element, type, handler) {
     if (!element) return;
@@ -65,9 +92,13 @@ function listen(element, type, handler) {
  * @param {object} handlers - What the game does on a click in the move list
  *   (moveListClick) or a key there (moveListKeydown), and on the buttons: live,
  *   playHere, step, resign, draw, hint, reset, review, copyPGN, downloadPGN,
- *   copyFEN and undo. undoOffered: false hides the Undo button.
+ *   copyFEN and undo. undoOffered: false hides the Undo button. pageKey: given
+ *   a key pressed elsewhere on the page, returns true if it used it.
  */
 function bindControls(handlers) {
+    pageKeyHandler = handlers.pageKey || null;
+    listen(document, 'keydown', handlePageKeydown);
+    listen(document, 'pointerup', releaseBoardFocus);
     listen(moveHistoryElement, 'click', handlers.moveListClick);
     listen(moveHistoryElement, 'keydown', handlers.moveListKeydown);
     listen(liveButton, 'click', handlers.live);

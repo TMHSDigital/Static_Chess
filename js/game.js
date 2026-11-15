@@ -99,6 +99,7 @@ function initializeGame() {
         hint: requestHint,
         reset: handleResetClick,
         review: reviewFromStart,
+        pageKey: handlePageKey,
         copyPGN,
         downloadPGN,
         copyFEN,
@@ -486,6 +487,31 @@ function handleMoveListKeydown(event) {
     event.preventDefault();
     viewMove(targets[event.key]);
     focusCurrentMove();
+}
+
+/**
+ * Keys that work anywhere on the page: Left and Right step through the game,
+ * Escape returns to it. game-ui.js leaves out the board, form fields and
+ * dialogs, which have keys of their own.
+ * @param {string} key - The key's name, as a keyboard event gives it.
+ * @returns {boolean} True if the key did something.
+ */
+function handlePageKey(key) {
+    if (positionHistory.length !== moveHistory.length) return false; // Nothing to look at
+    const shown = shownPosition().ply;
+    if (key === 'ArrowLeft' && shown > 0) {
+        viewMove(shown - 1);
+        return true;
+    }
+    if (key === 'ArrowRight' && shown < moveHistory.length) {
+        viewMove(shown + 1);
+        return true;
+    }
+    if (key === 'Escape' && viewPly !== null) {
+        returnToLiveGame();
+        return true;
+    }
+    return false;
 }
 
 /** The buttons under the move list step to the first, previous, next or last position. */
@@ -1513,6 +1539,7 @@ if (typeof module !== 'undefined' && module.exports) {
         viewMove,
         returnToLiveGame,
         reviewFromStart,
+        handlePageKey,
         requestHint,
         importPGN,
         importFEN,

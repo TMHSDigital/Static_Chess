@@ -863,6 +863,14 @@ body.coords-visible {
     margin-top: var(--space-1);
 }
 
+/* Which keys do what, at the end of the settings */
+.keys-note {
+    margin: var(--space-2) 0 0;
+    font-size: var(--text-sm);
+    line-height: 1.4;
+    color: var(--muted-text);
+}
+
 .more-settings summary:hover {
     background-color: var(--hover-bg);
 }

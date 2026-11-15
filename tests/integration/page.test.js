@@ -198,6 +198,51 @@ describe('the real page', () => {
     expect(byId('result-actions').hidden).toBe(true);
   });
 
+  test('Left and Right step through the game from anywhere but the board; Esc returns', () => {
+    const { window, byId } = openPage();
+    const square = (name) =>
+      window.document.querySelector(
+        `#chess-board .square[data-row="${8 - Number(name[1])}"][data-col="${name.charCodeAt(0) - 97}"]`
+      );
+    const press = (target, key) =>
+      target.dispatchEvent(
+        new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+      );
+    const status = () => byId('game-status').textContent;
+    for (const move of ['e2e4', 'e7e5', 'g1f3']) {
+      square(move.slice(0, 2)).click();
+      square(move.slice(2)).click();
+    }
+
+    press(window.document.body, 'ArrowLeft');
+    expect(status()).toBe('Viewing 1... e5');
+    press(byId('hint-button'), 'ArrowLeft');
+    expect(status()).toBe('Viewing 1. e4');
+    press(window.document.body, 'ArrowRight');
+    expect(status()).toBe('Viewing 1... e5');
+
+    square('e4').focus();
+    press(square('e4'), 'ArrowLeft'); // On the board: to the next square, not the next move
+    expect(status()).toBe('Viewing 1... e5');
+    expect(window.document.activeElement).toBe(square('d4'));
+
+    byId('move-history').querySelector('button[data-ply="2"]').focus();
+    press(window.document.activeElement, 'ArrowLeft'); // In the move list: one step, not two
+    expect(status()).toBe('Viewing 1. e4');
+
+    // A square pressed with the mouse gives the focus up, so the arrows step again
+    square('e4').focus();
+    square('e4').dispatchEvent(new window.Event('pointerup', { bubbles: true }));
+    expect(window.document.activeElement).toBe(window.document.body);
+    press(window.document.body, 'ArrowRight');
+    expect(status()).toBe('Viewing 1... e5');
+
+    press(window.document.body, 'Escape');
+    expect(status()).toBe("Black's turn");
+    press(window.document.body, 'ArrowRight'); // Already at the latest move
+    expect(status()).toBe("Black's turn");
+  });
+
   test('a move made with two clicks shows in the status and the move list', () => {
     const { window, byId } = openPage();
     const square = (row, col) =>
