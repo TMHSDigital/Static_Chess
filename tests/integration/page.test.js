@@ -138,6 +138,16 @@ describe('the real page', () => {
     expect(noComputer.byId('clock-setting').hidden).toBe(false);
   });
 
+  test('links to the source repository and the issue tracker', () => {
+    const page = new JSDOM(INDEX).window;
+    const links = Array.from(page.document.querySelectorAll('.game-info .about a'));
+    expect(links.map((link) => [link.textContent.trim(), link.getAttribute('href')])).toEqual([
+      ['Source on GitHub', 'https://github.com/TMHSDigital/Static_Chess'],
+      ['Report a problem', 'https://github.com/TMHSDigital/Static_Chess/issues'],
+    ]);
+    page.close();
+  });
+
   test('a move made with two clicks shows in the status and the move list', () => {
     const { window, byId } = openPage();
     const square = (row, col) =>
