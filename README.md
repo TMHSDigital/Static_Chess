@@ -56,7 +56,7 @@
 
 ## Overview
 
-Static Chess is a fully functional chess game playable in a web browser. It is built using pure vanilla JavaScript, HTML, and CSS, with no external frameworks or libraries. The game features standard chess rules, move validation, check/checkmate detection, move history in SAN with basic disambiguation, undo, accessibility improvements, and game state persistence using `localStorage`.
+Static Chess is a fully functional chess game playable in a web browser. It is built using pure vanilla JavaScript, HTML, and CSS, with no external frameworks or libraries. The game features standard chess rules, move validation, check/checkmate detection, move history in standard algebraic notation, a computer opponent, a chess clock, game review, PGN and FEN import and export, undo, accessibility support, offline play, and game state persistence using `localStorage`.
 
 It is designed to be simple, lightweight, and easily deployable on static hosting platforms like GitHub Pages.
 
@@ -81,14 +81,23 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
   - Shows possible legal moves for the selected piece
   - Highlights the king when in check
   - Highlights the last move made
-- **Move History:** Displays moves in standard algebraic notation (SAN) with basic disambiguation
+- **Move History:** Displays moves in standard algebraic notation (SAN), with a file or rank added only where two pieces could make the move
 - **Drag and Drop:** Move pieces by dragging them to valid squares (works alongside click-based movement)
 - **Undo Move:** Revert the last move with one click
+- **Chess Clock:** Five time controls, with a warning at 20 and 10 seconds; the computer budgets its time against it
+- **Game Review:** Step back through the game from the move list or with the step buttons, see what the engine makes of each position, and go on playing from any of them with "Play from here"
+- **Resign and Draw Offer:** End a game by resignation or by agreement; the result is saved and exported
+- **Hint:** Shows the move the engine would play, without playing it
+- **PGN and FEN:** Copy or save the game as PGN, copy the position as FEN, and load a game or a position from pasted text or a file
+- **Past Games:** The last 20 games are kept and can be opened again
+- **Captured Pieces:** Each player's bar shows what they have taken and the material lead
+- **Themes:** Four board colour schemes and a dark or light page
+- **Offline and Installable:** Works without a connection after the first visit and can be installed as an app
 - **Game Persistence:** Automatically saves game state to `localStorage`
 - **Responsive Design:** Adapts layout for both desktop and mobile devices
 - **Coordinate Toggle:** Option to display board coordinates
 - **Professional UI:** Clean, minimalist design with subtle animations and visual cues
-- **Customizable Settings:** Toggle visibility of coordinates, move indicators, last-move highlight, and sound effects
+- **Customizable Settings:** Clock, board theme, page theme, and toggles for coordinates, possible moves, the last-move highlight, sound effects and a flipped board
 
 </details>
 
@@ -139,12 +148,15 @@ The game features an elegant, professional-looking interface with a dark theme a
 
 Optional (for contributors):
 
-- Install dev tooling for linting/testing:
+- Node is only needed for the dev tooling: 22.22.2 or newer on the 22 line, or 24.15 or newer
+- Install it and run the checks CI runs:
   ```bash
-  npm install
-  npm test
+  npm ci
   npm run lint
+  npm run format
+  npm run coverage
   ```
+- See [CONTRIBUTING](.github/CONTRIBUTING.md) for the details, including what to update when a file is added
 
 That's it! No build process or dependencies are required.
 
@@ -190,6 +202,10 @@ That's it! No build process or dependencies are required.
 ```
 Static_Chess/
 ├── index.html           # Main HTML entry point
+├── 404.html             # Shown by GitHub Pages for an unknown address
+├── sw.js                # Service worker: keeps a copy of the app for offline use
+├── manifest.webmanifest # Makes the page installable as an app
+├── _config.yml          # Keeps docs, tests and tooling out of the published site
 ├── css/                 # CSS styles
 │   ├── style.css        # General page styles
 │   ├── board.css        # Chessboard specific styles
@@ -207,6 +223,8 @@ Static_Chess/
 │   ├── ai-worker.js     # Runs the search in a Web Worker
 │   └── promotion.js     # Pawn promotion chooser
 ├── assets/              # Static assets
+│   ├── icons/           # App icon (SVG, and PNG at 192px and 512px)
+│   ├── social-card.png  # Image shown when a link to the game is shared
 │   ├── screenshots/     # UI screenshots for documentation
 │   │   ├── game-in-progress.png
 │   │   └── settings-open.png
@@ -218,8 +236,9 @@ Static_Chess/
 │       ├── wq.svg, bq.svg   # White and black queens
 │       └── wk.svg, bk.svg   # White and black kings
 ├── tests/               # Test files (Jest + jsdom)
-│   ├── unit/            # Unit tests for utilities, pieces, game logic
-│   └── integration/     # Integration tests for game flow
+│   ├── helpers/         # Shared loader that builds a fresh page and game per test
+│   ├── unit/            # Unit tests for the rules, the engine, the game and its controls
+│   └── integration/     # Game flow through the DOM, and the real index.html
 ├── releases/            # Release files
 │   ├── README.md        # Release directory documentation
 │   ├── RELEASE_NOTES_v0.2.0.md  # Release notes for v0.2.0
@@ -234,8 +253,10 @@ Static_Chess/
 │   ├── ISSUE_TEMPLATE/  # Issue templates
 │   └── CODEOWNERS       # Code ownership rules
 ├── package.json         # Dev dependencies and scripts (lint/test only)
+├── package-lock.json    # Exact versions of the dev dependencies
 ├── eslint.config.mjs     # ESLint configuration
 ├── .prettierrc          # Prettier configuration
+├── .prettierignore      # Files Prettier leaves alone
 ├── .editorconfig        # Editor configuration
 ├── .gitignore           # Git ignore rules
 ├── CHANGELOG.md         # Project changelog
@@ -314,8 +335,8 @@ See the [Development Roadmap](docs/ROADMAP.md) for a detailed plan of upcoming f
 
 - **Stronger Computer Opponent:** Faster move generation and a transposition table, to search deeper in the same time
 - **Sound Effects:** Recorded sounds as an alternative to the built-in synthesized tones
-- **Multiple Saved Games:** Save and load multiple games
-- **Full SAN Implementation:** Complete algebraic notation with full disambiguation
+- **Named Saved Games:** Keep several games in progress under names; today the last 20 games are kept as past games
+- **Game Analysis:** Mark the moves where the engine's score drops
 
 </details>
 
