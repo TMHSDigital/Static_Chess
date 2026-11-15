@@ -128,6 +128,26 @@ function searchMoves(position, color) {
     return moves;
 }
 
+/**
+ * The moves quiescence follows: every capture, and a pawn reaching the last
+ * rank as a queen. A capture onto the last rank is one move per piece the
+ * pawn can become, as in searchMoves.
+ */
+function forcingMoves(position, color) {
+    const moves = [];
+    for (const move of allLegalCaptures(position, color)) {
+        const piece = position.board[move.from.row][move.from.col];
+        if (piece.type !== PAWN || (move.to.row !== 0 && move.to.row !== 7)) {
+            moves.push(move);
+        } else if (position.board[move.to.row][move.to.col] !== null) {
+            for (const promotion of PROMOTION_TYPES) moves.push({ ...move, promotion });
+        } else {
+            moves.push({ ...move, promotion: QUEEN });
+        }
+    }
+    return moves;
+}
+
 /** Captures and promotions first, most valuable first, so alpha-beta cuts off early. */
 function orderMoves(position, moves) {
     const gain = (move) => {
@@ -160,10 +180,7 @@ function quiescence(position, color, alpha, beta, depth) {
     if (depth === 0 || standPat >= beta) return standPat;
     if (standPat > alpha) alpha = standPat;
 
-    const forcing = searchMoves(position, color).filter(
-        (move) => position.board[move.to.row][move.to.col] !== null || move.promotion === QUEEN
-    );
-    for (const move of orderMoves(position, forcing)) {
+    for (const move of orderMoves(position, forcingMoves(position, color))) {
         const score = -quiescence(
             afterMove(position, move),
             opponentOf(color),

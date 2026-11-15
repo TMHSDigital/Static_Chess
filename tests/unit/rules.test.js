@@ -71,6 +71,60 @@ describe('move generation matches the published perft counts', () => {
       expect(perft(g, position, color, index + 1)).toBe(expected);
     });
   });
+
+  /** Calls visit for a position and every position up to depth moves after it. */
+  function walk(g, position, color, depth, visit) {
+    const { allLegalMoves, applyMove, opponentOf } = g.rules;
+    visit(position, color);
+    if (depth === 0) return;
+    for (const { from, to } of allLegalMoves(position, color)) {
+      walk(g, applyMove(position, from, to).position, opponentOf(color), depth - 1, visit);
+    }
+  }
+
+  test.each(cases)('the quick generators agree with the full ones: %s', (_name, fen) => {
+    const g = loadGame();
+    const { allLegalMoves, allLegalCaptures, isSquareAttacked, isPathObstructed } = g.rules;
+    const start = fromFen(g, fen);
+    let positions = 0;
+
+    walk(g, start.position, start.color, 2, (position, color) => {
+      positions++;
+      const board = position.board;
+
+      // Captures and arrivals on the last rank: the same moves in the same order
+      const forcing = allLegalMoves(position, color).filter(
+        ({ from, to }) =>
+          board[to.row][to.col] !== null ||
+          (board[from.row][from.col].type === 'p' && (to.row === 0 || to.row === 7))
+      );
+      expect(allLegalCaptures(position, color)).toEqual(forcing);
+
+      // Attacked squares: ask every piece in turn, as the rule is stated
+      const attackedTheSlowWay = (row, col, attacker) =>
+        board.some((line, r) =>
+          line.some((piece, c) => {
+            if (!piece || piece.color !== attacker) return false;
+            if (!g.pieces.isPseudoLegalMove(piece, r, c, row, col, true)) return false;
+            return !'rbq'.includes(piece.type) || !isPathObstructed(r, c, row, col, board);
+          })
+        );
+      if (positions % 7 !== 1) return; // Every square of every seventh position is plenty
+      for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+          for (const attacker of ['w', 'b']) {
+            expect([row, col, attacker, isSquareAttacked(row, col, attacker, board)]).toEqual([
+              row,
+              col,
+              attacker,
+              attackedTheSlowWay(row, col, attacker),
+            ]);
+          }
+        }
+      }
+    });
+    expect(positions).toBeGreaterThan(190);
+  });
 });
 
 describe('applyMove', () => {

@@ -39,21 +39,60 @@ function isPathObstructed(startRow, startCol, endRow, endCol, board) {
     return false;
 }
 
+const KNIGHT_JUMPS = [
+    [-2, -1],
+    [-2, 1],
+    [-1, -2],
+    [-1, 2],
+    [1, -2],
+    [1, 2],
+    [2, -1],
+    [2, 1],
+];
+// The eight directions; the first four are the rook's, the last four the bishop's
+const SLIDE_DIRECTIONS = [
+    [-1, 0],
+    [1, 0],
+    [0, -1],
+    [0, 1],
+    [-1, -1],
+    [-1, 1],
+    [1, -1],
+    [1, 1],
+];
+
 /**
- * Checks if a square is attacked by any piece of one colour.
+ * Checks if a square is attacked by any piece of one colour. Looks outward
+ * from the square for a piece that could take on it, which is far quicker
+ * than asking every piece on the board.
  * @returns {boolean}
  */
 function isSquareAttacked(targetRow, targetCol, attackerColor, board) {
-    for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-            const piece = board[r][c];
-            if (!piece || piece.color !== attackerColor) continue;
-            // Asked as a capture, so pawns answer with their diagonal moves
-            if (!isPseudoLegalMove(piece, r, c, targetRow, targetCol, true)) continue;
-            const slides = piece.type === ROOK || piece.type === BISHOP || piece.type === QUEEN;
-            if (!slides || !isPathObstructed(r, c, targetRow, targetCol, board)) {
-                return true;
-            }
+    const attackerAt = (row, col, type) => {
+        const piece = isWithinBounds(row, col) ? board[row][col] : null;
+        return !!piece && piece.color === attackerColor && piece.type === type;
+    };
+
+    // A pawn takes one square diagonally forward, so it stands one row behind the square
+    const pawnRow = targetRow + (attackerColor === WHITE ? 1 : -1);
+    if (attackerAt(pawnRow, targetCol - 1, PAWN) || attackerAt(pawnRow, targetCol + 1, PAWN)) {
+        return true;
+    }
+    for (const [rowStep, colStep] of KNIGHT_JUMPS) {
+        if (attackerAt(targetRow + rowStep, targetCol + colStep, KNIGHT)) return true;
+    }
+    for (let index = 0; index < SLIDE_DIRECTIONS.length; index++) {
+        const [rowStep, colStep] = SLIDE_DIRECTIONS[index];
+        if (attackerAt(targetRow + rowStep, targetCol + colStep, KING)) return true;
+        // The first piece met along the line attacks if it moves that way
+        let row = targetRow + rowStep;
+        let col = targetCol + colStep;
+        while (isWithinBounds(row, col) && board[row][col] === null) {
+            row += rowStep;
+            col += colStep;
+        }
+        if (attackerAt(row, col, QUEEN) || attackerAt(row, col, index < 4 ? ROOK : BISHOP)) {
+            return true;
         }
     }
     return false;
@@ -269,6 +308,42 @@ function allLegalMoves(position, color) {
 }
 
 /**
+ * Lists the legal moves for one colour that take a piece or put a pawn on the
+ * last rank: the moves a search follows to the end of an exchange. They are
+ * the moves allLegalMoves gives onto an occupied square or the last rank, in
+ * the same order, found without working out all the others. En passant is
+ * not among them.
+ * @returns {Array<{from: {row: number, col: number}, to: {row: number, col: number}}>}
+ */
+function allLegalCaptures(position, color) {
+    const board = position.board;
+    const moves = [];
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const piece = board[r][c];
+            if (!piece || piece.color !== color) continue;
+            const slides = piece.type === ROOK || piece.type === BISHOP || piece.type === QUEEN;
+            const from = { row: r, col: c };
+            for (let endRow = 0; endRow < 8; endRow++) {
+                // An empty square only counts for a pawn stepping onto the last rank
+                const pawnArrives = piece.type === PAWN && (endRow === 0 || endRow === 7);
+                for (let endCol = 0; endCol < 8; endCol++) {
+                    const target = board[endRow][endCol];
+                    if (target ? target.color === color : !pawnArrives) continue;
+                    if (!isPseudoLegalMove(piece, r, c, endRow, endCol, target !== null)) continue;
+                    if (slides && isPathObstructed(r, c, endRow, endCol, board)) continue;
+                    const to = { row: endRow, col: endCol };
+                    if (!isInCheck(applyMove(position, from, to).position, color)) {
+                        moves.push({ from, to });
+                    }
+                }
+            }
+        }
+    }
+    return moves;
+}
+
+/**
  * A key that is equal for two positions exactly when they count as the same
  * position for the repetition rule: same placement, side to move, castling
  * rights and en passant possibility.
@@ -432,6 +507,7 @@ if (typeof module !== 'undefined' && module.exports) {
         canCastleIn,
         legalMovesFrom,
         allLegalMoves,
+        allLegalCaptures,
         positionKey,
         hasInsufficientMaterial,
     };
