@@ -423,6 +423,75 @@ describe('the Load PGN dialog', () => {
     expect(el(g, 'import-dialog').hidden).toBe(true);
     expect(g.game.moveHistory).toHaveLength(0);
   });
+
+  describe('with the focus outside it, as after a click on the backdrop', () => {
+    const press = (g, key, init = {}) => {
+      const event = new g.window.KeyboardEvent('keydown', {
+        key,
+        bubbles: true,
+        cancelable: true,
+        ...init,
+      });
+      g.window.document.body.dispatchEvent(event);
+      return event;
+    };
+    const openWithFocusLost = (g) => {
+      el(g, 'import-button').click();
+      g.window.document.activeElement.blur();
+      expect(g.window.document.activeElement).toBe(g.window.document.body);
+    };
+
+    test('Escape closes it', () => {
+      const g = loadGame();
+      g.play('e2e4', 'e7e5');
+      openWithFocusLost(g);
+      press(g, 'Escape');
+      expect(el(g, 'import-dialog').hidden).toBe(true);
+      expect(g.game.viewPly).toBe(null);
+    });
+
+    test('the arrow keys leave the game behind it alone', () => {
+      const g = loadGame();
+      g.play('e2e4', 'e7e5');
+      openWithFocusLost(g);
+      press(g, 'ArrowLeft');
+      press(g, 'ArrowLeft');
+      expect(g.game.viewPly).toBe(null);
+      expect(el(g, 'import-dialog').hidden).toBe(false);
+    });
+
+    test('Tab and Shift+Tab stay inside it', () => {
+      const g = loadGame();
+      const doc = g.window.document;
+      openWithFocusLost(g);
+      expect(press(g, 'Tab').defaultPrevented).toBe(true);
+      expect(doc.activeElement).toBe(el(g, 'import-text'));
+      // From the first control, Shift+Tab goes round to the last
+      el(g, 'import-text').dispatchEvent(
+        new g.window.KeyboardEvent('keydown', {
+          key: 'Tab',
+          shiftKey: true,
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+      expect(doc.activeElement).toBe(el(g, 'import-load'));
+      // And from the last, Tab goes back to the first
+      el(g, 'import-load').dispatchEvent(
+        new g.window.KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })
+      );
+      expect(doc.activeElement).toBe(el(g, 'import-text'));
+      // Between the two, Tab is left to the browser
+      const middle = new g.window.KeyboardEvent('keydown', {
+        key: 'Tab',
+        bubbles: true,
+        cancelable: true,
+      });
+      el(g, 'import-cancel').focus();
+      el(g, 'import-cancel').dispatchEvent(middle);
+      expect(middle.defaultPrevented).toBe(false);
+    });
+  });
 });
 
 describe('FEN', () => {

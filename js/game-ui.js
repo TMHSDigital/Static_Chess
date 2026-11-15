@@ -61,7 +61,12 @@ let pageKeyHandler = null; // What the game does with a key pressed outside the 
  * setting or choose a piece. A key another handler has used is left alone.
  */
 function handlePageKeydown(event) {
-    if (!pageKeyHandler || event.defaultPrevented) return;
+    if (event.defaultPrevented) return;
+    if (importDialog && !importDialog.hidden) {
+        handleOpenDialogKey(event); // Nothing behind an open dialog reacts to keys
+        return;
+    }
+    if (!pageKeyHandler) return;
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     const target = event.target;
     const own = '#chess-board, input, select, textarea, [role="dialog"], .promotion-backdrop';
@@ -625,6 +630,35 @@ function handleImportKeydown(event) {
     if (event.key === 'Escape') {
         event.preventDefault();
         closeImportDialog();
+    }
+}
+
+/**
+ * Keys pressed while the Load dialog is open, wherever the focus is, as after
+ * a click on the dimmed backdrop: Escape closes it, and Tab and Shift+Tab go
+ * round its own controls instead of reaching the page behind it.
+ */
+function handleOpenDialogKey(event) {
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        closeImportDialog();
+        return;
+    }
+    if (event.key !== 'Tab') return;
+    const controls = Array.from(
+        importDialog.querySelectorAll('textarea, button, input, [tabindex="0"]')
+    ).filter((element) => !element.disabled && !element.closest('[hidden]'));
+    if (controls.length === 0) return;
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    const active = document.activeElement;
+    const inside = importDialog.contains(active);
+    if (event.shiftKey && (!inside || active === first)) {
+        event.preventDefault();
+        last.focus();
+    } else if (!event.shiftKey && (!inside || active === last)) {
+        event.preventDefault();
+        first.focus();
     }
 }
 
