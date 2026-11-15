@@ -128,7 +128,7 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 The game features an elegant, professional-looking interface with a dark theme and subtle visual cues:
 
 <p align="center">
-  <img src="assets/screenshots/game-in-progress.png" alt="A game in progress on the clock: the board with each player's bar, the move list, and the game controls" width="45%" style="margin-right: 2%;" valign="top">
+  <img src="assets/screenshots/game-in-progress.png" alt="A game in progress on the clock against the computer: the board with each player's bar, the game buttons, the move list, and the new-game settings" width="45%" style="margin-right: 2%;" valign="top">
   <img src="assets/screenshots/settings-open.png" alt="Looking back at an earlier move in the light theme with the green board, with Settings open" width="45%" valign="top">
 </p>
 
@@ -175,7 +175,7 @@ That's it! No build process or dependencies are required.
 8. Game ends with checkmate, stalemate or a draw (insufficient material, threefold repetition, fifty-move rule)
 9. Click "Undo" to take back the last move, or "New Game" to reset the board (a game in progress asks for a second click)
 10. Click "Copy PGN" to copy the game for an analysis board or to share it, or "Save PGN" to save it as a file
-    - Click a move in the Move History (or use the arrow keys, Home and End there) to look at the position after it. "Play from here" (asked twice) drops the later moves and lets you go on from the position you are looking at; the game as it was is kept under "Past games". While you look back, a line under the list says what the engine makes of the position ("Engine thinks White is ahead by 1.3"). The four buttons under the list step to the starting position, the previous move, the next move and the latest move; "Back to game" returns to the live position
+    - Click a move in the Move History (or use the arrow keys, Home and End there) to look at the position after it. Left and Right also step through the moves from anywhere else on the page, and Esc returns to the game. When a game is over, "Review" beside the result starts from the first position. "Play from here" (asked twice) drops the later moves and lets you go on from the position you are looking at; the game as it was is kept under "Past games". While you look back, a line under the list says what the engine makes of the position ("Engine thinks White is ahead by 1.3"). The four buttons under the list step to the starting position, the previous move, the next move and the latest move; "Back to game" returns to the live position
     - "Resign" ends the game after a second click. "Offer draw" is accepted by the other side with a second click, or answered at once by the computer. Undo reopens a game ended this way
     - "Load" replaces the game with a PGN game you paste, keeping its result (a resigned, drawn or timed-out game stays finished; Undo reopens it), or starts a new game from a FEN position you paste. "Open file" in that dialog reads a `.pgn` or `.fen` file instead, and a file can also be dropped on the dialog. It also lists your last 20 games under "Past games" (a game goes there when you start or load another); click one to open it again
     - "Copy FEN" copies the position on the board
