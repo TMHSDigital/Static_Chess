@@ -50,6 +50,7 @@ const appGlobals = {
     'hasInsufficientMaterial',
     'findSANMove',
     'positionToFEN',
+    'positionFromFEN',
   ]),
   // ai.js
   ...shared(['PROMOTION_TYPES']),

@@ -502,11 +502,112 @@ function positionToFEN(position, player, halfmoveClock, fullmove) {
     return `${ranks.join('/')} ${player} ${castling || '-'} ${enPassant} ${halfmoveClock} ${fullmove}`;
 }
 
+/**
+ * Reads a position written in Forsyth-Edwards Notation. The first two fields
+ * (placement and side to move) are required; castling rights, the en passant
+ * square, the half-move clock and the move number default to none, none, 0
+ * and 1. Castling rights become the hasMoved marks of the kings and rooks.
+ * @param {string} fen
+ * @returns {{position: object, player: string, halfmoveClock: number, fullmove: number}|{error: string}}
+ *   The position and how the game goes on from it, or what is wrong with the text.
+ */
+function positionFromFEN(fen) {
+    const [placement, side, castling = '-', target = '-', half = '0', full = '1'] = String(fen)
+        .trim()
+        .split(/\s+/);
+    const ranks = placement.split('/');
+    if (ranks.length !== 8) return { error: 'A FEN position needs eight ranks.' };
+
+    const board = [];
+    const kings = { [WHITE]: [], [BLACK]: [] };
+    for (const [row, rank] of ranks.entries()) {
+        const squares = [];
+        for (const ch of rank) {
+            if (/[1-8]/.test(ch)) {
+                for (let i = 0; i < Number(ch); i++) squares.push(null);
+            } else if (/[pnbrqk]/i.test(ch)) {
+                const color = ch === ch.toUpperCase() ? WHITE : BLACK;
+                const piece = new Piece(ch.toLowerCase(), color);
+                // Only a pawn still on its own second rank may move two squares
+                piece.hasMoved = piece.type !== PAWN || row !== (color === WHITE ? 6 : 1);
+                if (piece.type === KING) kings[color].push({ row, col: squares.length });
+                if (piece.type === PAWN && (row === 0 || row === 7)) {
+                    return { error: 'A pawn cannot stand on the first or last rank.' };
+                }
+                squares.push(piece);
+            } else {
+                return { error: `"${ch}" is not a piece or a number of empty squares.` };
+            }
+        }
+        if (squares.length !== 8) {
+            return { error: `Rank ${8 - row} of the FEN does not have eight squares.` };
+        }
+        board.push(squares);
+    }
+    if (kings[WHITE].length !== 1 || kings[BLACK].length !== 1) {
+        return { error: 'A position needs exactly one king of each colour.' };
+    }
+    if (side !== WHITE && side !== BLACK) {
+        return { error: 'The FEN does not say whose move it is.' };
+    }
+    if (!/^(-|[KQkq]{1,4})$/.test(castling)) {
+        return { error: 'The castling rights in the FEN cannot be read.' };
+    }
+    if (!/^(-|[a-h][36])$/.test(target)) {
+        return { error: 'The en passant square in the FEN cannot be read.' };
+    }
+    if (!/^\d+$/.test(half) || !/^\d+$/.test(full)) {
+        return { error: 'The move counters in the FEN are not numbers.' };
+    }
+
+    // A castling right holds only if the king and that rook are on their first squares
+    for (const right of castling === '-' ? '' : castling) {
+        const color = right === right.toUpperCase() ? WHITE : BLACK;
+        const row = color === WHITE ? 7 : 0;
+        const king = board[row][4];
+        const rook = board[row][right.toLowerCase() === 'k' ? 7 : 0];
+        const there = (piece, type) => !!piece && piece.type === type && piece.color === color;
+        if (there(king, KING) && there(rook, ROOK)) {
+            king.hasMoved = false;
+            rook.hasMoved = false;
+        }
+    }
+
+    // The en passant square counts only behind a pawn that could just have moved two squares
+    let enPassantTarget = null;
+    if (target !== '-') {
+        const { row, col } = algebraicToCoords(target);
+        const pawn = board[row + (side === WHITE ? 1 : -1)][col];
+        const passed = row === (side === WHITE ? 2 : 5) && board[row][col] === null;
+        if (passed && pawn && pawn.type === PAWN && pawn.color !== side) {
+            enPassantTarget = { row, col };
+        }
+    }
+
+    const position = {
+        board,
+        kingPositions: { [WHITE]: kings[WHITE][0], [BLACK]: kings[BLACK][0] },
+        enPassantTarget,
+    };
+    if (isInCheck(position, opponentOf(side))) {
+        return {
+            error: 'The side that is not to move is in check, which cannot happen in a game.',
+        };
+    }
+    return {
+        position,
+        player: side,
+        halfmoveClock: Number(half),
+        fullmove: Math.max(1, Number(full)),
+    };
+}
+
 // Export for Node/Jest tests (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         findSANMove,
         positionToFEN,
+        positionFromFEN,
         PROMOTION_TYPES,
         opponentOf,
         initialPosition,

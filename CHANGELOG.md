@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file.
 - **Offline and installable**: After one visit the game opens and plays without a connection, and browsers offer to install it as an app. The page has a real icon
 - **Load PGN**: Paste a game to load it; every move is checked first and a move that cannot be played is named, leaving the current game untouched
 - **Copy FEN**: Copies the position on the board, also while looking back through the move list
+- **Load a position from FEN**: Paste a FEN into the Load dialog to start a game from that position, with either side to move. Castling rights, the en passant square and the move counters are taken from it, the move list is numbered from there, and the PGN of such a game says where it began and loads back
 - **Stronger computer opponent**: The hard level thinks for about a second, looking deeper when it can; the engine considers promoting to a knight, rook or bishop, plays won endings such as king and rook against king to mate, and avoids repeating positions when it is ahead
 - **Themes**: Four board colour schemes (classic, green, blue, high contrast) and a light page theme that can also follow the system setting
 - The result is stored with the game, and the PGN says when a game ended by resignation or agreement
@@ -35,6 +36,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- The "Load PGN" button is now "Load", since it takes a FEN position as well
 - The display settings are folded under "Settings"; the opponent and side selectors stay in view
 - The status line sits above the board, and each player has a bar on their side of the board with their name, captured pieces and clock, so all of it is in view on a phone
 - The side panel is as tall as the board and the move list takes the height that is left; its controls are grouped (this game, new game, copy or load) and every control is at least 44px tall

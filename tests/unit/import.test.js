@@ -317,7 +317,9 @@ describe('the Load PGN dialog', () => {
     const g = loadGame();
     el(g, 'import-button').click();
     el(g, 'import-load').click();
-    expect(el(g, 'import-error').textContent).toBe('Paste a game in PGN format first.');
+    expect(el(g, 'import-error').textContent).toBe(
+      'Paste a game in PGN format, or a position in FEN, first.'
+    );
     el(g, 'import-text').value = '1. e4 e5 2. Qh7';
     el(g, 'import-load').click();
     expect(el(g, 'import-error').textContent).toBe(

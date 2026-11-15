@@ -164,7 +164,8 @@ That's it! No build process or dependencies are required.
 10. Click "Copy PGN" to copy the game for an analysis board or to share it
     - Click a move in the Move History (or use the arrow keys, Home and End there) to look at the position after it. While you look back, a line under the list says what the engine makes of the position ("Engine thinks White is ahead by 1.3"). The four buttons under the list step to the starting position, the previous move, the next move and the latest move; "Back to game" returns to the live position
     - "Resign" ends the game after a second click. "Offer draw" is accepted by the other side with a second click, or answered at once by the computer. Undo reopens a game ended this way
-    - "Load PGN" also lists your last 20 games under "Past games" (a game goes there when you start or load another); click one to open it again. It replaces the game with one you paste, keeping its result (a resigned, drawn or timed-out game stays finished; Undo reopens it); "Copy FEN" copies the position on the board
+    - "Load" replaces the game with a PGN game you paste, keeping its result (a resigned, drawn or timed-out game stays finished; Undo reopens it), or starts a new game from a FEN position you paste. It also lists your last 20 games under "Past games" (a game goes there when you start or load another); click one to open it again
+    - "Copy FEN" copies the position on the board
     - "Hint" marks the move the built-in engine would play for the side to move; nothing is played
     - The pieces each side has captured, and the material lead, are shown under the Move History
 11. Keyboard: Tab to the board, move between squares with the arrow keys, and press Enter or Space to select a piece or move it

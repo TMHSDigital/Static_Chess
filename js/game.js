@@ -107,8 +107,9 @@ function initializeGame() {
         // A computer move asked for before the saved game was loaded belongs to another position
         cancelAIMove();
     }
-    if (moveHistory.length === 0) {
-        // If no saved state or new game
+    if (moveHistory.length === 0 && !gameStart.fen) {
+        // No saved game, or one without a move: start afresh. A position that
+        // was loaded from FEN is kept even before its first move.
         resetGame();
     }
     createBoard();
@@ -1454,9 +1455,10 @@ function readArchive() {
     }
 }
 
-/** @returns {string} The moves and result of a PGN, without its tags. */
+/** @returns {string} What makes a PGN the game it is: where it began, its moves and its result. */
 function pgnMovetext(pgn) {
-    return pgn.trim().split('\n').pop();
+    const start = /^\[FEN "([^"]*)"\]/m.exec(pgn);
+    return `${start ? start[1] : ''} ${pgn.trim().split('\n').pop()}`;
 }
 
 /**
@@ -1928,7 +1930,8 @@ function pgnMoveTokens(text) {
 
 /**
  * Replaces the current game with one given as PGN. Every move is checked
- * first; if one cannot be played, nothing is changed. A result the moves do
+ * first; if one cannot be played, nothing is changed. A game with a FEN tag
+ * begins from that position instead of the usual one. A result the moves do
  * not show (resignation, agreed draw, time) ends the loaded game as well;
  * Undo reopens it. Of several games in the text, the first is loaded.
  * @param {string} text
@@ -1939,13 +1942,21 @@ function importPGN(text, validateOnly = false) {
     const tokens = pgnMoveTokens(text);
     if (tokens.length === 0) return { ok: false, error: 'No moves found in the text.' };
 
-    let position = initialPosition();
-    let color = WHITE;
+    // The game begins from the usual position unless a FEN tag says otherwise
+    let start = { ...STANDARD_START, position: initialPosition() };
+    const fenTag = /^\s*\[FEN\s+"([^"]*)"\]/m.exec(firstPGNGame(text));
+    if (fenTag) {
+        start = positionFromFEN(fenTag[1]);
+        if (start.error) return { ok: false, error: `The FEN tag cannot be used. ${start.error}` };
+    }
+
+    let position = start.position;
+    let color = start.player;
     const moves = [];
     for (const [index, token] of tokens.entries()) {
         const move = findSANMove(position, color, token);
         if (!move) {
-            const number = moveNumberText(index, STANDARD_START); // PGN is read from the usual start
+            const number = moveNumberText(index, start);
             return { ok: false, error: `Move ${number} ${token} cannot be played.` };
         }
         moves.push(move);
@@ -1956,7 +1967,7 @@ function importPGN(text, validateOnly = false) {
     if (validateOnly) return { ok: true, moves: moves.length };
 
     // The moves go in without sounds, saving or computer replies; the page is drawn once at the end
-    startGameFrom();
+    startGameFrom(start.position, start.player, start.halfmoveClock, start.fullmove);
     clock = null; // A loaded game is not played on the clock: its moves took no time here
     runClockTimer();
     for (const move of moves) {
@@ -1978,7 +1989,51 @@ function importPGN(text, validateOnly = false) {
     return { ok: true, moves: moves.length };
 }
 
-/** Opens the dialog for pasting a game. */
+/** @returns {boolean} True for text that begins like a FEN position: eight ranks of pieces and numbers. */
+function looksLikeFEN(text) {
+    return /^\s*[pnbrqk1-8]+(\/[pnbrqk1-8]+){7}(\s|$)/i.test(String(text));
+}
+
+/**
+ * Replaces the current game with a new one that begins from a position given
+ * in FEN. If the text cannot be used, nothing is changed.
+ * @param {string} text
+ * @param {boolean} validateOnly - Check the position without replacing the game.
+ * @returns {{ok: boolean, error?: string}}
+ */
+function importFEN(text, validateOnly = false) {
+    const start = positionFromFEN(text);
+    if (start.error) return { ok: false, error: start.error };
+    if (validateOnly) return { ok: true };
+
+    startGameFrom(start.position, start.player, start.halfmoveClock, start.fullmove);
+    endIfAlreadyDecided();
+    redraw();
+    saveGameState();
+    announce(`Position loaded. ${currentStatus}`);
+    requestAIMove();
+    return { ok: true };
+}
+
+/** A game may begin from a position in which it is already over: mate, stalemate or bare kings. */
+function endIfAlreadyDecided() {
+    if (generateAllLegalMoves(currentPlayer).length === 0) {
+        isGameOver = true;
+        if (findKingInCheck(currentPlayer)) {
+            gameResult = currentPlayer === WHITE ? '0-1' : '1-0';
+            currentStatus = `Checkmate! ${currentPlayer === WHITE ? 'Black' : 'White'} wins.`;
+        } else {
+            gameResult = '1/2-1/2';
+            currentStatus = 'Stalemate! Game is a draw.';
+        }
+    } else if (hasInsufficientMaterial(boardState)) {
+        isGameOver = true;
+        gameResult = '1/2-1/2';
+        currentStatus = 'Draw by insufficient material.';
+    }
+}
+
+/** Opens the dialog for pasting a game or a position. */
 function openImportDialog() {
     if (!importDialog) return;
     importError.textContent = '';
@@ -1995,13 +2050,17 @@ function closeImportDialog() {
     if (importButton) importButton.focus();
 }
 
-/** Loads the pasted game. A game in progress needs a confirming second click first. */
+/**
+ * Loads the pasted game or position. A game in progress needs a confirming
+ * second click first.
+ */
 function handleImportLoad() {
-    if (pgnMoveTokens(importText.value).length === 0) {
-        importError.textContent = 'Paste a game in PGN format first.';
+    const load = looksLikeFEN(importText.value) ? importFEN : importPGN;
+    if (load === importPGN && pgnMoveTokens(importText.value).length === 0) {
+        importError.textContent = 'Paste a game in PGN format, or a position in FEN, first.';
         return;
     }
-    const validation = importPGN(importText.value, true);
+    const validation = load(importText.value, true);
     if (!validation.ok) {
         cancelConfirm(importLoadButton);
         importError.textContent = validation.error + ' The current game was not changed.';
@@ -2011,7 +2070,7 @@ function handleImportLoad() {
     if (isGameInProgress() && !confirmSecondClick(importLoadButton, 'Discard current game?')) {
         return;
     }
-    const result = importPGN(importText.value);
+    const result = load(importText.value);
     if (!result.ok) {
         importError.textContent = `${result.error} The current game was not changed.`;
         return;
@@ -2118,6 +2177,7 @@ if (typeof module !== 'undefined' && module.exports) {
         returnToLiveGame,
         requestHint,
         importPGN,
+        importFEN,
         pgnMoveTokens,
         pgnResult,
         readArchive,

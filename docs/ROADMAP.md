@@ -54,7 +54,7 @@ Features are prioritized as follows:
 | ------------------------ | ---------- | ------------ | ---------------------------------------------------------------------------------- | ------------ |
 | **AI Opponent**          | High       | None         | Computer opponent with three levels (alpha-beta search)                            | ✅ Completed |
 | **Multiple Saved Games** | Medium     | None         | The last 20 games are kept and can be reopened; named slots are to do              | In progress  |
-| **Game Import/Export**   | Medium     | None         | PGN import and export, FEN export; loading a FEN position is still to do           | In progress  |
+| **Game Import/Export**   | Medium     | None         | PGN and FEN, both ways: copy, paste, and start from a position                     | ✅ Completed |
 | **Game Analysis**        | High       | AI Opponent  | A score for the position being reviewed and Hint are in; marking mistakes is to do | In progress  |
 
 ## Implementation Timeline
@@ -80,7 +80,7 @@ This is a rough guideline for feature implementation:
 - [ ] **Multiple Saved Games**
 - [x] **Theme Customization**
 - [x] **AI Opponent (basic)**
-- [ ] **Game Import/Export**
+- [x] **Game Import/Export**
 
 ### Phase 4: Final Polish (Ongoing)
 

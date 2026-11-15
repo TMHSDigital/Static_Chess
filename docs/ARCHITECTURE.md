@@ -306,7 +306,8 @@ SAN generation with disambiguation is implemented:
 2. `importPGN(text)` reads a game. `pgnMoveTokens()` drops tags, comments, variations and annotations, `findSANMove()` in `rules.js` finds the legal move each token stands for, and every move is checked before anything is changed; the first one that cannot be played is named in the dialog. Of several games in the text the first is loaded
 3. The moves go in through `playMove()`. A draw nobody claimed in the loaded game is ignored until the last move, and `pgnResult()` restores a result the moves do not show
 4. `buildFEN()` writes the position on screen with `positionToFEN()` from `rules.js`, also while looking back
-5. Copying goes through `copyOrDownload()`: the clipboard where it is available, otherwise a file download
+5. `importFEN(text)` starts a game from a position: `positionFromFEN()` in `rules.js` reads it (castling rights become the `hasMoved` marks of kings and rooks) and says what is wrong with text it cannot use, and `startGameFrom()` begins the game. The Load dialog takes text that begins like a FEN as a position and anything else as PGN. A PGN with a `FEN` tag is read from that position
+6. Copying goes through `copyOrDownload()`: the clipboard where it is available, otherwise a file download
 
 ### 14. Themes
 

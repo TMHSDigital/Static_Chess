@@ -119,8 +119,12 @@
                     <button id="fen-button" class="btn" aria-label="Copy the position as FEN">
                         Copy FEN
                     </button>
-                    <button id="import-button" class="btn" aria-label="Load a game from PGN">
-                        Load PGN
+                    <button
+                        id="import-button"
+                        class="btn"
+                        aria-label="Load a game from PGN or a position from FEN"
+                    >
+                        Load
                     </button>
                 </div>
                 <details class="panel-group more-settings" id="more-settings">
@@ -187,13 +191,13 @@
                 aria-modal="true"
                 aria-labelledby="import-title"
             >
-                <h3 id="import-title">Load a game</h3>
+                <h3 id="import-title">Load a game or a position</h3>
                 <textarea
                     id="import-text"
                     rows="8"
                     spellcheck="false"
-                    aria-label="Game in PGN format"
-                    placeholder="Paste a game in PGN format, for example: 1. e4 e5 2. Nf3 Nc6"
+                    aria-label="Game in PGN format, or position in FEN"
+                    placeholder="Paste a game in PGN format (1. e4 e5 2. Nf3 Nc6) or a position in FEN (8/8/8/4k3/8/8/4P3/4K3 w - - 0 1)"
                 ></textarea>
                 <p id="import-error" class="import-error" role="alert"></p>
                 <div class="buttons-row">
