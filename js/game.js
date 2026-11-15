@@ -1645,13 +1645,54 @@ function copyOrDownload(text, button, label, filename) {
 // --- Loading a game from PGN ---
 
 /**
+ * @param {string} text - PGN that may hold several games.
+ * @returns {string} The first game: everything up to the tags of a second one.
+ */
+function firstPGNGame(text) {
+    const lines = String(text).split('\n');
+    let inMoves = false;
+    const end = lines.findIndex((line) => {
+        const isTag = /^\s*\[\w+\s+"[^"\n]*"\]\s*$/.test(line);
+        if (!isTag && line.trim()) inMoves = true;
+        return isTag && inMoves;
+    });
+    return (end === -1 ? lines : lines.slice(0, end)).join('\n');
+}
+
+/**
+ * Finds how a game given as PGN ended: the result after the moves, or else
+ * the Result tag. The comment this app writes before the result of a game
+ * ended by resignation, agreement or on time becomes the status again.
+ * @param {string} text
+ * @returns {{result: string, status: string}|null} Null for a game in progress.
+ */
+function pgnResult(text) {
+    const game = firstPGNGame(text);
+    const RESULT = '1-0|0-1|1\\/2-1\\/2';
+    const closing = new RegExp(`(?:\\{([^}]*)\\}\\s*)?(?:^|\\s)(${RESULT}|\\*)\\s*$`).exec(game);
+    const tag = new RegExp(`^\\s*\\[Result\\s+"(${RESULT})"\\]`, 'm').exec(game);
+    const result = closing ? closing[2] : tag && tag[1];
+    if (!result || result === '*') return null;
+
+    const comment = closing && closing[1] ? closing[1].trim() : '';
+    const ownWording =
+        /^(?:(?:White|Black) resigned\. (?:White|Black) wins\.|Draw by agreement\.|(?:White|Black) ran out of time[.,] .+)$/;
+    const fallback = {
+        '1-0': 'White won (result from the loaded game).',
+        '0-1': 'Black won (result from the loaded game).',
+        '1/2-1/2': 'Draw (result from the loaded game).',
+    };
+    return { result, status: ownWording.test(comment) ? comment : fallback[result] };
+}
+
+/**
  * Takes the moves out of PGN text: tags, comments, variations, annotation
  * codes, move numbers and the result are dropped.
  * @param {string} text
  * @returns {string[]} The moves in standard algebraic notation.
  */
 function pgnMoveTokens(text) {
-    let body = String(text)
+    let body = firstPGNGame(text)
         .replace(/^\s*\[[^\]\n]*\]\s*$/gm, ' ') // Tag pairs
         .replace(/\{[^}]*\}/g, ' ') // Comments in braces
         .replace(/;[^\n]*/g, ' '); // Comments to the end of the line
@@ -1665,7 +1706,9 @@ function pgnMoveTokens(text) {
 
 /**
  * Replaces the current game with one given as PGN. Every move is checked
- * first; if one cannot be played, nothing is changed.
+ * first; if one cannot be played, nothing is changed. A result the moves do
+ * not show (resignation, agreed draw, time) ends the loaded game as well;
+ * Undo reopens it. Of several games in the text, the first is loaded.
  * @param {string} text
  * @param {boolean} validateOnly - Check the moves without replacing the game.
  * @returns {{ok: boolean, error?: string, moves?: number}}
@@ -1703,6 +1746,13 @@ function importPGN(text, validateOnly = false) {
             makeMove(move.from.row, move.from.col, move.to.row, move.to.col, move.promotion);
         }
         endIfAutomaticDraw(moveHistory[moveHistory.length - 1]);
+        const ending = isGameOver ? null : pgnResult(text);
+        if (ending) {
+            isGameOver = true;
+            gameResult = ending.result;
+            endedWithoutMove = true;
+            currentStatus = ending.status;
+        }
     } finally {
         replaying = false;
     }
@@ -1853,6 +1903,7 @@ if (typeof module !== 'undefined' && module.exports) {
         requestHint,
         importPGN,
         pgnMoveTokens,
+        pgnResult,
         buildFEN,
         setTimeControl,
         clockRemaining,

@@ -90,6 +90,113 @@ describe('reading PGN', () => {
     expect(g.at('a2').type).toBe('p');
   });
 
+  describe('the result of a loaded game', () => {
+    const status = (g) => el(g, 'game-status').textContent;
+
+    test('a resigned game comes back resigned, and Undo reopens it', () => {
+      const first = loadGame();
+      first.play('e2e4', 'e7e5');
+      first.game.resign();
+      const pgn = first.game.buildPGN();
+      expect(pgn).toContain('{White resigned. Black wins.} 0-1');
+
+      const g = loadGame();
+      expect(g.game.importPGN(pgn)).toEqual({ ok: true, moves: 2 });
+      expect(g.game.isGameOver).toBe(true);
+      expect(g.game.gameResult).toBe('0-1');
+      expect(status(g)).toBe('White resigned. Black wins.');
+      expect(g.game.isBoardLocked()).toBe(true);
+      expect(g.game.buildPGN()).toContain('{White resigned. Black wins.} 0-1');
+
+      g.game.undoLastMove();
+      expect(g.game.isGameOver).toBe(false);
+      expect(notations(g)).toEqual(['e4', 'e5']);
+      expect(status(g)).toBe("White's turn");
+    });
+
+    test('a draw by agreement and a loss on time keep their wording', () => {
+      const first = loadGame();
+      first.play('e2e4', 'e7e5');
+      first.game.handleDrawClick(); // Offer
+      first.game.handleDrawClick(); // Accept
+      expect(first.game.currentStatus).toBe('Draw by agreement.');
+
+      const drawn = loadGame();
+      drawn.game.importPGN(first.game.buildPGN());
+      expect(drawn.game.gameResult).toBe('1/2-1/2');
+      expect(status(drawn)).toBe('Draw by agreement.');
+
+      const timed = loadGame();
+      timed.game.importPGN(`[TimeControl "300+0"]
+
+1. e4 e5 {White ran out of time. Black wins.} 0-1`);
+      expect(timed.game.gameResult).toBe('0-1');
+      expect(status(timed)).toBe('White ran out of time. Black wins.');
+    });
+
+    test('a result from elsewhere is stated plainly, from the moves or the Result tag', () => {
+      const g = loadGame();
+      g.game.importPGN('1. e4 e5 2. Nf3 {Black lost on time} 1-0');
+      expect(g.game.gameResult).toBe('1-0');
+      expect(status(g)).toBe('White won (result from the loaded game).');
+
+      const tagged = loadGame();
+      tagged.game.importPGN('[Result "1/2-1/2"]\n\n1. e4 e5');
+      expect(tagged.game.gameResult).toBe('1/2-1/2');
+      expect(status(tagged)).toBe('Draw (result from the loaded game).');
+    });
+
+    test('a game marked * or without a result is still in progress', () => {
+      for (const pgn of ['1. e4 e5 *', '1. e4 e5', '[Result "*"]\n\n1. e4 e5']) {
+        const g = loadGame();
+        expect(g.game.importPGN(pgn).ok).toBe(true);
+        expect(g.game.isGameOver).toBe(false);
+        expect(g.game.gameResult).toBeNull();
+        expect(status(g)).toBe("White's turn");
+      }
+      // The movetext wins over a tag that disagrees
+      expect(loadGame().game.pgnResult('[Result "1-0"]\n\n1. e4 e5 *')).toBeNull();
+    });
+
+    test('a result the moves already show is left alone', () => {
+      const g = loadGame();
+      g.game.importPGN('1. f3 e5 2. g4 Qh4# 0-1');
+      expect(status(g)).toBe('Checkmate! Black wins.');
+      g.game.undoLastMove(); // Takes back the mating move, not a result on its own
+      expect(notations(g)).toEqual(['f3', 'e5', 'g4']);
+    });
+
+    test('the computer does not move after a finished game is loaded', () => {
+      jest.useFakeTimers();
+      try {
+        const g = loadGame();
+        g.game.setOpponent('easy', 'w');
+        g.game.importPGN('1. e4 {White resigned. Black wins.} 0-1');
+        jest.runAllTimers();
+        expect(notations(g)).toEqual(['e4']);
+        expect(g.game.isGameOver).toBe(true);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    test('of several games in the text, the first is loaded', () => {
+      const g = loadGame();
+      const pgn = `[Event "One"]
+[Result "1-0"]
+
+1. e4 e5 2. Nf3 1-0
+
+[Event "Two"]
+[Result "0-1"]
+
+1. d4 d5 0-1`;
+      expect(g.game.importPGN(pgn)).toEqual({ ok: true, moves: 3 });
+      expect(notations(g)).toEqual(['e4', 'e5', 'Nf3']);
+      expect(g.game.gameResult).toBe('1-0');
+    });
+  });
+
   test('reads moves as other sites write them', () => {
     const g = loadGame();
     const result = g.game.importPGN(
