@@ -55,6 +55,38 @@ describe('past games', () => {
     expect(entries(g)[0].textContent).toMatch(/Computer \(medium\) · Not finished · 1 move$/);
   });
 
+  test('a finished game keeps its players when the settings change afterwards', () => {
+    const g = loadGame();
+    g.game.setOpponent('easy', 'w');
+    g.game.makeMove(6, 4, 4, 4); // 1. e4, then Black's reply played by hand
+    g.game.makeMove(1, 4, 3, 4);
+    g.game.resign();
+    g.game.setOpponent('hard', 'b');
+
+    expect(g.game.buildPGN()).toContain('[White "White"]');
+    expect(g.game.buildPGN()).toContain('[Black "Computer (easy)"]');
+
+    // A reload keeps who played, although the settings now say otherwise
+    const saved = g.window.localStorage.getItem('chessGameState');
+    const again = loadGame({ storage: { chessGameState: saved } });
+    again.game.setOpponent('hard', 'b');
+    expect(again.game.buildPGN()).toContain('[Black "Computer (easy)"]');
+
+    again.game.resetGame();
+    expect(again.game.readArchive()[0].opponent).toBe('Computer (easy)');
+  });
+
+  test('Undo of a finished game lets the players follow the settings again', () => {
+    const g = loadGame();
+    g.game.setOpponent('easy', 'w');
+    g.game.makeMove(6, 4, 4, 4);
+    g.game.resign();
+    g.game.setOpponent(null);
+    expect(g.game.buildPGN()).toContain('[Black "Computer (easy)"]');
+    g.game.undoLastMove(); // Takes back the resignation
+    expect(g.game.buildPGN()).toContain('[Black "Black"]');
+  });
+
   test('opening an entry loads that game with its result', () => {
     const g = loadGame();
     g.play('e2e4', 'e7e5');

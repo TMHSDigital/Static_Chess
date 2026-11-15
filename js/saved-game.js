@@ -156,12 +156,27 @@ function validateSavedGame(saved) {
               }
             : STANDARD_START;
 
+    // Who played is optional: saves from older versions name the players from the settings
+    const p = saved.players;
+    let players = null;
+    if (p && typeof p === 'object') {
+        if (p.computer === null && p.level === null) players = { level: null, computer: null };
+        else if (
+            (p.computer === WHITE || p.computer === BLACK) &&
+            typeof p.level === 'string' &&
+            /^[a-z]{1,16}$/.test(p.level)
+        ) {
+            players = { level: p.level, computer: p.computer };
+        }
+    }
+
     return {
         ...position,
         gameStart: start,
         clock: savedClock,
         gameResult: result,
         endedWithoutMove: over && saved.endedWithoutMove === true,
+        players,
         moveHistory: history,
         positionHistory: undoStack,
     };

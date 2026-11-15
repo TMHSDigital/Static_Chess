@@ -39,6 +39,10 @@ let scoredGame = null; // The finished game (gameSignature) gameScores was asked
 let opponentLevel = null; // null for two players, otherwise a key of AI_LEVELS ('easy', 'medium', 'hard')
 let humanColor = WHITE; // The side the person plays when there is a computer opponent
 let aiThinking = false;
+// Who plays the game on the board: the computer's level and colour, or nulls for two
+// players. Follows the settings while the game goes on and is kept once it is over, so
+// changing them afterwards does not rename the players of a finished game.
+let gamePlayers = { level: null, computer: null };
 
 /**
  * The live position as one record. These two functions are the only places
@@ -162,6 +166,7 @@ function startGameFrom(position = initialPosition(), player = WHITE, startClock 
         enPassantTarget: position.enPassantTarget,
         halfmoveClock: startClock,
     });
+    recordPlayers();
     moveHistory = [];
     positionHistory = [];
     gameResult = null;
@@ -835,6 +840,22 @@ function computerColor() {
     return opponentOf(humanColor);
 }
 
+/** Notes who plays the game on the board from the settings, unless the game is over. */
+function recordPlayers() {
+    if (isGameOver) return;
+    const computer = computerColor();
+    gamePlayers = { level: computer ? opponentLevel : null, computer };
+}
+
+/**
+ * @param {string} color
+ * @param {string} plain - The name to use for a side the computer did not play.
+ * @returns {string} The name of a side of the game on the board, as the PGN and past games give it.
+ */
+function recordedName(color, plain) {
+    return gamePlayers.computer === color ? `Computer (${gamePlayers.level})` : plain;
+}
+
 /** @returns {boolean} True while the player cannot move: game over, chooser open, or the computer's turn. */
 function isBoardLocked() {
     return (
@@ -1230,6 +1251,7 @@ function saveGameState() {
         moveHistory: moveHistory,
         gameResult: gameResult,
         endedWithoutMove: endedWithoutMove,
+        players: gamePlayers,
         // Times as of now. After a reload the side to move gets back on the clock.
         clock: clock && {
             control: clock.control,
@@ -1255,6 +1277,7 @@ function loadGameState() {
     positionHistory = state.positionHistory;
     gameResult = state.gameResult;
     endedWithoutMove = state.endedWithoutMove;
+    if (state.players) gamePlayers = state.players; // Saves from older versions follow the settings
     clock = state.clock;
     return true;
 }
@@ -1267,7 +1290,7 @@ function archiveCurrentGame() {
     addToArchive({
         pgn: buildPGN(),
         result: (isGameOver && gameResult) || '*',
-        opponent: computerColor() ? `Computer (${opponentLevel})` : 'Two players',
+        opponent: gamePlayers.computer ? recordedName(gamePlayers.computer) : 'Two players',
         date: new Date().toISOString(),
         moves: moveHistory.length,
     });
@@ -1377,6 +1400,7 @@ function playersView() {
 
 /** Brings the status line, the player bars, the buttons and the clocks up to date with the game. */
 function updateStatusDisplay() {
+    recordPlayers(); // A change of settings, or a game going on again after Undo
     renderStatus(statusText());
     renderPlayers(playersView());
     renderControls(controlsView());
@@ -1399,14 +1423,12 @@ function handleResetClick() {
 
 /** @returns {string} This game as PGN text. */
 function buildPGN() {
-    const name = (color, plain) =>
-        computerColor() === color ? `Computer (${opponentLevel})` : plain;
     return writePGN({
         moves: moveHistory.map((move) => move.notation),
         start: gameStart,
         result: (isGameOver && gameResult) || '*', // "*" marks a game still in progress
-        white: name(WHITE, 'White'),
-        black: name(BLACK, 'Black'),
+        white: recordedName(WHITE, 'White'),
+        black: recordedName(BLACK, 'Black'),
         timeControl: clock ? `${clock.base / 1000}+${clock.increment / 1000}` : null,
         // A resignation or agreed draw is not visible in the moves, so it goes in as a comment
         comment: endedWithoutMove ? currentStatus : null,
