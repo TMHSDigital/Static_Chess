@@ -1620,9 +1620,10 @@ function pgnMoveTokens(text) {
  * Replaces the current game with one given as PGN. Every move is checked
  * first; if one cannot be played, nothing is changed.
  * @param {string} text
+ * @param {boolean} validateOnly - Check the moves without replacing the game.
  * @returns {{ok: boolean, error?: string, moves?: number}}
  */
-function importPGN(text) {
+function importPGN(text, validateOnly = false) {
     const tokens = pgnMoveTokens(text);
     if (tokens.length === 0) return { ok: false, error: 'No moves found in the text.' };
 
@@ -1643,6 +1644,8 @@ function importPGN(text) {
         position = applyMove(position, move.from, move.to, move.promotion).position;
         color = opponentOf(color);
     }
+
+    if (validateOnly) return { ok: true, moves: moves.length };
 
     replaying = true; // No sounds, saving or computer replies while the moves go in
     try {
@@ -1682,6 +1685,13 @@ function handleImportLoad() {
         importError.textContent = 'Paste a game in PGN format first.';
         return;
     }
+    const validation = importPGN(importText.value, true);
+    if (!validation.ok) {
+        cancelConfirm(importLoadButton);
+        importError.textContent = validation.error + ' The current game was not changed.';
+        return;
+    }
+    importError.textContent = '';
     if (isGameInProgress() && !confirmSecondClick(importLoadButton, 'Discard current game?')) {
         return;
     }
