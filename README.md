@@ -56,7 +56,7 @@
 
 ## Overview
 
-Static Chess is a fully functional chess game playable in a web browser. It is built using pure vanilla JavaScript, HTML, and CSS, with no external frameworks or libraries. The game features standard chess rules, move validation, check/checkmate detection, move history in SAN with basic disambiguation, undo, accessibility improvements, and game state persistence using `localStorage`.
+Static Chess is a fully functional chess game playable in a web browser. It is built using pure vanilla JavaScript, HTML, and CSS, with no external frameworks or libraries. The game features standard chess rules, move validation, check/checkmate detection, move history in SAN with disambiguation, undo, accessibility improvements, and game state persistence using `localStorage`.
 
 It is designed to be simple, lightweight, and easily deployable on static hosting platforms like GitHub Pages.
 
@@ -81,14 +81,21 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
   - Shows possible legal moves for the selected piece
   - Highlights the king when in check
   - Highlights the last move made
-- **Move History:** Displays moves in standard algebraic notation (SAN) with basic disambiguation
+- **Move History:** Displays moves in standard algebraic notation (SAN) with disambiguation
+- **Game Review:** Step through earlier positions using the move list or review buttons, then return to the live game
+- **Resign and Draw Offer:** Resign or agree to a draw with confirmation
+- **Hint:** Highlight the move the computer would play without making it
+- **Chess Clock:** Choose an optional time control for the next new game
+- **Game Import and Export:** Load a pasted PGN game, copy the game as PGN, or copy the displayed position as FEN
+- **Captured Pieces:** See each side's captures and material lead
 - **Drag and Drop:** Move pieces by dragging them to valid squares (works alongside click-based movement)
 - **Undo Move:** Revert the last move with one click
 - **Game Persistence:** Automatically saves game state to `localStorage`
+- **Offline and Installable:** Play offline after the first visit over HTTP(S), and install the game as an app in supporting browsers
 - **Responsive Design:** Adapts layout for both desktop and mobile devices
 - **Coordinate Toggle:** Option to display board coordinates
 - **Professional UI:** Clean, minimalist design with subtle animations and visual cues
-- **Customizable Settings:** Toggle visibility of coordinates, move indicators, last-move highlight, and sound effects
+- **Customizable Settings:** Toggle coordinates, move indicators, last-move highlight, sound effects and board orientation; choose a board theme, page theme and clock
 
 </details>
 
@@ -139,11 +146,12 @@ The game features an elegant, professional-looking interface with a dark theme a
 
 Optional (for contributors):
 
-- Install dev tooling for linting/testing:
+- Use Node.js 22.22.2 or newer on the 22 line, or 24.15.0 or newer, and install dev tooling for linting/testing:
   ```bash
-  npm install
+  npm ci
   npm test
   npm run lint
+  npm run format
   ```
 
 That's it! No build process or dependencies are required.
@@ -188,6 +196,8 @@ That's it! No build process or dependencies are required.
 ```
 Static_Chess/
 ├── index.html           # Main HTML entry point
+├── sw.js                # Service worker for offline play
+├── manifest.webmanifest # Installable app metadata
 ├── css/                 # CSS styles
 │   ├── style.css        # General page styles
 │   ├── board.css        # Chessboard specific styles
@@ -205,6 +215,7 @@ Static_Chess/
 │   ├── ai-worker.js     # Runs the search in a Web Worker
 │   └── promotion.js     # Pawn promotion chooser
 ├── assets/              # Static assets
+│   ├── icons/           # App icons
 │   ├── screenshots/     # UI screenshots for documentation
 │   │   ├── ui-with-settings.png
 │   │   └── ui-without-settings.png
@@ -216,6 +227,7 @@ Static_Chess/
 │       ├── wq.svg, bq.svg   # White and black queens
 │       └── wk.svg, bk.svg   # White and black kings
 ├── tests/               # Test files (Jest + jsdom)
+│   ├── helpers/         # Shared game loader and jsdom environment
 │   ├── unit/            # Unit tests for utilities, pieces, game logic
 │   └── integration/     # Integration tests for game flow
 ├── releases/            # Release files
@@ -231,9 +243,11 @@ Static_Chess/
 │   ├── workflows/       # CI/CD workflows (ci.yml, release.yml)
 │   ├── ISSUE_TEMPLATE/  # Issue templates
 │   └── CODEOWNERS       # Code ownership rules
-├── package.json         # Dev dependencies and scripts (lint/test only)
+├── package.json         # Dev dependencies and lint/test/format scripts
+├── package-lock.json    # Locked dev dependency versions
 ├── eslint.config.mjs     # ESLint configuration
 ├── .prettierrc          # Prettier configuration
+├── .prettierignore      # Files excluded from formatting checks
 ├── .editorconfig        # Editor configuration
 ├── .gitignore           # Git ignore rules
 ├── CHANGELOG.md         # Project changelog
@@ -311,7 +325,6 @@ See the [Development Roadmap](docs/ROADMAP.md) for a detailed plan of upcoming f
 - **Stronger Computer Opponent:** Faster move generation and a transposition table, to search deeper in the same time
 - **Sound Effects:** Recorded sounds as an alternative to the built-in synthesized tones
 - **Multiple Saved Games:** Save and load multiple games
-- **Full SAN Implementation:** Complete algebraic notation with full disambiguation
 
 </details>
 
