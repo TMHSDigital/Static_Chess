@@ -90,6 +90,16 @@ describe('the computer opponent in a Web Worker', () => {
     g.game.setOpponent(null);
   });
 
+  test('a hint is not budgeted against the clock of the player who asked for it', () => {
+    const workers = installWorker();
+    const g = loadGame();
+    g.game.setTimeControl('10+0');
+    g.play('e2e4'); // Black is on the clock
+    g.game.requestHint();
+    expect(workers[0].messages[0].color).toBe('b');
+    expect(workers[0].messages[0].budgetMs).toBeNull(); // The hint level's usual time
+  });
+
   test('its answer is played after the pause', () => {
     const workers = installWorker();
     const g = loadGame();

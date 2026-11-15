@@ -953,7 +953,7 @@ function requestAIMove() {
 /**
  * Asks the engine for a move in a position of this game, telling it what only
  * the game knows: the positions that have occurred, so it can avoid repeating
- * them, and in a game on the clock how long it may think.
+ * them, and for the computer's move in a game on the clock how long it may think.
  * @param {object} position - A rules.js position.
  * @param {string} color - The side to find a move for.
  * @param {string} level - A key of AI_LEVELS.
@@ -964,7 +964,12 @@ function askEngineAbout(position, color, level, onMove) {
     const seen = positionHistory.map((past) =>
         positionKey(past.boardState, past.currentPlayer, past.enPassantTarget)
     );
-    const budgetMs = clock ? searchBudget(clockRemaining(color), clock.increment, level) : null;
+    // Only the computer's own move is budgeted against the clock. A hint is for
+    // the player, whose clock is running: it gets the level's usual time
+    const onItsClock = clock && color === computerColor();
+    const budgetMs = onItsClock
+        ? searchBudget(clockRemaining(color), clock.increment, level)
+        : null;
     return askEngine({ position, color, level, seen, budgetMs }, onMove);
 }
 
