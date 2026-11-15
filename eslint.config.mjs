@@ -112,6 +112,7 @@ const appGlobals = {
     'renderStatus',
     'renderControls',
     'renderClocks',
+    'renderPlayers',
     'renderReviewScore',
     'renderHint',
     'renderMoveList',

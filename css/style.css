@@ -846,12 +846,46 @@ body.coords-visible {
     color: var(--text-color);
 }
 
-/* One bar per side: its name, what it has captured, and its clock when the game has one */
+/* One bar per side: who plays it, what it has captured, and its clock when
+   the game has one. The bar of the side to move is tinted. */
 .side-row {
     display: flex;
     align-items: center;
     gap: var(--space-2);
     min-height: 34px;
+    box-sizing: border-box;
+    padding: 0 var(--space-2);
+    border-radius: var(--border-radius);
+    transition: background-color 0.15s ease;
+}
+
+.side-row.to-move {
+    background-color: var(--accent-tint);
+}
+
+.side-row.to-move .side-name::before {
+    box-shadow: 0 0 0 2px var(--accent-color);
+}
+
+/* Beside the computer's name while it works out its move */
+.thinking {
+    font-size: var(--text-sm);
+    color: var(--muted-text);
+    animation: thinking-pulse 1.2s ease-in-out infinite;
+}
+
+.thinking[hidden] {
+    display: none;
+}
+
+.thinking::after {
+    content: '\2026'; /* An ellipsis */
+}
+
+@keyframes thinking-pulse {
+    50% {
+        opacity: 0.35;
+    }
 }
 
 .side-name {
@@ -880,6 +914,7 @@ body.coords-visible {
 
 .clock {
     margin-left: auto; /* Always at the right end of the bar */
+    margin-right: calc(-1 * var(--space-2) + 3px); /* Tucked into the bar's rounded end */
     padding: 3px 10px;
     border: 1px solid var(--control-border);
     border-radius: var(--radius-sm);

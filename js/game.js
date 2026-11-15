@@ -1312,9 +1312,24 @@ function controlsView() {
     };
 }
 
-/** Brings the status line, the buttons and the clocks up to date with the game. */
+/**
+ * @returns {object} For each colour: the name on its bar, whether it is to
+ *   move in the live game, and whether the computer is thinking for it.
+ */
+function playersView() {
+    const computer = computerColor();
+    const side = (color, plain) => ({
+        name: !computer ? plain : color === computer ? `Computer (${opponentLevel})` : 'You',
+        toMove: !isGameOver && viewPly === null && currentPlayer === color,
+        thinking: aiThinking && color === computer,
+    });
+    return { [WHITE]: side(WHITE, 'White'), [BLACK]: side(BLACK, 'Black') };
+}
+
+/** Brings the status line, the player bars, the buttons and the clocks up to date with the game. */
 function updateStatusDisplay() {
     renderStatus(statusText());
+    renderPlayers(playersView());
     renderControls(controlsView());
     updateClockDisplay();
     // Every way a game ends or goes on again passes through here
@@ -1511,6 +1526,7 @@ if (typeof module !== 'undefined' && module.exports) {
             return gameScores;
         },
         moveCost,
+        playersView,
         resign,
         handleResignClick,
         handleDrawClick,

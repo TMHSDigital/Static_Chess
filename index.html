@@ -54,8 +54,9 @@
                 </div>
                 <!-- One bar per player. CSS puts each on its own side of the board. -->
                 <div class="captured-pieces" id="captured-pieces">
-                    <div class="side-row side-black">
-                        <span class="side-name">Black</span>
+                    <div class="side-row side-black" id="side-black">
+                        <span class="side-name" id="side-name-black">Black</span>
+                        <span class="thinking" aria-hidden="true" hidden>thinking</span>
                         <div
                             class="captured-row"
                             id="captured-by-black"
@@ -64,8 +65,9 @@
                         ></div>
                         <span class="clock" id="clock-black" role="timer" hidden></span>
                     </div>
-                    <div class="side-row side-white">
-                        <span class="side-name">White</span>
+                    <div class="side-row side-white" id="side-white">
+                        <span class="side-name" id="side-name-white">White</span>
+                        <span class="thinking" aria-hidden="true" hidden>thinking</span>
                         <div
                             class="captured-row"
                             id="captured-by-white"

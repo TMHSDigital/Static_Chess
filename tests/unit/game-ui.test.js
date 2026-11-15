@@ -11,6 +11,8 @@ const HTML = `<!DOCTYPE html><body>
     <button data-step="first"></button><button data-step="previous"></button>
     <button data-step="next"></button><button data-step="last"></button>
   </div>
+  <div id="side-black"><span class="side-name">Black</span><span class="thinking" hidden></span></div>
+  <div id="side-white"><span class="side-name">White</span><span class="thinking" hidden></span></div>
   <div id="captured-by-black"></div><div id="captured-by-white"></div>
   <span id="clock-black" hidden></span><span id="clock-white" hidden></span>
   <div id="game-status"></div>
@@ -131,6 +133,27 @@ describe('game-ui.js without a game', () => {
     ui.renderControls(view({ moveCount: 0, shownPly: 0 }));
     expect(el('pgn-button').disabled).toBe(true);
     expect(el('download-button').disabled).toBe(true);
+  });
+
+  test('names the players, marks the side to move and shows who is thinking', () => {
+    const name = (id) => el(id).querySelector('.side-name').textContent;
+    const thinking = (id) => !el(id).querySelector('.thinking').hidden;
+    ui.renderPlayers({
+      w: { name: 'You', toMove: false, thinking: false },
+      b: { name: 'Computer (hard)', toMove: true, thinking: true },
+    });
+    expect([name('side-white'), name('side-black')]).toEqual(['You', 'Computer (hard)']);
+    expect(el('side-black').classList.contains('to-move')).toBe(true);
+    expect(el('side-white').classList.contains('to-move')).toBe(false);
+    expect([thinking('side-white'), thinking('side-black')]).toEqual([false, true]);
+
+    ui.renderPlayers({
+      w: { name: 'White', toMove: true, thinking: false },
+      b: { name: 'Black', toMove: false, thinking: false },
+    });
+    expect(el('side-white').classList.contains('to-move')).toBe(true);
+    expect(el('side-black').classList.contains('to-move')).toBe(false);
+    expect(thinking('side-black')).toBe(false);
   });
 
   test('shows the clocks it is given and hides them when there are none', () => {

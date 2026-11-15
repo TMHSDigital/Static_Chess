@@ -93,6 +93,19 @@ describe('the real page', () => {
     expect(values('side-select')).toEqual(['w', 'b']);
   });
 
+  test('the player bars follow the opponent setting and the side to move', () => {
+    const { window, byId } = openPage();
+    const name = (id) => byId(id).textContent;
+    expect([name('side-name-white'), name('side-name-black')]).toEqual(['White', 'Black']);
+    expect(byId('side-white').classList.contains('to-move')).toBe(true);
+    expect(byId('side-black').classList.contains('to-move')).toBe(false);
+
+    byId('opponent-select').value = 'easy';
+    byId('opponent-select').dispatchEvent(new window.Event('change', { bubbles: true }));
+    expect([name('side-name-white'), name('side-name-black')]).toEqual(['You', 'Computer (easy)']);
+    expect(byId('side-black').querySelector('.thinking').hidden).toBe(true); // Not its move
+  });
+
   describe('clock setting', () => {
     test('lists every time control and starts on the default', () => {
       const { run, byId, values } = openPage();

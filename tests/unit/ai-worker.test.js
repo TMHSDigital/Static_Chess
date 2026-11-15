@@ -80,6 +80,38 @@ describe('the computer opponent in a Web Worker', () => {
     expect(statusText(g)).toBe("Black's turn (computer is thinking)");
   });
 
+  test('the player bars say who is who, whose move it is and when the computer thinks', () => {
+    const workers = installWorker();
+    const g = loadGame();
+    expect(g.game.playersView()).toEqual({
+      w: { name: 'White', toMove: true, thinking: false },
+      b: { name: 'Black', toMove: false, thinking: false },
+    });
+
+    g.game.setOpponent('medium', 'w');
+    g.play('e2e4');
+    expect(g.game.playersView()).toEqual({
+      w: { name: 'You', toMove: false, thinking: false },
+      b: { name: 'Computer (medium)', toMove: true, thinking: true },
+    });
+
+    workers[0].reply({ id: workers[0].messages[0].id, move: E7E5 });
+    jest.runAllTimers();
+    expect(g.game.playersView().b.thinking).toBe(false);
+    expect(g.game.playersView().w.toMove).toBe(true);
+
+    g.game.viewMove(1); // Looking back: nobody is marked as to move
+    expect(g.game.playersView().w.toMove).toBe(false);
+    g.game.returnToLiveGame();
+    g.game.resign();
+    expect(g.game.playersView().w.toMove).toBe(false); // Nor in a finished game
+
+    g.game.setOpponent('hard', 'b'); // The person plays Black
+    expect(g.game.playersView().w.name).toBe('Computer (hard)');
+    expect(g.game.playersView().b.name).toBe('You');
+    g.game.stopAllTimers();
+  });
+
   test('in a game on the clock the worker is told how long it may think', () => {
     const workers = installWorker();
     const g = loadGame();

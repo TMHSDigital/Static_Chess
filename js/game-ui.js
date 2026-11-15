@@ -25,6 +25,10 @@ const capturedRows = {
     [WHITE]: document.getElementById('captured-by-white'),
     [BLACK]: document.getElementById('captured-by-black'),
 };
+const sideRows = {
+    [WHITE]: document.getElementById('side-white'),
+    [BLACK]: document.getElementById('side-black'),
+};
 const clockElements = {
     [WHITE]: document.getElementById('clock-white'),
     [BLACK]: document.getElementById('clock-black'),
@@ -136,6 +140,23 @@ function renderControls(view) {
         drawButton.disabled = !view.inProgress;
         drawButton.textContent = view.drawOffered ? 'Accept draw?' : 'Offer draw';
         drawButton.classList.toggle('confirming', view.drawOffered);
+    }
+}
+
+/**
+ * Fills the two player bars: who plays each side, whose move it is, and
+ * whether the computer is working out its move.
+ * @param {object} players - For each colour { name, toMove, thinking }.
+ */
+function renderPlayers(players) {
+    for (const color of [WHITE, BLACK]) {
+        const row = sideRows[color];
+        if (!row) continue;
+        const { name, toMove, thinking } = players[color];
+        row.querySelector('.side-name').textContent = name;
+        row.classList.toggle('to-move', toMove);
+        // Decoration only: the status line says the same to screen readers
+        row.querySelector('.thinking').hidden = !thinking;
     }
 }
 
@@ -558,6 +579,7 @@ if (typeof module !== 'undefined' && module.exports) {
         renderStatus,
         renderControls,
         renderClocks,
+        renderPlayers,
         renderReviewScore,
         renderHint,
         renderMoveList,
