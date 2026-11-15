@@ -200,6 +200,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             sideSelect.addEventListener('change', () => {
                 writeSetting(KEYS.PLAYER_SIDE, sideSelect.value);
+                // Sit behind the pieces just chosen; "Flip board" can still turn the board afterwards
+                const flipped = sideSelect.value === 'b';
+                if (flipToggle) flipToggle.checked = flipped;
+                setBoardFlipped(flipped);
+                writeSetting(KEYS.FLIP_BOARD, flipped.toString());
                 applyOpponent();
             });
             applyOpponent();

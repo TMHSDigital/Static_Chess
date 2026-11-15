@@ -194,6 +194,10 @@ describe('opponent settings', () => {
     };
     const opponent = select('opponent-select', ['human', 'easy', 'medium', 'hard']);
     const side = select('side-select', ['w', 'b']);
+    const flip = doc.createElement('input');
+    flip.type = 'checkbox';
+    flip.id = 'flip-toggle';
+    doc.body.appendChild(flip);
     Object.assign(global, {
       initializeGame: g.game.initializeGame,
       setBoardFlipped: g.board.setBoardFlipped,
@@ -210,6 +214,8 @@ describe('opponent settings', () => {
       doc,
       opponent,
       side,
+      flip,
+      boardIsFlipped: () => doc.getElementById('chess-board').classList.contains('flipped'),
       choose,
       stored: (key) => g.window.localStorage.getItem(key),
     };
@@ -251,6 +257,33 @@ describe('opponent settings', () => {
     app.choose(app.opponent, 'human');
     expect(app.game.computerColor()).toBeNull();
     expect(app.stored('opponent')).toBe('human');
+  });
+
+  test('choosing a side turns the board to it, and Flip board still overrides', () => {
+    const app = startApp({ opponent: 'easy' });
+    app.choose(app.side, 'b');
+    expect(app.boardIsFlipped()).toBe(true);
+    expect(app.flip.checked).toBe(true);
+    expect(app.stored('flipBoard')).toBe('true');
+
+    app.flip.checked = false;
+    app.flip.dispatchEvent(new app.window.Event('change'));
+    expect(app.boardIsFlipped()).toBe(false);
+    expect(app.stored('flipBoard')).toBe('false');
+
+    app.choose(app.side, 'w');
+    expect(app.boardIsFlipped()).toBe(false);
+    app.choose(app.side, 'b');
+    app.choose(app.side, 'w');
+    expect(app.boardIsFlipped()).toBe(false);
+    expect(app.flip.checked).toBe(false);
+    expect(app.stored('flipBoard')).toBe('false');
+  });
+
+  test('starting with Black saved does not turn a board the player had turned back', () => {
+    const app = startApp({ opponent: 'easy', playerSide: 'b', flipBoard: 'false' });
+    expect(app.boardIsFlipped()).toBe(false);
+    expect(app.flip.checked).toBe(false);
   });
 
   /** Starts the page as a browser does: settings and a saved game in storage, then main.js. */

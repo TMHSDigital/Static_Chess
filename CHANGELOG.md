@@ -32,6 +32,7 @@ All notable changes to this project will be documented in this file.
 - The display settings are folded under "Settings"; the opponent and side selectors stay in view
 - The status line sits above the board, and each player has a bar on their side of the board with their name, captured pieces and clock, so all of it is in view on a phone
 - The side panel is as tall as the board and the move list takes the height that is left; its controls are grouped (this game, new game, copy or load) and every control is at least 44px tall
+- Choosing a side under "Play as" turns the board to that side; "Flip board" still turns it by hand
 - The last move is shown as a tint on both squares instead of corner marks, and the dots for possible moves no longer pulse
 
 ## [0.2.0] - 2026-11-13
