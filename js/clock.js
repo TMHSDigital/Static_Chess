@@ -47,9 +47,43 @@ function formatClock(ms) {
     return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
+/**
+ * @param {number} left - Milliseconds left on a clock.
+ * @returns {number|null} The smallest threshold of CONFIG.LOW_TIME_WARNINGS the
+ *   clock is at or under, or null while it is above them all.
+ */
+function lowTimeLevel(left) {
+    const reached = CONFIG.LOW_TIME_WARNINGS.filter((threshold) => left <= threshold);
+    return reached.length > 0 ? Math.min(...reached) : null;
+}
+
+/**
+ * How a game ends when a side's time is up: the other side wins, unless it
+ * has nothing to checkmate with, which makes it a draw.
+ * @param {string} loser - The colour whose time ran out.
+ * @param {boolean} winnerCanMate - Whether the other side could still checkmate.
+ * @returns {{result: string, status: string}} The result and what the status line says.
+ */
+function timeoutResult(loser, winnerCanMate) {
+    const name = (color) => (color === WHITE ? 'White' : 'Black');
+    const winner = loser === WHITE ? BLACK : WHITE;
+    if (!winnerCanMate) {
+        return {
+            result: '1/2-1/2',
+            status: `${name(loser)} ran out of time, but ${name(winner)} cannot checkmate. Draw.`,
+        };
+    }
+    return {
+        result: winner === WHITE ? '1-0' : '0-1',
+        status: `${name(loser)} ran out of time. ${name(winner)} wins.`,
+    };
+}
+
 // Export for Node/Jest tests (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
+        lowTimeLevel,
+        timeoutResult,
         makeClock,
         timeLeft,
         formatClock,

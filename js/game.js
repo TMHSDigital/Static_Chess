@@ -172,7 +172,7 @@ function startGameFrom(position = initialPosition(), player = WHITE, startClock 
     cancelPendingPromotion();
     clearSelectedSquare();
     clearPossibleMoves();
-    clearSavedGame();
+    clearStoredGame();
 }
 
 /**
@@ -321,13 +321,7 @@ function showReviewScore() {
  * @returns {string} What the engine makes of it, as a sentence.
  */
 function positionScoreText(shown) {
-    const { score, mate, over } = assessPosition(shown, shown.player);
-    const ahead = score > 0 ? 'White' : 'Black';
-    const pawns = Math.abs(score) / 100;
-    if (over) return mate ? 'Checkmate.' : 'Stalemate.';
-    if (mate) return `Engine thinks ${ahead} can force mate.`;
-    if (pawns < 0.3) return 'Engine thinks the position is about equal.';
-    return `Engine thinks ${ahead} is ahead by ${pawns.toFixed(1)}.`;
+    return scoreText(assessPosition(shown, shown.player));
 }
 
 // --- Review of a finished game ---
@@ -384,35 +378,21 @@ function scoreFinishedGame() {
 }
 
 /**
- * What a move cost the side that played it, by the engine's count: the score
- * before it less the score after it. Only for a finished game that has been
- * gone through, and only when the loss reaches CONFIG.REVIEW_MISTAKE_DROP.
+ * What a move cost the side that played it, by the engine's count. Only for a
+ * finished game that has been gone through.
  * @param {number} index - How many moves were played before it.
  * @returns {{lost: number, allowedMate: boolean, missedMate: boolean}|null}
- *   lost is in hundredths of a pawn; null when the move is not marked.
+ *   As scoreDrop in review.js gives it; null when the move is not marked.
  */
 function moveCost(index) {
     if (!gameScores || gameScores.length !== moveHistory.length + 1) return null;
-    const before = gameScores[index];
-    const after = gameScores[index + 1];
-    const side = moveHistory[index].piece.color === WHITE ? 1 : -1;
-    const lost = (before.score - after.score) * side;
-    if (lost < CONFIG.REVIEW_MISTAKE_DROP) return null;
-    return {
-        lost,
-        allowedMate: after.mate && after.score * side < 0,
-        missedMate: before.mate && before.score * side > 0,
-    };
+    return scoreDrop(gameScores[index], gameScores[index + 1], moveHistory[index].piece.color);
 }
 
 /** @returns {string|null} moveCost as a sentence, or null when the move is not marked. */
 function moveCostText(index) {
     const cost = moveCost(index);
-    if (!cost) return null;
-    const label = moveLabel(index + 1);
-    if (cost.allowedMate) return `Engine thinks ${label} allowed a forced mate.`;
-    if (cost.missedMate) return `Engine thinks ${label} missed a forced mate.`;
-    return `Engine thinks ${label} lost about ${(cost.lost / 100).toFixed(1)}.`;
+    return cost && scoreDropText(moveLabel(index + 1), cost);
 }
 
 /** Handles "Play from here", which needs a confirming second click because it drops the later moves. */
@@ -457,27 +437,14 @@ function returnToLiveGame() {
     viewMove(moveHistory.length);
 }
 
-/**
- * The number a move carries in the move list, in PGN and in FEN. Everything
- * that numbers moves asks here, so a game need not begin with White's move 1.
- * @param {number} index - How many moves were played before it.
- * @param {object} [start] - How the game began; this game by default.
- * @returns {{number: number, white: boolean}} The move number and whose move it is.
- */
-function moveNumberAt(index, start = gameStart) {
-    const halfMoves = index + (start.player === BLACK ? 1 : 0);
-    return { number: start.fullmove + Math.floor(halfMoves / 2), white: halfMoves % 2 === 0 };
-}
-
-/** @returns {string} A move number as written before the move: "12." for White, "12..." for Black. */
-function moveNumberText(index, start = gameStart) {
-    const { number, white } = moveNumberAt(index, start);
-    return `${number}${white ? '.' : '...'}`;
+/** @returns {{number: number, white: boolean}} The number of a move of this game and whose move it is. */
+function moveNumberAt(index) {
+    return moveNumber(index, gameStart);
 }
 
 /** @returns {string} A move with its number, such as "12. Nf3" or "12... Nf6". */
 function moveLabel(ply) {
-    return `${moveNumberText(ply - 1)} ${moveHistory[ply - 1].notation}`;
+    return `${moveNumberPrefix(ply - 1, gameStart)} ${moveHistory[ply - 1].notation}`;
 }
 
 /** Redraws everything that depends on the position on screen. */
@@ -1015,20 +982,9 @@ function tickClock() {
         warnIfTimeIsLow();
         return;
     }
-    const loser = currentPlayer;
-    const winner = opponentOf(loser);
-    const name = (color) => (color === WHITE ? 'White' : 'Black');
-    if (canDeliverMate(boardState, winner)) {
-        endGameWithoutMove(
-            winner === WHITE ? '1-0' : '0-1',
-            `${name(loser)} ran out of time. ${name(winner)} wins.`
-        );
-    } else {
-        endGameWithoutMove(
-            '1/2-1/2',
-            `${name(loser)} ran out of time, but ${name(winner)} cannot checkmate. Draw.`
-        );
-    }
+    const winnerCanMate = canDeliverMate(boardState, opponentOf(currentPlayer));
+    const { result, status } = timeoutResult(currentPlayer, winnerCanMate);
+    endGameWithoutMove(result, status);
 }
 
 /**
@@ -1038,10 +994,7 @@ function tickClock() {
  * threshold, that one warns again on the next way down.
  */
 function warnIfTimeIsLow() {
-    const left = clockRemaining(currentPlayer);
-    // The smallest threshold the clock is at or under now, or null above them all
-    const reached = CONFIG.LOW_TIME_WARNINGS.filter((threshold) => left <= threshold);
-    const level = reached.length > 0 ? Math.min(...reached) : null;
+    const level = lowTimeLevel(clockRemaining(currentPlayer));
     clock.warned = clock.warned || { [WHITE]: null, [BLACK]: null };
     const before = clock.warned[currentPlayer];
     clock.warned[currentPlayer] = level;
@@ -1221,13 +1174,9 @@ function isStalemate(playerColor) {
 
 // --- Persistence ---
 
-const SAVED_GAME_KEY = CONFIG.STORAGE_KEYS.GAME_STATE;
-
-/**
- * Saves the current game state to localStorage.
- */
+/** Saves the game, with its undo stack and clock, so it is there after a reload. */
 function saveGameState() {
-    const gameState = {
+    storeGame({
         version: SAVED_GAME_VERSION,
         ...currentSnapshot(),
         gameStart: gameStart,
@@ -1243,36 +1192,16 @@ function saveGameState() {
             running: clock.turnStartedAt !== null,
         },
         positionHistory: positionHistory, // Undo stack, so Undo still works after a reload
-    };
-    if (!writeStored(SAVED_GAME_KEY, JSON.stringify(gameState))) {
-        console.error('The game could not be saved: storage is blocked or full.');
-    }
-}
-
-/** Removes the saved game. Storage may be unavailable, which must not stop the game. */
-function clearSavedGame() {
-    removeStored(SAVED_GAME_KEY);
+    });
 }
 
 /**
- * Loads game state from localStorage. The live game is only changed once the
- * saved value has passed validation; anything else is discarded.
+ * Makes the saved game, if there is a usable one, the live game.
  * @returns {boolean} True if a saved game was loaded.
  */
 function loadGameState() {
-    let state = null;
-    const savedState = readStored(SAVED_GAME_KEY);
-    if (!savedState) return false;
-    try {
-        state = validateSavedGame(JSON.parse(savedState));
-    } catch (e) {
-        console.error('Error loading game state:', e);
-    }
-    if (!state) {
-        clearSavedGame(); // Unusable saved state: start fresh next time too
-        return false;
-    }
-
+    const state = readStoredGame();
+    if (!state) return false;
     restoreSnapshot(state);
     gameStart = state.gameStart;
     moveHistory = state.moveHistory;
@@ -1285,57 +1214,16 @@ function loadGameState() {
 
 // --- Past games ---
 
-const ARCHIVE_KEY = CONFIG.STORAGE_KEYS.GAME_ARCHIVE;
-
-/**
- * Reads the past games from localStorage. A missing or damaged value gives an
- * empty list, and entries that are not complete are left out.
- * @returns {Array<{pgn: string, result: string, opponent: string, date: string, moves: number}>}
- *   Newest first.
- */
-function readArchive() {
-    try {
-        const saved = JSON.parse(readStored(ARCHIVE_KEY));
-        if (!Array.isArray(saved)) return [];
-        return saved
-            .filter(
-                (entry) =>
-                    entry &&
-                    typeof entry.pgn === 'string' &&
-                    typeof entry.result === 'string' &&
-                    typeof entry.opponent === 'string' &&
-                    typeof entry.date === 'string' &&
-                    !Number.isNaN(Date.parse(entry.date)) &&
-                    Number.isInteger(entry.moves)
-            )
-            .slice(0, CONFIG.ARCHIVE_LIMIT);
-    } catch {
-        return [];
-    }
-}
-
-/**
- * Puts the current game at the top of the past games, if it has any moves.
- * Only the newest CONFIG.ARCHIVE_LIMIT games are kept, as PGN text of about a
- * kilobyte each, so the storage quota is not at risk.
- */
+/** Puts the current game at the top of the past games, if it has any moves. */
 function archiveCurrentGame() {
     if (moveHistory.length === 0) return;
-    const pgn = buildPGN();
-    const same = (entry) => pgnMovetext(entry.pgn) === pgnMovetext(pgn);
-    const archive = readArchive();
-    // A game opened from the list and put back keeps its entry instead of appearing twice
-    const entry = archive.find(same) || {
-        pgn,
+    addToArchive({
+        pgn: buildPGN(),
         result: (isGameOver && gameResult) || '*',
         opponent: computerColor() ? `Computer (${opponentLevel})` : 'Two players',
         date: new Date().toISOString(),
         moves: moveHistory.length,
-    };
-    const updated = [entry, ...archive.filter((past) => !same(past))];
-    if (!writeStored(ARCHIVE_KEY, JSON.stringify(updated.slice(0, CONFIG.ARCHIVE_LIMIT)))) {
-        console.error('The past games could not be saved: storage is blocked or full.');
-    }
+    });
 }
 
 // --- What the page shows (drawn by game-ui.js) ---
@@ -1445,45 +1333,21 @@ function handleResetClick() {
     announce(`New game. ${currentStatus}`);
 }
 
-/**
- * Builds the game as PGN text: the seven standard tags followed by the moves.
- * @returns {string}
- */
+/** @returns {string} This game as PGN text. */
 function buildPGN() {
-    const result = (isGameOver && gameResult) || '*'; // "*" marks a game still in progress
-
-    const today = new Date();
-    const pad = (n) => String(n).padStart(2, '0');
-    const date = `${today.getFullYear()}.${pad(today.getMonth() + 1)}.${pad(today.getDate())}`;
-    const tags = [
-        ['Event', 'Static Chess game'],
-        ['Site', '?'],
-        ['Date', date],
-        ['Round', '-'],
-        ['White', computerColor() === WHITE ? `Computer (${opponentLevel})` : 'White'],
-        ['Black', computerColor() === BLACK ? `Computer (${opponentLevel})` : 'Black'],
-        ['Result', result],
-        ...(clock ? [['TimeControl', `${clock.base / 1000}+${clock.increment / 1000}`]] : []),
-        // A game that did not begin from the usual position says where it began
-        ...(gameStart.fen
-            ? [
-                  ['SetUp', '1'],
-                  ['FEN', gameStart.fen],
-              ]
-            : []),
-    ].map(([name, value]) => `[${name} "${value}"]`);
-
-    const moves = moveHistory.map((move, index) => {
-        const san = move.notation.replace(' e.p.', ''); // Not valid in PGN
-        // White's moves carry their number, and so does a first move by Black
-        const numbered = moveNumberAt(index).white || index === 0;
-        return numbered ? `${moveNumberText(index)} ${san}` : san;
+    const name = (color, plain) =>
+        computerColor() === color ? `Computer (${opponentLevel})` : plain;
+    return writePGN({
+        moves: moveHistory.map((move) => move.notation),
+        start: gameStart,
+        result: (isGameOver && gameResult) || '*', // "*" marks a game still in progress
+        white: name(WHITE, 'White'),
+        black: name(BLACK, 'Black'),
+        timeControl: clock ? `${clock.base / 1000}+${clock.increment / 1000}` : null,
+        // A resignation or agreed draw is not visible in the moves, so it goes in as a comment
+        comment: endedWithoutMove ? currentStatus : null,
+        date: new Date(),
     });
-
-    // A resignation or agreed draw is not visible in the moves, so say it in a comment
-    const ending = endedWithoutMove ? [`{${currentStatus.replace(/[{}]/g, '')}}`] : [];
-
-    return `${tags.join('\n')}\n\n${[...moves, ...ending, result].join(' ')}\n`;
 }
 
 /**
@@ -1515,55 +1379,22 @@ function buildFEN() {
     return positionToFEN(shown, shown.player, shown.halfmoveClock, moveNumberAt(shown.ply).number);
 }
 
-// --- Loading a game from PGN ---
-
-const IMPORT_NO_MOVES = 'No moves found in the text.';
-const IMPORT_TOO_LONG = `That text is too long to be a game (over ${CONFIG.IMPORT_MAX_LENGTH.toLocaleString('en-US')} characters).`;
-
-/** @returns {string|null} Why a text of this length cannot be loaded, or null if it can. */
-function importSizeError(length) {
-    return length > CONFIG.IMPORT_MAX_LENGTH ? IMPORT_TOO_LONG : null;
-}
+// --- Loading a game from PGN or FEN ---
 
 /**
  * Replaces the current game with one given as PGN. Every move is checked
- * first; if one cannot be played, nothing is changed. A game with a FEN tag
- * begins from that position instead of the usual one. A result the moves do
- * not show (resignation, agreed draw, time) ends the loaded game as well;
- * Undo reopens it. Of several games in the text, the first is loaded.
+ * first (readPGN in notation.js); if one cannot be played, nothing is changed.
+ * A result the moves do not show (resignation, agreed draw, time) ends the
+ * loaded game as well; Undo reopens it.
  * @param {string} text
  * @param {boolean} validateOnly - Check the moves without replacing the game.
  * @returns {{ok: boolean, error?: string, empty?: boolean, moves?: number}} empty: the
  *   text holds no move at all.
  */
 function importPGN(text, validateOnly = false) {
-    if (String(text).length > CONFIG.IMPORT_MAX_LENGTH)
-        return { ok: false, error: IMPORT_TOO_LONG };
-    const tokens = pgnMoveTokens(text);
-    if (tokens.length === 0) return { ok: false, error: IMPORT_NO_MOVES, empty: true };
-
-    // The game begins from the usual position unless a FEN tag says otherwise
-    let start = { ...STANDARD_START, position: initialPosition() };
-    const fenTag = pgnTag(firstPGNGame(text), 'FEN');
-    if (fenTag !== null) {
-        start = positionFromFEN(fenTag);
-        if (start.error) return { ok: false, error: `The FEN tag cannot be used. ${start.error}` };
-    }
-
-    let position = start.position;
-    let color = start.player;
-    const moves = [];
-    for (const [index, token] of tokens.entries()) {
-        const move = findSANMove(position, color, token);
-        if (!move) {
-            const number = moveNumberText(index, start);
-            return { ok: false, error: `Move ${number} ${token} cannot be played.` };
-        }
-        moves.push(move);
-        position = applyMove(position, move.from, move.to, move.promotion).position;
-        color = opponentOf(color);
-    }
-
+    const game = readPGN(text);
+    if (!game.ok) return game;
+    const { start, moves } = game;
     if (validateOnly) return { ok: true, moves: moves.length };
 
     // The moves go in without sounds, saving or computer replies; the page is drawn once at the end
@@ -1597,12 +1428,11 @@ function importPGN(text, validateOnly = false) {
  * @returns {{ok: boolean, error?: string}}
  */
 function importFEN(text, validateOnly = false) {
-    if (String(text).length > CONFIG.IMPORT_MAX_LENGTH)
-        return { ok: false, error: IMPORT_TOO_LONG };
-    const start = positionFromFEN(text);
-    if (start.error) return { ok: false, error: start.error };
+    const read = readFEN(text);
+    if (!read.ok) return read;
     if (validateOnly) return { ok: true };
 
+    const { start } = read;
     startGameFrom(start.position, start.player, start.halfmoveClock, start.fullmove);
     endIfAlreadyDecided();
     redraw();

@@ -88,10 +88,22 @@ const appGlobals = {
     'looksLikeFEN',
     'pgnMovetext',
   ]),
+  ...shared([
+    'moveNumber',
+    'moveNumberPrefix',
+    'writePGN',
+    'importSizeError',
+    'readPGN',
+    'readFEN',
+  ]),
   // saved-game.js
   ...shared(['SAVED_GAME_VERSION', 'STANDARD_START', 'validateSavedGame']),
+  // game-store.js
+  ...shared(['storeGame', 'clearStoredGame', 'readStoredGame', 'readArchive', 'addToArchive']),
   // clock.js
-  ...shared(['makeClock', 'timeLeft', 'formatClock']),
+  ...shared(['makeClock', 'timeLeft', 'formatClock', 'lowTimeLevel', 'timeoutResult']),
+  // review.js
+  ...shared(['scoreText', 'scoreDrop', 'scoreDropText']),
   // engine-bridge.js
   ...shared(['askEngine', 'askEngineForScores', 'dropEngineRequests', 'isLatestEngineRequest']),
   // game-ui.js
@@ -123,10 +135,8 @@ const appGlobals = {
   ]),
   // game.js
   ...shared([
-    'readArchive',
     'importPGN',
     'importFEN',
-    'importSizeError',
     'isGameInProgress',
     'initializeGame',
     'isOwnPiece',

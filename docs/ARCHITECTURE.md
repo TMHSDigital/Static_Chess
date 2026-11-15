@@ -27,9 +27,11 @@ Static_Chess/
 │   ├── ai.js            # Computer opponent: evaluation and search
 │   ├── ai-worker.js     # Web Worker that runs the search off the main thread
 │   ├── promotion.js     # Pawn promotion chooser
-│   ├── notation.js      # Writing a move in SAN; taking PGN text apart
+│   ├── notation.js      # Writing SAN and PGN; reading PGN and FEN into checked moves
 │   ├── saved-game.js    # Checking a saved game read from storage
-│   ├── clock.js         # The arithmetic of a chess clock
+│   ├── game-store.js    # The saved game and the past games in the browser's storage
+│   ├── clock.js         # The arithmetic and the rules of a chess clock
+│   ├── review.js        # The engine's scores put into words
 │   ├── engine-bridge.js # Requests to the engine, through the worker or on the page
 │   └── game-ui.js       # Status, buttons, clocks, move list and the Load dialog
 ├── tests/               # Jest tests (dev only)
@@ -67,7 +69,7 @@ Static_Chess/
    - Holds the game state (board, side to move, history, undo stack, result, clock)
    - Adds the click listener to the board and handles the buttons beside it
    - `makeMove()` plays a move in the live game. The change to the game itself is `playMove()`: it applies the move through `rules.js`, records it and detects checkmate and stalemate, and it refuses a finished game. `makeMove()` adds what only a move made on the page needs: the clock, automatic draws, `showMoveResult()` for the page updates, saving and the computer's reply. Load PGN plays its moves in through `playMove()` alone
-   - `startGameFrom()` begins a game from a position, by default `initialPosition()` from `rules.js` with White to move. How the game began is kept in `gameStart` and saved with it, and `moveNumberAt()` is the one place that works out move numbers from it for the move list, PGN and FEN
+   - `startGameFrom()` begins a game from a position, by default `initialPosition()` from `rules.js` with White to move. How the game began is kept in `gameStart` and saved with it, and `moveNumber()` in `notation.js` is the one place that works out move numbers from it for the move list, PGN and FEN
    - `currentSnapshot()` and `restoreSnapshot()` are the one place that lists the fields of a position; the undo stack, saving, loading and a new game go through them
    - Delegates rendering to board.js
 
@@ -114,20 +116,20 @@ Static_Chess/
 Everything is kept in `localStorage` under the keys in `CONFIG.STORAGE_KEYS`:
 
 - `chessGameState`: the game. It holds a `version` field, the position (`boardState`, `currentPlayer`, `isGameOver`, `kingPositions`, `currentStatus`, `enPassantTarget`, `halfmoveClock`), the move list (`moveHistory`), the undo stack (`positionHistory`), the result (`gameResult`, and `endedWithoutMove` for a resignation, an agreed draw or a loss on time), how the game began (`gameStart`) and the `clock` object when the game is timed
-- `chessGameArchive`: the past games, newest first, at most `CONFIG.ARCHIVE_LIMIT`. Each entry is `{ pgn, result, opponent, date, moves }`; `readArchive()` ignores a damaged value and drops incomplete entries
+- `chessGameArchive`: the past games, newest first, at most `CONFIG.ARCHIVE_LIMIT`. Each entry is `{ pgn, result, opponent, date, moves }`; `readArchive()` in `game-store.js` ignores a damaged value and drops incomplete entries
 - One key per setting: `showCoords`, `showPossibleMoves`, `showLastMove`, `enableSounds`, `flipBoard`, `opponent`, `playerSide`, `timeControl`, `boardTheme`, `pageTheme`
 
 A saved game is validated before it is used (`validateSavedGame()`); anything unusable is discarded and a fresh game starts. Fields added later are optional there, so older saves still load. Changing a key name orphans what players have saved under the old one.
 
 ## How the scripts depend on each other
 
-The scripts are plain `<script>` files in one global scope, loaded in the order in `index.html`: `config`, `utils`, `pieces`, `rules`, `ai`, `board`, `drag`, `promotion`, `notation`, `saved-game`, `clock`, `engine-bridge`, `game-ui`, `game`, `main`.
+The scripts are plain `<script>` files in one global scope, loaded in the order in `index.html`: `config`, `utils`, `pieces`, `rules`, `ai`, `board`, `drag`, `promotion`, `notation`, `saved-game`, `game-store`, `clock`, `review`, `engine-bridge`, `game-ui`, `game`, `main`.
 
 - `rules.js` depends only on `pieces.js` and `utils.js`; `ai.js` builds on `rules.js` (`allLegalMoves`, `allLegalCaptures`, `applyMove`, `isInCheck`, `positionKey`). Neither touches the DOM, which is what lets `ai-worker.js` load them in a Web Worker
 - `board.js` owns the selection (`getSelectedSquare()`, `getPossibleMoves()` and their setters) and renders what it is given; it reads nothing from `game.js`. The last move to highlight is an argument of `updateBoardVisuals()`
-- `game.js` owns the game state and calls into `board.js`, `rules.js`, `promotion.js` and the five files below
+- `game.js` owns the game state and calls into `board.js`, `rules.js`, `promotion.js` and the files below. What is left in it is the state of the game and what changes it: the move flow, undo, the end of the game, the computer's turn, and the steps that apply a clock tick, a hint, a review, a saved or a loaded game to that state
 - `game-ui.js` draws everything on the page apart from the board: the status line, the buttons, the clocks, the move list, the captured pieces, announcements and the Load dialog. It holds no game. `game.js` tells it what to show in plain values (`renderStatus(text)`, `renderControls(view)`, `renderClocks(clocks)`, `renderMoveList(moves, view)`, `renderCaptured(taken, lead)`, `renderHint(move)`) and hands it its handlers once (`bindControls()`); the Load dialog calls back into `importPGN()`, `importFEN()` and `readArchive()`. `tests/unit/game-ui.test.js` loads it without `game.js`
-- `notation.js`, `saved-game.js` and `clock.js` hold what needs no page: writing SAN and reading PGN text, validating a saved game, and clock arithmetic. They take what they work on as arguments and can be loaded and tested with no document (`tests/unit/no-dom.test.js`)
+- `notation.js`, `saved-game.js`, `game-store.js`, `clock.js` and `review.js` hold what needs no page and no game: writing SAN and PGN (`writeSAN()`, `writePGN()`), reading PGN and FEN into moves that have been checked (`readPGN()`, `readFEN()`), validating a saved game, reading and writing the browser's storage (`storeGame()`, `readStoredGame()`, `readArchive()`, `addToArchive()`), clock arithmetic and rules (`timeLeft()`, `lowTimeLevel()`, `timeoutResult()`), and the wording of the engine's scores (`scoreText()`, `scoreDrop()`). They take what they work on as arguments and can be loaded and tested with no document (`tests/unit/no-dom.test.js`)
 - `engine-bridge.js` is the only file that talks to the worker. It knows nothing about the game: `game.js` hands it a position and gets a move back, or a list of positions and gets a score for each. Requests travel on named channels, each with a worker of its own; only the latest request on a channel counts, and channels do not affect each other
 - `drag.js` calls `board.js` for the selection and `game.js` for `isBoardLocked()`, `isOwnPiece()`, `generateLegalMovesForPiece()`, `playChosenMove()` and `refreshBoardVisuals()`; it reads no state of the game directly
 - Cross-file calls are direct, with no `window.` lookups or `typeof` guards, so a missing script is a `ReferenceError` rather than a click that does nothing. The names involved are listed once in `eslint.config.mjs`
@@ -234,7 +236,7 @@ To make it stronger, the limit is speed: each extra half-move costs roughly an o
 1. `CONFIG.TIME_CONTROLS` lists the time controls: minutes each and seconds added per move. `main.js` fills the "Clock" selector from it and calls `setTimeControl()`. The choice applies to the next new game; a game with no move yet takes it at once
 2. A timed game has a `clock` object: `{ control, base, increment, remaining: { w, b }, turnStartedAt }`, times in milliseconds. `turnStartedAt` is when the side to move was put on the clock, or `null` while no clock runs. `clockRemaining(color)` works out the time left from it, so nothing has to count down
 3. `makeMove()` stops the mover's clock, adds the increment and starts the other side's. White's first move is not timed
-4. `runClockTimer()` keeps an interval going (`CONFIG.CLOCK_TICK_MS`) only while a clock runs. `tickClock()` redraws it and, at zero, ends the game through `endGameWithoutMove()`: a loss, or a draw if the other side could never give mate (`canDeliverMate()`)
+4. `runClockTimer()` keeps an interval going (`CONFIG.CLOCK_TICK_MS`) only while a clock runs. `tickClock()` redraws it and, at zero, ends the game through `endGameWithoutMove()` with what `timeoutResult()` in `clock.js` says: a loss, or a draw if the other side could never give mate (`canDeliverMate()`)
 5. `warnIfTimeIsLow()` announces "White has 20 seconds left." and plays the `LOW_TIME` sound when the side to move goes down past a threshold in `CONFIG.LOW_TIME_WARNINGS`, once per threshold unless an increment takes the clock back above it
 6. Undo is off in a timed game
 7. The clock is saved with the game, as the times left and whether it was running, and the page saves again on `pagehide`. After a reload the side to move is put back on the clock from that moment
@@ -263,7 +265,7 @@ Undo is implemented using a pre-move snapshot stack:
 There is one live game, saved under `chessGameState`, and an archive of the games before it:
 
 1. `startGameFrom()` calls `archiveCurrentGame()` before it clears the game, so a game with moves that is replaced by New Game or by a loaded game goes into the archive, finished or not
-2. An entry holds the game as PGN text (`buildPGN()`), which keeps it near a kilobyte; the newest `CONFIG.ARCHIVE_LIMIT` are kept
+2. An entry holds the game as PGN text (`buildPGN()`), which keeps it near a kilobyte; `addToArchive()` in `game-store.js` keeps the newest `CONFIG.ARCHIVE_LIMIT`
 3. The Load dialog lists them (`showArchive()`). A click loads the entry with `importPGN()`, which restores its result
 4. A game opened from the list and replaced again keeps its one entry and moves to the top
 
@@ -314,7 +316,7 @@ SAN generation with disambiguation is implemented:
 
 ### 13. PGN and FEN
 
-1. `buildPGN()` writes the seven standard tags, `TimeControl` for a timed game, `SetUp` and `FEN` for a game that did not begin from the usual position, the moves, and a comment before the result when the game ended without a move
+1. `buildPGN()` hands the game to `writePGN()` in `notation.js`, which writes the seven standard tags, `TimeControl` for a timed game, `SetUp` and `FEN` for a game that did not begin from the usual position, the moves, and a comment before the result when the game ended without a move
 2. `importPGN(text)` reads a game. `pgnMoveTokens()` drops tags, comments, variations and annotations, `findSANMove()` in `rules.js` finds the legal move each token stands for, and every move is checked before anything is changed; the first one that cannot be played is named in the dialog. Of several games in the text the first is loaded
 3. The moves go in through `playMove()`. A draw nobody claimed in the loaded game is ignored until the last move, and `pgnResult()` restores a result the moves do not show
 4. `buildFEN()` writes the position on screen with `positionToFEN()` from `rules.js`, also while looking back

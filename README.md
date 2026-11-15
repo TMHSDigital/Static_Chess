@@ -224,9 +224,11 @@ Static_Chess/
 │   ├── ai.js            # Computer opponent (evaluation and search)
 │   ├── ai-worker.js     # Runs the search in a Web Worker
 │   ├── promotion.js     # Pawn promotion chooser
-│   ├── notation.js      # Writing a move in SAN; taking PGN text apart
+│   ├── notation.js      # Writing SAN and PGN; reading PGN and FEN into checked moves
 │   ├── saved-game.js    # Checking a saved game read from storage
-│   ├── clock.js         # The arithmetic of a chess clock
+│   ├── game-store.js    # The saved game and the past games in the browser's storage
+│   ├── clock.js         # The arithmetic and the rules of a chess clock
+│   ├── review.js        # The engine's scores put into words
 │   ├── engine-bridge.js # Requests to the engine, through the worker or on the page
 │   └── game-ui.js       # Status, buttons, clocks, move list and the Load dialog
 ├── assets/              # Static assets
@@ -282,7 +284,7 @@ The project follows a clear separation of concerns:
   - `board.js`: DOM rendering, keyboard navigation, and diff-based updates
   - `game.js`: Game state and move flow, undo, saving, and what the status and announcements say
   - `game-ui.js`: Draws the status line, buttons, clocks, move list and the Load dialog from what `game.js` tells it
-  - `notation.js`, `saved-game.js`, `clock.js`: SAN and PGN text, saved-game validation and clock arithmetic, with no DOM access
+  - `notation.js`, `saved-game.js`, `game-store.js`, `clock.js`, `review.js`: SAN, PGN and FEN text, saved-game validation, storage, clock rules and the wording of engine scores, with no DOM access
   - `engine-bridge.js`: Sends positions to the engine and brings its move or its scores back
   - `main.js`: Bootstraps the application
   - `drag.js`: Drag and drop integrated via existing click handlers
