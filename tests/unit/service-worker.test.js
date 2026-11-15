@@ -21,7 +21,7 @@ const settled = () => new Promise((resolve) => setTimeout(resolve, 0)); // Lets 
 /**
  * Loads sw.js with the service worker globals stubbed: Cache Storage is a Map
  * of Maps, and the network is the function passed in.
- * @param {(request: object) => Promise<object>} [network]
+ * @param {(request: object, options: object) => Promise<object>} [network]
  */
 function startServiceWorker(network = () => Promise.reject(new Error('offline'))) {
   const listeners = {};
@@ -122,13 +122,15 @@ describe('service worker', () => {
     expect(network).not.toHaveBeenCalled();
   });
 
-  test('a page that loads from the network is returned and a copy is saved', async () => {
+  test('the HTTP cache is revalidated and the network response is saved', async () => {
     const fresh = response(true, 'new version');
-    const sw = startServiceWorker(async () => fresh);
+    const network = jest.fn(async () => fresh);
+    const sw = startServiceWorker(network);
     await sw.lifecycle('install');
     const request = get(`${PAGE}js/game.js`);
 
     expect(await sw.fetchEvent(request)).toBe(fresh);
+    expect(network).toHaveBeenCalledWith(request, { cache: 'no-cache' });
     await settled();
     const [saved] = sw.stores.values();
     expect(saved.get(request.url)).toEqual({ ok: true, body: 'new version', copy: true });

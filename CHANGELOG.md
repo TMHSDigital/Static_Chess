@@ -29,6 +29,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Online visits with an active service worker check for updated app files even when the browser's HTTP cache is still fresh. Unchanged files can still use the cached copy.
 - On narrow screens the side panel was wider than the screen and its edges were cut off
 - Light theme: the card around the board stayed black with an unreadable title, and the move list, status and settings boxes were grey
 - The pawn promotion chooser ran off the edge of very narrow screens

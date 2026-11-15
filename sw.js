@@ -97,7 +97,8 @@ self.addEventListener('fetch', (event) => {
                 });
             }, NETWORK_WAIT_MS);
 
-            fetch(request)
+            // Revalidate fresh HTTP cache entries as well as stale ones.
+            fetch(request, { cache: 'no-cache' })
                 .then((response) => {
                     clearTimeout(waiting);
                     if (response.ok) {
