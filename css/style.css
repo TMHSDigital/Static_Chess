@@ -326,7 +326,8 @@ body {
 .more-settings summary:focus-visible,
 .switch input:focus-visible + .slider,
 .move-history li button.move:focus-visible,
-.import-panel textarea:focus-visible {
+.import-panel textarea:focus-visible,
+.about a:focus-visible {
     outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
 }
@@ -679,6 +680,25 @@ body.coords-visible {
 
 .more-settings summary:hover {
     background-color: var(--hover-bg);
+}
+
+.about {
+    margin: 0;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border-color);
+    font-size: 0.85rem;
+    color: var(--muted-text);
+    text-align: center;
+}
+
+.about a {
+    color: var(--muted-text);
+    text-underline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+.about a:hover {
+    color: var(--text-color);
 }
 
 /* One bar per side: its name, what it has captured, and its clock when the game has one */
