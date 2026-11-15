@@ -7,7 +7,7 @@
     "node": "^22.22.2 || >=24.15.0"
   },
   "scripts": {
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "format": "prettier --check .",
     "test": "jest --runInBand",
     "coverage": "jest --runInBand --coverage"
@@ -17,7 +17,15 @@
     "collectCoverageFrom": [
       "js/**/*.js",
       "sw.js"
-    ]
+    ],
+    "coverageThreshold": {
+      "global": {
+        "statements": 90,
+        "branches": 83,
+        "functions": 90,
+        "lines": 90
+      }
+    }
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

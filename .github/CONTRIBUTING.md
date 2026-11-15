@@ -18,12 +18,12 @@ Guidelines:
 
 The app itself needs no tooling: open `index.html` or serve the folder. Node is only used for linting and tests.
 
-- **Node:** 22.22.2 or newer on the 22 line, or 24.15 or newer (CI uses 24). jsdom sets this floor.
+- **Node:** 22.22.2 or newer on the 22 line, or 24.15 or newer (CI runs both lines). jsdom sets this floor.
 - **Install:** `npm ci`
 - **Scripts:**
   - `npm test` runs the Jest suite
-  - `npm run coverage` runs it with a coverage report
-  - `npm run lint` runs ESLint (`eslint.config.mjs` is the only ESLint config)
+  - `npm run coverage` runs it with a coverage report. It fails if coverage falls below the thresholds in `package.json` (`coverageThreshold`), and this is the command CI runs, so new code needs tests
+  - `npm run lint` runs ESLint (`eslint.config.mjs` is the only ESLint config). Warnings fail it too
   - `npm run format` checks formatting with Prettier, and CI fails if it does not pass. Run `npx prettier --write .` to fix formatting before you push.
 
 ### How the scripts fit together
