@@ -19,31 +19,12 @@ let endedWithoutMove = false; // True when the game ended by resignation or agre
 let drawOffered = false; // Two-player game: a draw offer is waiting for the other side
 let viewPly = null; // Number of moves played in the position being looked at; null shows the live game
 
-const moveHistoryElement = document.getElementById('move-history');
-const gameStatusElement = document.getElementById('game-status');
-const liveButton = document.getElementById('live-button');
-const reviewActions = document.getElementById('review-actions');
-const playHereButton = document.getElementById('play-here-button');
-const stepButtons = document.getElementById('step-buttons');
-const reviewScoreElement = document.getElementById('review-score');
-const resignButton = document.getElementById('resign-button');
-const drawButton = document.getElementById('draw-button');
-const capturedRows = {
-    [WHITE]: document.getElementById('captured-by-white'),
-    [BLACK]: document.getElementById('captured-by-black'),
-};
-const pendingConfirms = new Map(); // Buttons waiting for a confirming second click
-const clockElements = {
-    [WHITE]: document.getElementById('clock-white'),
-    [BLACK]: document.getElementById('clock-black'),
-};
 let chosenTimeControl = null; // Key of CONFIG.TIME_CONTROLS for the next game; null for no clock
 // The clock of the game being played, or null: { control, base, increment,
 // remaining: {w, b} } in milliseconds, and turnStartedAt, the time the side to
 // move was put on the clock (null while no clock is running)
 let clock = null;
 let clockTimer = null; // Interval that redraws a running clock
-const hintButton = document.getElementById('hint-button');
 let hintMove = null; // The move the engine suggested, if asked
 let hintPending = false; // True while the engine is working out a hint
 let hintPly = null; // Moves played in the position the hint is for
@@ -53,22 +34,6 @@ const REVIEW_HINT_CHANNEL = 'review-hint';
 const REVIEW_SCORES_CHANNEL = 'review-scores';
 let gameScores = null; // Once the game is over: what the engine makes of every position, first to last
 let scoredGame = null; // The finished game (gameSignature) gameScores was asked for, or null
-let announcerElement = document.getElementById('announcer'); // Live region read out by screen readers
-const resetButton = document.getElementById('reset-button');
-const undoButton = document.getElementById('undo-button');
-const pgnButton = document.getElementById('pgn-button');
-const downloadButton = document.getElementById('download-button');
-const fenButton = document.getElementById('fen-button');
-const importButton = document.getElementById('import-button');
-const importDialog = document.getElementById('import-dialog');
-const importText = document.getElementById('import-text');
-const importError = document.getElementById('import-error');
-const importLoadButton = document.getElementById('import-load');
-const importCancelButton = document.getElementById('import-cancel');
-const importFileButton = document.getElementById('import-file-button');
-const importFile = document.getElementById('import-file');
-const archiveSection = document.getElementById('archive-section');
-const archiveList = document.getElementById('archive-list');
 
 // Computer opponent
 let opponentLevel = null; // null for two players, otherwise a key of AI_LEVELS ('easy', 'medium', 'hard')
@@ -123,39 +88,22 @@ function initializeGame() {
     updateMoveHistoryDisplay();
     refreshBoardVisuals();
 
-    // The move list: click or use the arrow keys to look at earlier positions
-    moveHistoryElement.removeEventListener('click', handleMoveListClick);
-    moveHistoryElement.addEventListener('click', handleMoveListClick);
-    moveHistoryElement.removeEventListener('keydown', handleMoveListKeydown);
-    moveHistoryElement.addEventListener('keydown', handleMoveListKeydown);
-    if (liveButton) {
-        liveButton.removeEventListener('click', returnToLiveGame);
-        liveButton.addEventListener('click', returnToLiveGame);
-    }
-    if (playHereButton) {
-        playHereButton.removeEventListener('click', handlePlayHereClick);
-        playHereButton.addEventListener('click', handlePlayHereClick);
-    }
-    if (stepButtons) {
-        stepButtons.removeEventListener('click', handleStepClick);
-        stepButtons.addEventListener('click', handleStepClick);
-    }
-    if (archiveList) {
-        archiveList.removeEventListener('click', handleArchiveClick);
-        archiveList.addEventListener('click', handleArchiveClick);
-    }
-    if (resignButton) {
-        resignButton.removeEventListener('click', handleResignClick);
-        resignButton.addEventListener('click', handleResignClick);
-    }
-    if (drawButton) {
-        drawButton.removeEventListener('click', handleDrawClick);
-        drawButton.addEventListener('click', handleDrawClick);
-    }
-    if (hintButton) {
-        hintButton.removeEventListener('click', requestHint);
-        hintButton.addEventListener('click', requestHint);
-    }
+    bindControls({
+        moveListClick: handleMoveListClick,
+        moveListKeydown: handleMoveListKeydown,
+        live: returnToLiveGame,
+        playHere: handlePlayHereClick,
+        step: handleStepClick,
+        resign: handleResignClick,
+        draw: handleDrawClick,
+        hint: requestHint,
+        reset: handleResetClick,
+        copyPGN,
+        downloadPGN,
+        copyFEN,
+        undo: undoLastMove,
+        undoOffered: CONFIG.FEATURES.UNDO_MOVE,
+    });
     // Keep the clock times when the page is closed in the middle of a turn
     window.removeEventListener('pagehide', saveGameInProgress);
     window.addEventListener('pagehide', saveGameInProgress);
@@ -164,55 +112,6 @@ function initializeGame() {
     // Add event listener for board clicks (delegated)
     boardElement.removeEventListener('click', handleBoardClickEvent);
     boardElement.addEventListener('click', handleBoardClickEvent);
-
-    // Add event listener for reset button
-    resetButton.removeEventListener('click', handleResetClick);
-    resetButton.addEventListener('click', handleResetClick);
-
-    // Add event listener for the PGN export button
-    if (pgnButton) {
-        pgnButton.removeEventListener('click', copyPGN);
-        pgnButton.addEventListener('click', copyPGN);
-    }
-    if (downloadButton) {
-        downloadButton.removeEventListener('click', downloadPGN);
-        downloadButton.addEventListener('click', downloadPGN);
-    }
-    if (fenButton) {
-        fenButton.removeEventListener('click', copyFEN);
-        fenButton.addEventListener('click', copyFEN);
-    }
-    if (importButton && importDialog) {
-        importButton.removeEventListener('click', openImportDialog);
-        importButton.addEventListener('click', openImportDialog);
-        importLoadButton.removeEventListener('click', handleImportLoad);
-        importLoadButton.addEventListener('click', handleImportLoad);
-        importCancelButton.removeEventListener('click', closeImportDialog);
-        importCancelButton.addEventListener('click', closeImportDialog);
-        importDialog.removeEventListener('keydown', handleImportKeydown);
-        importDialog.addEventListener('keydown', handleImportKeydown);
-        // A file can be dropped anywhere on the dialog
-        for (const type of ['dragover', 'dragleave', 'drop']) {
-            importDialog.removeEventListener(type, handleImportDrag);
-            importDialog.addEventListener(type, handleImportDrag);
-        }
-    }
-    if (importFileButton && importFile) {
-        importFileButton.removeEventListener('click', chooseImportFile);
-        importFileButton.addEventListener('click', chooseImportFile);
-        importFile.removeEventListener('change', handleImportFileChosen);
-        importFile.addEventListener('change', handleImportFileChosen);
-    }
-
-    // Add event listener for undo button
-    if (undoButton) {
-        undoButton.removeEventListener('click', undoLastMove);
-        if (CONFIG.FEATURES.UNDO_MOVE) {
-            undoButton.addEventListener('click', undoLastMove);
-        } else {
-            undoButton.hidden = true;
-        }
-    }
 
     requestAIMove(); // In case it is the computer's turn in the loaded game
     debugLog('Game initialized.');
@@ -410,11 +309,11 @@ function viewMove(ply) {
  * screen reader users find it under the move list when they want it.
  */
 function showReviewScore() {
-    if (!reviewScoreElement || viewPly === null) return;
+    if (viewPly === null) return;
     // After a finished game has been gone through: also what the move that led here cost
     const cost = viewPly > 0 ? moveCostText(viewPly - 1) : null;
     const score = positionScoreText(shownPosition());
-    reviewScoreElement.textContent = cost ? `${score} ${cost}` : score;
+    renderReviewScore(cost ? `${score} ${cost}` : score);
 }
 
 /**
@@ -626,12 +525,6 @@ function handleStepClick(event) {
     viewMove(targets[button.dataset.step]);
 }
 
-/** The list is rebuilt on every change, so focus has to be put back by hand. */
-function focusCurrentMove() {
-    const entry = moveHistoryElement.querySelector('button[tabindex="0"]');
-    if (entry) entry.focus();
-}
-
 /** @returns {boolean} True if the square holds a piece of the side to move. */
 function isOwnPiece(row, col) {
     const piece = boardState[row][col];
@@ -839,42 +732,6 @@ function undoLastMove() {
 // --- Ending the game without a move ---
 
 /**
- * Asks for a confirming second click on a button, so a mis-tap cannot end the
- * game. The first click changes the label for a few seconds.
- * @param {HTMLElement} button
- * @param {string} question - Label shown while waiting.
- * @returns {boolean} True on the confirming click.
- */
-function confirmSecondClick(button, question) {
-    if (pendingConfirms.has(button)) {
-        cancelConfirm(button);
-        return true;
-    }
-    pendingConfirms.set(button, {
-        label: button.textContent,
-        timer: setTimeout(() => cancelConfirm(button), CONFIG.CONFIRM_MS),
-    });
-    button.textContent = question;
-    button.classList.add('confirming');
-    return false;
-}
-
-/** Puts a button waiting for confirmation back to normal. */
-function cancelConfirm(button) {
-    const pending = pendingConfirms.get(button);
-    if (!pending) return;
-    clearTimeout(pending.timer);
-    pendingConfirms.delete(button);
-    button.textContent = pending.label;
-    button.classList.remove('confirming');
-}
-
-/** Drops every confirmation that is waiting; used whenever the game moves on. */
-function cancelConfirms() {
-    for (const button of Array.from(pendingConfirms.keys())) cancelConfirm(button);
-}
-
-/**
  * Ends the game with a result that no move produced. Undo reopens it.
  * @param {string} result - '1-0', '0-1' or '1/2-1/2'.
  * @param {string} status - What the status line says.
@@ -943,7 +800,7 @@ function handleDrawClick() {
             endGameWithoutMove('1/2-1/2', 'Draw by agreement.');
         } else {
             announce('The computer declines the draw.');
-            gameStatusElement.textContent = `The computer declines the draw. ${currentStatus}`;
+            renderStatus(`The computer declines the draw. ${currentStatus}`);
         }
         return;
     }
@@ -1111,22 +968,11 @@ function clockRemaining(color) {
 
 /** Shows both clocks, or hides them in a game without one. */
 function updateClockDisplay() {
-    for (const color of [WHITE, BLACK]) {
-        const element = clockElements[color];
-        if (!element) continue;
-        element.hidden = !clock;
-        if (!clock) continue;
-        const left = clockRemaining(color);
-        const running = clock.turnStartedAt !== null && color === currentPlayer;
-        element.textContent = formatClock(left);
-        element.classList.toggle('running', running);
-        element.classList.toggle('low', left < Math.max(...CONFIG.LOW_TIME_WARNINGS));
-        // A timer is not read out on every change; the label is there when asked for
-        element.setAttribute(
-            'aria-label',
-            `${color === WHITE ? 'White' : 'Black'} clock: ${formatClock(left)}`
-        );
-    }
+    const side = (color) => ({
+        left: clockRemaining(color),
+        running: clock.turnStartedAt !== null && color === currentPlayer,
+    });
+    renderClocks(clock ? { [WHITE]: side(WHITE), [BLACK]: side(BLACK) } : null);
 }
 
 /** Runs the ticking while a clock is running, and stops it otherwise. */
@@ -1285,14 +1131,7 @@ function clearHint() {
  * on the board, and removes the marks otherwise.
  */
 function showHintOnBoard() {
-    boardElement
-        .querySelectorAll('.hint-from, .hint-to')
-        .forEach((el) => el.classList.remove('hint-from', 'hint-to'));
-    if (!hintMove || hintPly !== shownPosition().ply) return;
-    const from = getSquareElement(hintMove.from.row, hintMove.from.col);
-    const to = getSquareElement(hintMove.to.row, hintMove.to.col);
-    if (from) from.classList.add('hint-from');
-    if (to) to.classList.add('hint-to');
+    renderHint(hintMove && hintPly === shownPosition().ply ? hintMove : null);
 }
 
 // --- Draw detection ---
@@ -1499,128 +1338,25 @@ function archiveCurrentGame() {
     }
 }
 
-/** @returns {string} One line about a past game: date, opponent, result and length. */
-function describeArchivedGame(entry) {
-    const results = { '1-0': 'White won', '0-1': 'Black won', '1/2-1/2': 'Draw' };
-    const date = new Date(entry.date).toLocaleDateString(undefined, {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-    });
-    const moves = Math.ceil(entry.moves / 2);
-    return [
-        date,
-        entry.opponent,
-        results[entry.result] || 'Not finished',
-        `${moves} ${moves === 1 ? 'move' : 'moves'}`,
-    ].join(' \u00b7 ');
-}
+// --- What the page shows (drawn by game-ui.js) ---
 
-/** Fills the list of past games in the Load dialog; the section is hidden while there are none. */
-function showArchive() {
-    if (!archiveSection || !archiveList) return;
-    const archive = readArchive();
-    archiveSection.hidden = archive.length === 0;
-    archiveList.innerHTML = '';
-    archive.forEach((entry, index) => {
-        const item = document.createElement('li');
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.classList.add('btn');
-        button.dataset.index = index;
-        button.textContent = describeArchivedGame(entry);
-        item.appendChild(button);
-        archiveList.appendChild(item);
-    });
-}
-
-/** A click on a past game loads it. The game it replaces goes into the list itself. */
-function handleArchiveClick(event) {
-    const button = event.target.closest ? event.target.closest('button[data-index]') : null;
-    if (!button) return;
-    const entry = readArchive()[Number(button.dataset.index)];
-    const result = entry ? importPGN(entry.pgn) : { ok: false, error: 'That game is gone.' };
-    if (!result.ok) {
-        importError.textContent = `${result.error} The current game was not changed.`;
-        return;
-    }
-    closeImportDialog();
-}
-
-// --- UI Updates ---
-
-/**
- * Updates the move history display in the DOM.
- */
+/** Shows the move list for the position on screen, and with it what each side has captured. */
 function updateMoveHistoryDisplay() {
-    moveHistoryElement.innerHTML = ''; // Clear existing
-    const shownPly = shownPosition().ply;
-    const canView = positionHistory.length === moveHistory.length;
-    let listItem = null;
-    let current = null; // The entry for the position on screen
-
-    moveHistory.forEach((move, index) => {
-        const ply = index + 1;
-        const { number, white } = moveNumberAt(index);
-        if (white || index === 0) {
-            // White's move starts a new row
-            listItem = document.createElement('li');
-            const turnSpan = document.createElement('span');
-            turnSpan.classList.add('turn-number');
-            turnSpan.textContent = `${number}.`;
-            listItem.appendChild(turnSpan);
-            if (!white) {
-                // The game began with Black to move: White's place in the first row stays empty
-                const gap = document.createElement('span');
-                gap.classList.add('move', 'white-move');
-                gap.textContent = '...';
-                listItem.appendChild(gap);
-            }
-            moveHistoryElement.appendChild(listItem);
-        }
-
-        // Each move is a button that shows the position after it. Only one is
-        // in the tab order; the arrow keys step between them.
-        const entry = document.createElement('button');
-        entry.type = 'button';
-        entry.classList.add('move', white ? 'white-move' : 'black-move');
-        entry.textContent = move.notation;
-        entry.dataset.ply = ply;
-        entry.tabIndex = -1;
-        entry.disabled = !canView;
-        const cost = moveCostText(index);
-        if (cost) {
-            // The "?" comes from the stylesheet; the reason is in the name and the tooltip
-            entry.classList.add('lost-ground');
-            entry.title = cost;
-            entry.setAttribute('aria-label', `${move.notation}. ${cost}`);
-        }
-        if (ply === shownPly) {
-            entry.setAttribute('aria-current', 'true');
-            current = entry;
-        }
-        listItem.appendChild(entry);
+    const moves = moveHistory.map((move, index) => ({
+        notation: move.notation,
+        ...moveNumberAt(index),
+        cost: moveCostText(index),
+    }));
+    renderMoveList(moves, {
+        shownPly: shownPosition().ply,
+        canView: positionHistory.length === moveHistory.length,
+        live: viewPly === null,
     });
-
-    const tabStop = current || moveHistoryElement.querySelector('button[data-ply]');
-    if (tabStop) tabStop.tabIndex = 0;
-
-    // Highlight the row of the last move played
-    if (moveHistoryElement.lastElementChild) {
-        moveHistoryElement.lastElementChild.classList.add('last-move-entry');
-    }
-
-    if (viewPly === null) {
-        moveHistoryElement.scrollTop = moveHistoryElement.scrollHeight; // Follow the game
-    } else if (current && typeof current.scrollIntoView === 'function') {
-        current.scrollIntoView({ block: 'nearest' });
-    }
-
     updateCapturedDisplay(); // Follows the same position as the list
 }
 
 /**
- * Lists what each side has captured up to the position on screen, and how far
+ * Shows what each side has captured up to the position on screen, and how far
  * ahead in material the leading side is.
  */
 function updateCapturedDisplay() {
@@ -1636,56 +1372,7 @@ function updateCapturedDisplay() {
             if (piece) lead += (piece.color === WHITE ? 1 : -1) * PIECE_POINTS[piece.type];
         }
     }
-
-    const order = [PAWN, KNIGHT, BISHOP, ROOK, QUEEN];
-    for (const color of [WHITE, BLACK]) {
-        const rowElement = capturedRows[color];
-        if (!rowElement) continue;
-        const side = color === WHITE ? 'White' : 'Black';
-        const ahead = color === WHITE ? lead : -lead;
-        const types = taken[color].sort((a, b) => order.indexOf(a) - order.indexOf(b));
-
-        rowElement.innerHTML = '';
-        for (const type of types) {
-            const icon = document.createElement('span');
-            icon.classList.add('captured-piece');
-            icon.style.backgroundImage = `url('assets/${opponentOf(color)}${type}.svg')`;
-            rowElement.appendChild(icon);
-        }
-        if (ahead > 0) {
-            const leadElement = document.createElement('span');
-            leadElement.classList.add('material-lead');
-            leadElement.textContent = `+${ahead}`;
-            rowElement.appendChild(leadElement);
-        }
-
-        const counts = order
-            .map((type) => [type, types.filter((t) => t === type).length])
-            .filter(([, count]) => count > 0)
-            .map(([type, count]) =>
-                count === 1 ? PIECE_NAMES[type] : `${count} ${PIECE_NAMES[type]}s`
-            );
-        let label = `${side} has captured ${counts.length ? counts.join(', ') : 'nothing'}.`;
-        if (ahead > 0) label += ` ${side} is ahead by ${ahead}.`;
-        rowElement.setAttribute('aria-label', label);
-    }
-}
-
-/**
- * Has screen readers read a message out. The status line is not a live region
- * itself, so a move and the status that follows it are read as one sentence.
- * @param {string} message
- */
-function announce(message) {
-    if (!announcerElement) {
-        announcerElement = document.createElement('div');
-        announcerElement.id = 'announcer';
-        announcerElement.className = 'visually-hidden';
-        announcerElement.setAttribute('role', 'status');
-        announcerElement.setAttribute('aria-live', 'polite');
-        document.body.appendChild(announcerElement);
-    }
-    announcerElement.textContent = message;
+    renderCaptured(taken, lead);
 }
 
 /**
@@ -1710,61 +1397,38 @@ function describeMove(move) {
     return `${text} ${currentStatus}`;
 }
 
-/**
- * Updates the game status message in the DOM.
- */
-function updateStatusDisplay() {
+/** @returns {string} What the status line says about the position on screen. */
+function statusText() {
     if (viewPly !== null) {
-        gameStatusElement.textContent =
-            viewPly === 0 ? 'Viewing the starting position' : `Viewing ${moveLabel(viewPly)}`;
-    } else if (aiThinking) {
-        gameStatusElement.textContent = `${currentStatus} (computer is thinking)`;
-    } else if (drawOffered) {
-        gameStatusElement.textContent = `${currentStatus} (draw offered)`;
-    } else {
-        gameStatusElement.textContent = currentStatus;
+        return viewPly === 0 ? 'Viewing the starting position' : `Viewing ${moveLabel(viewPly)}`;
     }
-    if (liveButton) {
-        liveButton.hidden = viewPly === null;
-    }
-    if (reviewActions) {
-        reviewActions.hidden = viewPly === null;
-    }
-    if (reviewScoreElement) {
-        reviewScoreElement.hidden = viewPly === null;
-    }
-    if (stepButtons) {
-        // Off at the end already reached, and when the positions behind the moves are missing
-        const canView = positionHistory.length === moveHistory.length;
-        const shown = shownPosition().ply;
-        for (const button of stepButtons.querySelectorAll('button[data-step]')) {
-            const back = button.dataset.step === 'first' || button.dataset.step === 'previous';
-            button.disabled = !canView || shown === (back ? 0 : moveHistory.length);
-        }
-    }
-    // Undo is only available while there is a move, or a resignation or agreed draw, to take back
-    if (undoButton) {
-        undoButton.disabled = !!clock || (positionHistory.length === 0 && !endedWithoutMove);
-    }
+    if (aiThinking) return `${currentStatus} (computer is thinking)`;
+    if (drawOffered) return `${currentStatus} (draw offered)`;
+    return currentStatus;
+}
+
+/** @returns {object} What the buttons depend on, for renderControls in game-ui.js. */
+function controlsView() {
+    return {
+        reviewing: viewPly !== null,
+        // False for a save from an older version without the positions behind its moves
+        canView: positionHistory.length === moveHistory.length,
+        shownPly: shownPosition().ply,
+        moveCount: moveHistory.length,
+        // There must be a move, or a resignation or agreed draw, to take back; never on the clock
+        canUndo: !clock && (positionHistory.length > 0 || endedWithoutMove),
+        inProgress: isGameInProgress(),
+        canHint: canHint(),
+        hintPending,
+        drawOffered,
+    };
+}
+
+/** Brings the status line, the buttons and the clocks up to date with the game. */
+function updateStatusDisplay() {
+    renderStatus(statusText());
+    renderControls(controlsView());
     updateClockDisplay();
-    if (pgnButton) {
-        pgnButton.disabled = moveHistory.length === 0;
-    }
-    if (downloadButton) {
-        downloadButton.disabled = moveHistory.length === 0;
-    }
-    if (resignButton) {
-        resignButton.disabled = !isGameInProgress();
-    }
-    if (hintButton) {
-        hintButton.disabled = !canHint();
-        hintButton.textContent = hintPending ? 'Thinking' : 'Hint';
-    }
-    if (drawButton) {
-        drawButton.disabled = !isGameInProgress();
-        drawButton.textContent = drawOffered ? 'Accept draw?' : 'Offer draw';
-        drawButton.classList.toggle('confirming', drawOffered);
-    }
     // Every way a game ends or goes on again passes through here
     scoreFinishedGame();
 }
@@ -1851,53 +1515,15 @@ function buildFEN() {
     return positionToFEN(shown, shown.player, shown.halfmoveClock, moveNumberAt(shown.ply).number);
 }
 
-/**
- * Copies text to the clipboard and says so on the button. Where the clipboard
- * is not available, the text is downloaded as a file instead.
- * @param {string} text
- * @param {HTMLElement} button - The button that was pressed.
- * @param {string} label - The button's normal label, put back after the notice.
- * @param {string} filename - Name of the file if it has to be downloaded.
- */
-function copyOrDownload(text, button, label, filename) {
-    const download = () => {
-        downloadText(text, filename);
-        flashButton(button, 'Downloaded', label);
-    };
-
-    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard
-            .writeText(text)
-            .then(() => flashButton(button, 'Copied!', label), download);
-    } else {
-        download();
-    }
-}
-
-/** Hands text to the browser as a file to save: a PGN file as such, anything else as plain text. */
-function downloadText(text, filename) {
-    const type = filename.endsWith('.pgn') ? 'application/x-chess-pgn' : 'text/plain';
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(new Blob([text], { type }));
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(link.href);
-}
-
-/** Shows a short notice on a button, then its normal label again. */
-function flashButton(button, notice, label) {
-    button.textContent = notice;
-    setTimeout(() => {
-        button.textContent = label;
-    }, CONFIG.NOTICE_MS);
-}
-
 // --- Loading a game from PGN ---
 
 const IMPORT_NO_MOVES = 'No moves found in the text.';
 const IMPORT_TOO_LONG = `That text is too long to be a game (over ${CONFIG.IMPORT_MAX_LENGTH.toLocaleString('en-US')} characters).`;
+
+/** @returns {string|null} Why a text of this length cannot be loaded, or null if it can. */
+function importSizeError(length) {
+    return length > CONFIG.IMPORT_MAX_LENGTH ? IMPORT_TOO_LONG : null;
+}
 
 /**
  * Replaces the current game with one given as PGN. Every move is checked
@@ -1907,13 +1533,14 @@ const IMPORT_TOO_LONG = `That text is too long to be a game (over ${CONFIG.IMPOR
  * Undo reopens it. Of several games in the text, the first is loaded.
  * @param {string} text
  * @param {boolean} validateOnly - Check the moves without replacing the game.
- * @returns {{ok: boolean, error?: string, moves?: number}}
+ * @returns {{ok: boolean, error?: string, empty?: boolean, moves?: number}} empty: the
+ *   text holds no move at all.
  */
 function importPGN(text, validateOnly = false) {
     if (String(text).length > CONFIG.IMPORT_MAX_LENGTH)
         return { ok: false, error: IMPORT_TOO_LONG };
     const tokens = pgnMoveTokens(text);
-    if (tokens.length === 0) return { ok: false, error: IMPORT_NO_MOVES };
+    if (tokens.length === 0) return { ok: false, error: IMPORT_NO_MOVES, empty: true };
 
     // The game begins from the usual position unless a FEN tag says otherwise
     let start = { ...STANDARD_START, position: initialPosition() };
@@ -2003,106 +1630,6 @@ function endIfAlreadyDecided() {
     }
 }
 
-/** Opens the dialog for pasting a game or a position. */
-function openImportDialog() {
-    if (!importDialog) return;
-    importError.textContent = '';
-    showArchive();
-    importDialog.hidden = false;
-    importText.focus();
-}
-
-/** Closes the dialog and gives the focus back to the button that opened it. */
-function closeImportDialog() {
-    if (!importDialog || importDialog.hidden) return;
-    cancelConfirm(importLoadButton);
-    importDialog.hidden = true;
-    if (importButton) importButton.focus();
-}
-
-/**
- * Loads the pasted game or position. A game in progress needs a confirming
- * second click first.
- */
-function handleImportLoad() {
-    const load = looksLikeFEN(importText.value) ? importFEN : importPGN;
-    const validation = load(importText.value, true);
-    if (!validation.ok) {
-        cancelConfirm(importLoadButton);
-        importError.textContent =
-            validation.error === IMPORT_NO_MOVES
-                ? 'Paste a game in PGN format, or a position in FEN, first.'
-                : `${validation.error} The current game was not changed.`;
-        return;
-    }
-    importError.textContent = '';
-    if (isGameInProgress() && !confirmSecondClick(importLoadButton, 'Discard current game?')) {
-        return;
-    }
-    const result = load(importText.value);
-    if (!result.ok) {
-        importError.textContent = `${result.error} The current game was not changed.`;
-        return;
-    }
-    importText.value = '';
-    closeImportDialog();
-}
-
-/** "Open file" opens the browser's file chooser. */
-function chooseImportFile() {
-    importFile.click();
-}
-
-/** A file was chosen: its text goes into the box, where Load checks it like pasted text. */
-function handleImportFileChosen() {
-    const file = importFile.files && importFile.files[0];
-    importFile.value = ''; // So choosing the same file again is noticed
-    if (file) readImportFile(file);
-}
-
-/** A file dragged over the dialog is marked as welcome; dropped, it is read. */
-function handleImportDrag(event) {
-    const types = event.dataTransfer ? Array.from(event.dataTransfer.types || []) : [];
-    if (!types.includes('Files')) return; // Dragged text is left to the text box
-    event.preventDefault();
-    const panel = importDialog.querySelector('.import-panel') || importDialog;
-    panel.classList.toggle('drop-target', event.type === 'dragover');
-    if (event.type === 'drop' && event.dataTransfer.files[0]) {
-        readImportFile(event.dataTransfer.files[0]);
-    }
-}
-
-/**
- * Puts the text of a file into the Load dialog's box. Nothing is loaded yet:
- * the Load button then checks it and asks before a game in progress is replaced.
- * @param {File} file
- */
-function readImportFile(file) {
-    cancelConfirm(importLoadButton);
-    if (file.size > CONFIG.IMPORT_MAX_LENGTH) {
-        importError.textContent = IMPORT_TOO_LONG;
-        return;
-    }
-    file.text().then(
-        (text) => {
-            importText.value = text;
-            importError.textContent = '';
-            importLoadButton.focus();
-        },
-        () => {
-            importError.textContent = 'That file could not be read.';
-        }
-    );
-}
-
-/** Escape closes the dialog. */
-function handleImportKeydown(event) {
-    if (event.key === 'Escape') {
-        event.preventDefault();
-        closeImportDialog();
-    }
-}
-
 // Export for Node/Jest tests (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -2136,6 +1663,8 @@ if (typeof module !== 'undefined' && module.exports) {
         pgnResult,
         readArchive,
         openImportDialog,
+        importSizeError,
+        isGameInProgress,
         buildFEN,
         setTimeControl,
         clockRemaining,

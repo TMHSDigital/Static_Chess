@@ -38,6 +38,7 @@ const APP_FILES = [
     'js/saved-game.js',
     'js/clock.js',
     'js/engine-bridge.js',
+    'js/game-ui.js',
     'js/game.js',
     'js/main.js',
     'assets/wk.svg',

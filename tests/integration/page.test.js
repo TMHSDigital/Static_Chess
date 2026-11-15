@@ -73,6 +73,7 @@ describe('the real page', () => {
         'saved-game',
         'clock',
         'engine-bridge',
+        'game-ui',
         'game',
         'main',
       ].map((name) => `js/${name}.js`)

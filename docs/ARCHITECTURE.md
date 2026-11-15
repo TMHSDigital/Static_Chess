@@ -30,7 +30,8 @@ Static_Chess/
 │   ├── notation.js      # Writing a move in SAN; taking PGN text apart
 │   ├── saved-game.js    # Checking a saved game read from storage
 │   ├── clock.js         # The arithmetic of a chess clock
-│   └── engine-bridge.js # Requests to the engine, through the worker or on the page
+│   ├── engine-bridge.js # Requests to the engine, through the worker or on the page
+│   └── game-ui.js       # Status, buttons, clocks, move list and the Load dialog
 ├── tests/               # Jest tests (dev only)
 │   ├── helpers/         # Shared loader that builds a fresh page and game per test
 │   ├── unit/            # Rules, engine, undo, persistence, clock, import, input, settings, service worker
@@ -120,11 +121,12 @@ A saved game is validated before it is used (`validateSavedGame()`); anything un
 
 ## How the scripts depend on each other
 
-The scripts are plain `<script>` files in one global scope, loaded in the order in `index.html`: `config`, `utils`, `pieces`, `rules`, `ai`, `board`, `drag`, `promotion`, `notation`, `saved-game`, `clock`, `engine-bridge`, `game`, `main`.
+The scripts are plain `<script>` files in one global scope, loaded in the order in `index.html`: `config`, `utils`, `pieces`, `rules`, `ai`, `board`, `drag`, `promotion`, `notation`, `saved-game`, `clock`, `engine-bridge`, `game-ui`, `game`, `main`.
 
 - `rules.js` depends only on `pieces.js` and `utils.js`; `ai.js` builds on `rules.js` (`allLegalMoves`, `allLegalCaptures`, `applyMove`, `isInCheck`, `positionKey`). Neither touches the DOM, which is what lets `ai-worker.js` load them in a Web Worker
 - `board.js` owns the selection (`getSelectedSquare()`, `getPossibleMoves()` and their setters) and renders what it is given; it reads nothing from `game.js`. The last move to highlight is an argument of `updateBoardVisuals()`
-- `game.js` owns the game state and calls into `board.js`, `rules.js`, `promotion.js` and the four files below
+- `game.js` owns the game state and calls into `board.js`, `rules.js`, `promotion.js` and the five files below
+- `game-ui.js` draws everything on the page apart from the board: the status line, the buttons, the clocks, the move list, the captured pieces, announcements and the Load dialog. It holds no game. `game.js` tells it what to show in plain values (`renderStatus(text)`, `renderControls(view)`, `renderClocks(clocks)`, `renderMoveList(moves, view)`, `renderCaptured(taken, lead)`, `renderHint(move)`) and hands it its handlers once (`bindControls()`); the Load dialog calls back into `importPGN()`, `importFEN()` and `readArchive()`. `tests/unit/game-ui.test.js` loads it without `game.js`
 - `notation.js`, `saved-game.js` and `clock.js` hold what needs no page: writing SAN and reading PGN text, validating a saved game, and clock arithmetic. They take what they work on as arguments and can be loaded and tested with no document (`tests/unit/no-dom.test.js`)
 - `engine-bridge.js` is the only file that talks to the worker. It knows nothing about the game: `game.js` hands it a position and gets a move back, or a list of positions and gets a score for each. Requests travel on named channels, each with a worker of its own; only the latest request on a channel counts, and channels do not affect each other
 - `drag.js` calls `board.js` for the selection and `game.js` for `isBoardLocked()`, `isOwnPiece()`, `generateLegalMovesForPiece()`, `playChosenMove()` and `refreshBoardVisuals()`; it reads no state of the game directly
@@ -144,7 +146,7 @@ The scripts are plain `<script>` files in one global scope, loaded in the order 
 - The board is an ARIA grid: `board.js` builds eight `role="row"` elements of eight `role="gridcell"` squares. The rows use `display: contents`, so the squares still lay out in the board's CSS grid
 - Roving tabindex: one square has `tabindex="0"` and the rest `-1`, so Tab enters and leaves the board in one press. The tab stop follows focus
 - Each square's `aria-label` names its piece and square, and `updateBoardVisuals()` appends "selected", "legal move" or "in check" to match the visual highlights
-- `announce()` in `game.js` writes to the hidden `#announcer` live region. `describeMove()` turns a move into a sentence followed by the new status, for example "White knight takes on f3. Check. Black's turn". The visible status line is not a live region, so nothing is read twice
+- `announce()` in `game-ui.js` writes to the hidden `#announcer` live region. `describeMove()` turns a move into a sentence followed by the new status, for example "White knight takes on f3. Check. Black's turn". The visible status line is not a live region, so nothing is read twice
 - `style.css` shortens animations and transitions under `prefers-reduced-motion: reduce`
 
 ## State Management
@@ -307,7 +309,7 @@ SAN generation with disambiguation is implemented:
 ### 12. Hint
 
 1. `requestHint()` asks the engine, at `CONFIG.HINT_LEVEL`, for the move it would play for the side to move, through the same `askEngineAbout()` the computer opponent uses. While an earlier position is on the board it asks about that position instead, on the `review-hint` channel, so a computer move being worked out on the `play` channel is neither cancelled nor delayed. The hint remembers the position it was asked for (`hintPly`) and its marks show only there; asked while looking back, the announcement also gives the score
-2. The move is not played. `showHintOnBoard()` marks its two squares and `announce()` reads it out
+2. The move is not played. `showHintOnBoard()` has `renderHint()` mark its two squares and `announce()` reads it out
 3. The hint is dropped when the position changes, and a hint still being worked out is cancelled with the engine request it shares
 
 ### 13. PGN and FEN
@@ -334,7 +336,7 @@ SAN generation with disambiguation is implemented:
 
 ### 16. Captured Pieces
 
-`updateCapturedDisplay()` in `game.js` lists what each side has taken, with the material lead, from the moves up to the position on screen. It is redrawn with the move list.
+`updateCapturedDisplay()` in `game.js` works out what each side has taken, and the material lead, from the moves up to the position on screen; `renderCaptured()` in `game-ui.js` draws it. It is redrawn with the move list.
 
 ## Coding Standards
 

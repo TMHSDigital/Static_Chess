@@ -227,7 +227,8 @@ Static_Chess/
 │   ├── notation.js      # Writing a move in SAN; taking PGN text apart
 │   ├── saved-game.js    # Checking a saved game read from storage
 │   ├── clock.js         # The arithmetic of a chess clock
-│   └── engine-bridge.js # Requests to the engine, through the worker or on the page
+│   ├── engine-bridge.js # Requests to the engine, through the worker or on the page
+│   └── game-ui.js       # Status, buttons, clocks, move list and the Load dialog
 ├── assets/              # Static assets
 │   ├── icons/           # App icon (SVG, and PNG at 192px and 512px)
 │   ├── social-card.png  # Image shown when a link to the game is shared
@@ -279,7 +280,8 @@ The project follows a clear separation of concerns:
   - `pieces.js`: Piece objects and basic movement patterns
   - `rules.js`: Legal move generation, check, castling, en passant, promotion and draw rules, with no DOM access
   - `board.js`: DOM rendering, keyboard navigation, and diff-based updates
-  - `game.js`: Game state and move flow, undo, saving, status and announcements
+  - `game.js`: Game state and move flow, undo, saving, and what the status and announcements say
+  - `game-ui.js`: Draws the status line, buttons, clocks, move list and the Load dialog from what `game.js` tells it
   - `notation.js`, `saved-game.js`, `clock.js`: SAN and PGN text, saved-game validation and clock arithmetic, with no DOM access
   - `engine-bridge.js`: Sends positions to the engine and brings its move or its scores back
   - `main.js`: Bootstraps the application
