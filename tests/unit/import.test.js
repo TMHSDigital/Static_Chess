@@ -42,6 +42,27 @@ describe('reading PGN', () => {
     expect(mate.game.gameResult).toBe('0-1');
   });
 
+  test('a loaded game has no clock, whatever time control is selected', () => {
+    jest.useFakeTimers(); // A clock would otherwise tick on after the test
+    try {
+      const g = loadGame();
+      g.game.setTimeControl('15+10');
+      g.game.resetGame();
+      expect(g.game.clock).not.toBeNull();
+
+      const pgn = '1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7';
+      expect(g.game.importPGN(pgn)).toEqual({ ok: true, moves: 10 });
+      expect(g.game.clock).toBeNull();
+      expect(el(g, 'clock-white').hidden).toBe(true);
+      expect(el(g, 'undo-button').disabled).toBe(false);
+
+      g.game.resetGame(); // The next new game is timed again
+      expect(g.game.clock.remaining).toEqual({ w: 900000, b: 900000 });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   test('reads moves as other sites write them', () => {
     const g = loadGame();
     const result = g.game.importPGN(

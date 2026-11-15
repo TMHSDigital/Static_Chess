@@ -1661,6 +1661,8 @@ function importPGN(text, validateOnly = false) {
     replaying = true; // No sounds, saving or computer replies while the moves go in
     try {
         resetGame();
+        clock = null; // A loaded game is not played on the clock: its moves took no time here
+        runClockTimer();
         for (const move of moves) {
             makeMove(move.from.row, move.from.col, move.to.row, move.to.col, move.promotion);
         }
