@@ -85,6 +85,35 @@ describe('offline support', () => {
     expect([meta('og:image:width'), meta('og:image:height')]).toEqual(['1200', '630']);
   });
 
+  test('the page has a Content-Security-Policy that allows only its own files', () => {
+    const page = read('index.html');
+    const tag = page.match(/<meta\s+http-equiv="Content-Security-Policy"\s+content="([^"]*)"/);
+    expect(tag).not.toBeNull();
+    const policy = Object.fromEntries(
+      tag[1].split(';').map((directive) => {
+        const [name, ...values] = directive.trim().split(/\s+/);
+        return [name, values.join(' ')];
+      })
+    );
+    expect(policy).toEqual({
+      'default-src': "'none'",
+      'script-src': "'self'",
+      'style-src': "'self'",
+      'img-src': "'self'",
+      'worker-src': "'self'",
+      'manifest-src': "'self'",
+      'connect-src': "'self'",
+      'base-uri': "'none'",
+      'form-action': "'none'",
+    });
+    // The policy must come before anything it governs, and the page must not need exceptions
+    expect(page.indexOf(tag[0])).toBeLessThan(page.indexOf('<link rel="stylesheet"'));
+    expect(page).not.toMatch(/<script(?![^>]*\bsrc=)[^>]*>/); // No inline script
+    expect(page).not.toMatch(/<style[\s>]/);
+    expect(page).not.toMatch(/\sstyle="/);
+    expect(page).not.toMatch(/\son[a-z]+="/);
+  });
+
   test('the manifest is valid and its icons exist', () => {
     const manifest = JSON.parse(read('manifest.webmanifest'));
     expect(manifest.name).toBe('Static Chess');

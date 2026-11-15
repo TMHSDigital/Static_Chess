@@ -46,6 +46,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - "Show coordinates" labels the board edges only: the file letters along the rank nearest the player and the rank numbers down the left side, 16 labels instead of 126. They follow a flipped board and stay visible on the squares of the last move and on squares a piece can move to
+- The page carries a Content-Security-Policy that lets it load only its own files
 - The "Load PGN" button is now "Load", since it takes a FEN position as well
 - The display settings are folded under "Settings"; the opponent and side selectors stay in view
 - The status line sits above the board, and each player has a bar on their side of the board with their name, captured pieces and clock, so all of it is in view on a phone

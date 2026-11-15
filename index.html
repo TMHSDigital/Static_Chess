@@ -4,6 +4,12 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Static Chess</title>
+        <!-- A second line of defence: the page may only load its own scripts, styles,
+             images, worker and manifest. Nothing inline, nothing from another host. -->
+        <meta
+            http-equiv="Content-Security-Policy"
+            content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; worker-src 'self'; manifest-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'"
+        />
         <link rel="stylesheet" href="css/style.css" />
         <link rel="stylesheet" href="css/board.css" />
         <link rel="stylesheet" href="css/pieces.css" />
