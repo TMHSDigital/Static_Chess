@@ -184,3 +184,51 @@ describe('announcements', () => {
     expect(doc(g).getElementById('game-status').textContent).toBe("Black's turn");
   });
 });
+
+describe('a button that switches itself off hands the focus on', () => {
+  const step = (g, name) => doc(g).querySelector(`button[data-step="${name}"]`);
+  const press = (button) => {
+    button.focus();
+    button.click();
+  };
+  const boardTabStop = (g) => doc(g).querySelector('#chess-board .square[tabindex="0"]');
+
+  test('the step buttons, to the nearest one still on', () => {
+    const g = loadGame();
+    g.play('e2e4', 'e7e5');
+    press(step(g, 'first'));
+    expect(step(g, 'first').disabled).toBe(true);
+    expect(doc(g).activeElement).toBe(step(g, 'next'));
+
+    press(step(g, 'last'));
+    expect(step(g, 'last').disabled).toBe(true);
+    expect(doc(g).activeElement).toBe(step(g, 'previous'));
+  });
+
+  test('Back to game, to the board', () => {
+    const g = loadGame();
+    g.play('e2e4', 'e7e5');
+    g.game.viewMove(1);
+    const live = doc(g).getElementById('live-button');
+    press(live);
+    expect(live.hidden).toBe(true);
+    expect(doc(g).activeElement).toBe(boardTabStop(g));
+  });
+
+  test('Resign, to the board', () => {
+    const g = loadGame();
+    g.play('e2e4');
+    const resign = doc(g).getElementById('resign-button');
+    press(resign);
+    press(resign); // Confirms
+    expect(resign.disabled).toBe(true);
+    expect(doc(g).activeElement).toBe(boardTabStop(g));
+  });
+
+  test('a button that stays on keeps the focus', () => {
+    const g = loadGame();
+    g.play('e2e4', 'e7e5');
+    press(step(g, 'previous'));
+    expect(doc(g).activeElement).toBe(step(g, 'previous'));
+  });
+});

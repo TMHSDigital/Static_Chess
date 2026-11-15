@@ -175,6 +175,40 @@ function renderStatus(text) {
  *   hintPending, drawOffered: as named.
  */
 function renderControls(view) {
+    const focused = document.activeElement; // Kept below if the change switches it off
+    applyControls(view);
+    if (focused && focused !== document.body && isSwitchedOff(focused)) handOnFocus(focused);
+}
+
+/** @returns {boolean} True for an element that is disabled or hidden, and so cannot keep the focus. */
+function isSwitchedOff(element) {
+    return element.disabled === true || !!(element.closest && element.closest('[hidden]'));
+}
+
+/**
+ * A control that switches itself off when pressed would drop the keyboard
+ * focus to the page, and the next Tab would start from the top. The focus goes
+ * instead to the nearest step button still on, for a step button, or else to
+ * the board.
+ */
+function handOnFocus(control) {
+    const usable = (element) => element && !isSwitchedOff(element);
+    let next = null;
+    if (stepButtons && stepButtons.contains(control)) {
+        const steps = Array.from(stepButtons.querySelectorAll('button[data-step]'));
+        const at = steps.indexOf(control);
+        const byDistance = steps
+            .map((button, index) => ({ button, distance: Math.abs(index - at) }))
+            .sort((a, b) => a.distance - b.distance);
+        const found = byDistance.find(({ button }) => usable(button));
+        next = found ? found.button : null;
+    }
+    if (!next) next = document.querySelector('#chess-board .square[tabindex="0"]');
+    if (usable(next)) next.focus();
+}
+
+/** Sets what renderControls describes, without minding the focus. */
+function applyControls(view) {
     // A finished game: the result stands out and offers what to do next
     if (statusBar) statusBar.classList.toggle('is-over', view.gameOver);
     if (resultActions) resultActions.hidden = !view.gameOver;
