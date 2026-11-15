@@ -146,4 +146,16 @@ describe('announcements', () => {
     g.play('e2e4');
     expect(doc(g).getElementById('game-status').textContent).toBe("Black's turn");
   });
+
+  test('the page links to the source repository and issue tracker', () => {
+    const g = loadGame();
+    const links = Array.from(doc(g).querySelectorAll('.about a')).map((a) => ({
+      text: a.textContent.trim(),
+      href: a.getAttribute('href'),
+    }));
+    expect(links).toEqual([
+      { text: 'Source on GitHub', href: 'https://github.com/TMHSDigital/Static_Chess' },
+      { text: 'Report a problem', href: 'https://github.com/TMHSDigital/Static_Chess/issues' },
+    ]);
+  });
 });
