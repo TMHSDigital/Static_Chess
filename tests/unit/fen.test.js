@@ -155,6 +155,29 @@ describe('starting a game from FEN', () => {
     expect(el(bare, 'game-status').textContent).toBe('Draw by insufficient material.');
   });
 
+  test('a half-move count of 100 or more loads as drawn, whatever the next move would be', () => {
+    for (const fen of [
+      '4k3/8/8/8/8/8/4P3/4K2R w K - 120 80',
+      '4k3/8/8/8/8/8/4P3/4K2R w K - 100 70',
+    ]) {
+      const g = loadGame();
+      g.game.importFEN(fen);
+      expect(g.game.isGameOver).toBe(true);
+      expect(g.game.gameResult).toBe('1/2-1/2');
+      expect(el(g, 'game-status').textContent).toBe('Draw by the fifty-move rule.');
+    }
+
+    // One short of the rule, the game goes on
+    const live = loadGame();
+    live.game.importFEN('4k3/8/8/8/8/8/4P3/4K2R w K - 99 70');
+    expect(live.game.isGameOver).toBe(false);
+
+    // Mate on the board comes before the count
+    const mate = loadGame();
+    mate.game.importFEN('rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 100 3');
+    expect(mate.game.gameResult).toBe('0-1');
+  });
+
   test('undo goes back to the loaded position and no further', () => {
     const g = loadGame();
     const fen = '4k3/8/8/8/8/8/4P3/4K3 w - - 0 1';

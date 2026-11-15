@@ -1528,7 +1528,10 @@ function importFEN(text, validateOnly = false) {
     return { ok: true };
 }
 
-/** A game may begin from a position in which it is already over: mate, stalemate or bare kings. */
+/**
+ * A game may begin from a position in which it is already over: mate,
+ * stalemate, bare kings, or a half-move count that has reached the fifty-move rule.
+ */
 function endIfAlreadyDecided() {
     if (generateAllLegalMoves(currentPlayer).length === 0) {
         isGameOver = true;
@@ -1543,6 +1546,11 @@ function endIfAlreadyDecided() {
         isGameOver = true;
         gameResult = '1/2-1/2';
         currentStatus = 'Draw by insufficient material.';
+    } else if (halfmoveClock >= 100) {
+        // As after a move here: the rule is not left to depend on which move comes next
+        isGameOver = true;
+        gameResult = '1/2-1/2';
+        currentStatus = 'Draw by the fifty-move rule.';
     }
 }
 
