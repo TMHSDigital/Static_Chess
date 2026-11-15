@@ -161,6 +161,14 @@ body {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
+    /* Beside the board the panel is sized as if it were empty, so the row is as
+       tall as the board card and the panel stretches to that. What does not
+       fit, such as the open Settings, scrolls inside the panel and the page
+       stays where it is. */
+    contain: size;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--control-border) transparent;
 }
 
 .panel-group {
@@ -457,6 +465,12 @@ body {
 
     .board-container {
         align-self: center;
+    }
+
+    /* Under the board the panel is as tall as what it holds, and the page scrolls */
+    .game-info {
+        contain: none;
+        overflow-y: visible;
     }
 
     .move-history {

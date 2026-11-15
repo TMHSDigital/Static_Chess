@@ -24,6 +24,7 @@ const HTML = `<!DOCTYPE html><body>
   <button id="resign-button">Resign</button><button id="undo-button">Undo</button>
   <button id="pgn-button">Copy PGN</button><button id="download-button">Save PGN</button>
   <button id="reset-button">New Game</button>
+  <details id="more-settings"><summary>Settings</summary></details>
 </body>`;
 
 let ui;
@@ -203,6 +204,26 @@ describe('game-ui.js without a game', () => {
     el('move-history').addEventListener('keydown', (event) => event.preventDefault());
     press(el('move-history'), 'ArrowLeft');
     expect(keys).toEqual([]);
+  });
+
+  test('Settings is brought into view when it is opened, not when it is closed', () => {
+    const settings = el('more-settings');
+    settings.scrollIntoView = jest.fn();
+    ui.bindControls({});
+    const toggle = (open) => {
+      settings.open = open;
+      settings.dispatchEvent(new page.Event('toggle'));
+    };
+
+    toggle(true);
+    expect(settings.scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(settings.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+    toggle(false);
+    expect(settings.scrollIntoView).toHaveBeenCalledTimes(1);
+
+    delete settings.scrollIntoView; // A browser without it: nothing happens, nothing breaks
+    settings.scrollIntoView = undefined;
+    expect(() => toggle(true)).not.toThrow();
   });
 
   test('names the players, marks the side to move and shows who is thinking', () => {

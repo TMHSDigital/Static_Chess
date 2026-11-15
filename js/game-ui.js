@@ -49,6 +49,7 @@ const importFileButton = document.getElementById('import-file-button');
 const importFile = document.getElementById('import-file');
 const archiveSection = document.getElementById('archive-section');
 const archiveList = document.getElementById('archive-list');
+const moreSettings = document.getElementById('more-settings');
 
 // --- Connecting the controls ---
 
@@ -79,6 +80,16 @@ function releaseBoardFocus() {
     if (active && active.classList && active.classList.contains('square')) active.blur();
 }
 
+/**
+ * Brings Settings into view when it has just been opened. Beside the board the
+ * panel scrolls inside itself, and Settings opens below what is showing.
+ */
+function showOpenedSettings() {
+    if (moreSettings.open && typeof moreSettings.scrollIntoView === 'function') {
+        moreSettings.scrollIntoView({ block: 'nearest' });
+    }
+}
+
 /** Calls a handler for an event on an element, once, however often this is asked for. */
 function listen(element, type, handler) {
     if (!element) return;
@@ -99,6 +110,7 @@ function bindControls(handlers) {
     pageKeyHandler = handlers.pageKey || null;
     listen(document, 'keydown', handlePageKeydown);
     listen(document, 'pointerup', releaseBoardFocus);
+    listen(moreSettings, 'toggle', showOpenedSettings);
     listen(moveHistoryElement, 'click', handlers.moveListClick);
     listen(moveHistoryElement, 'keydown', handlers.moveListKeydown);
     listen(liveButton, 'click', handlers.live);
