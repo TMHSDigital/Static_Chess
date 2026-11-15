@@ -1,0 +1,15 @@
+# GitHub Pages builds the site from the root of main. Only the game is meant
+# to be published: index.html, 404.html, sw.js, manifest.webmanifest, css/,
+# js/ and assets/. Everything else that is tracked is listed here so it is
+# left out of the site. Add new top-level files that are not part of the game
+# to this list.
+exclude:
+  - README.md
+  - CHANGELOG.md
+  - LICENSE
+  - docs
+  - releases
+  - tests
+  - package.json
+  - package-lock.json
+  - eslint.config.mjs

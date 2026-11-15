@@ -292,6 +292,8 @@ Since this is a purely static website, it can be easily deployed on any static h
 5. Set folder to `/ (root)`
 6. Your site will be available at `https://tmhsdigital.github.io/Static_Chess/`
 
+Pages builds the site from the repository root. `_config.yml` lists what is left out of it (docs, tests, dev tooling), so only the game is published; a new top-level file that is not part of the game belongs on that list.
+
 **CI/CD Workflows:**
 
 - `.github/workflows/ci.yml`: Runs lint and tests on PRs and pushes
