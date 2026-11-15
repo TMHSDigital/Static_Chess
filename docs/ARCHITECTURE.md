@@ -273,7 +273,7 @@ Draws are declared automatically; there is no claim button. The clock is part of
 
 SAN generation with disambiguation is implemented:
 
-1. `generateNotationWithDisambiguation()` in `game.js` uses the pre-move board to resolve conflicts (file first, then rank, then both)
+1. `generateNotationWithDisambiguation()` in `game.js` uses the position before the move to resolve conflicts (file first, then rank, then both). Only pieces that could legally have made the move count, so a pinned twin adds nothing
 2. Includes capture markers, checks, mates, promotions, and en passant indicator
 3. Future work: handle all edge cases for full SAN parity
 

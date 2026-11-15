@@ -560,7 +560,11 @@ function playMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
     enPassantTarget = result.position.enPassantTarget;
     halfmoveClock = move.piece.type === PAWN || move.captured ? 0 : halfmoveClock + 1; // Fifty-move rule counter
     switchPlayer();
-    move.notation = generateNotationWithDisambiguation(move, before.boardState);
+    move.notation = generateNotationWithDisambiguation(move, {
+        board: before.boardState,
+        kingPositions: before.kingPositions,
+        enPassantTarget: before.enPassantTarget,
+    });
     moveHistory.push(move);
 
     // --- Has the game ended? ---
@@ -2088,9 +2092,13 @@ function handleImportKeydown(event) {
 }
 
 /**
- * Generate SAN with basic disambiguation using pre-move board state
+ * Writes a move in standard algebraic notation. A file or rank is added only
+ * when another piece of the same type could legally have made the move.
+ * @param {object} move - The move as recorded by applyMove.
+ * @param {object} positionBefore - The rules.js position the move was played in.
+ * @returns {string}
  */
-function generateNotationWithDisambiguation(move, boardBefore) {
+function generateNotationWithDisambiguation(move, positionBefore) {
     const piece = move.piece;
     const toAlg = coordsToAlgebraic(move.to.row, move.to.col);
     if (move.isCastling) {
@@ -2099,24 +2107,19 @@ function generateNotationWithDisambiguation(move, boardBefore) {
 
     let disambiguation = '';
     if (piece.type !== PAWN) {
-        const rivals = []; // Other pieces of the same type that could also reach the square
-        // Check for same-type pieces that could also move to the destination
+        // Other pieces of the same type that could legally have gone to the square.
+        // A piece that is pinned could not, so it does not count, which is also
+        // how findSANMove reads the move back.
+        const rivals = [];
         for (let r = 0; r < 8; r++) {
             for (let c = 0; c < 8; c++) {
                 if (r === move.from.row && c === move.from.col) continue;
-                const other = boardBefore[r][c];
-                if (other && other.type === piece.type && other.color === piece.color) {
-                    const targetSquare = boardBefore[move.to.row][move.to.col];
-                    const isCapture = !!targetSquare && targetSquare.color !== piece.color;
-                    if (isPseudoLegalMove(other, r, c, move.to.row, move.to.col, isCapture)) {
-                        if ([ROOK, BISHOP, QUEEN].includes(other.type)) {
-                            // Respect obstructions on pre-move board
-                            if (isPathObstructed(r, c, move.to.row, move.to.col, boardBefore))
-                                continue;
-                        }
-                        rivals.push({ row: r, col: c });
-                    }
-                }
+                const other = positionBefore.board[r][c];
+                if (!other || other.type !== piece.type || other.color !== piece.color) continue;
+                const reaches = legalMovesFrom(positionBefore, r, c).some(
+                    (to) => to.row === move.to.row && to.col === move.to.col
+                );
+                if (reaches) rivals.push({ row: r, col: c });
             }
         }
         // SAN rule: the file if it is enough to tell the pieces apart, else the

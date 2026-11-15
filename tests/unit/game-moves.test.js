@@ -157,6 +157,17 @@ describe('promotion and notation', () => {
     expect(g.game.moveHistory.at(-1).notation).toBe('R1a3');
   });
 
+  test('a pinned piece of the same type does not call for a file or rank', () => {
+    const g = loadGame();
+    // The knight on c3 is pinned by the bishop on b4, so only the g5 knight can go to e4
+    g.play('d2d4', 'e7e6', 'b1c3', 'f8b4', 'g1h3', 'd7d6', 'h3g5', 'h7h6', 'g5e4');
+    expect(g.game.moveHistory.at(-1).notation).toBe('Ne4');
+
+    const loaded = loadGame();
+    expect(loaded.game.importPGN(g.game.buildPGN())).toEqual({ ok: true, moves: 9 });
+    expect(loaded.snapshot()).toEqual(g.snapshot());
+  });
+
   test('a piece on a different file and rank needs only the file', () => {
     const g = loadGame();
     g.setPosition({ e1: 'wk*', a1: 'wr*', h3: 'wr*', g8: 'bk*' });
