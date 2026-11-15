@@ -86,17 +86,33 @@
                         role="group"
                         aria-label="Step through the game"
                     >
-                        <button class="btn" data-step="first" aria-label="Starting position">
-                            &laquo;
+                        <button
+                            class="btn btn-quiet"
+                            data-step="first"
+                            aria-label="Starting position"
+                        >
+                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M11 6l-6 6 6 6M19 6l-6 6 6 6" />
+                            </svg>
                         </button>
-                        <button class="btn" data-step="previous" aria-label="Previous move">
-                            &lsaquo;
+                        <button
+                            class="btn btn-quiet"
+                            data-step="previous"
+                            aria-label="Previous move"
+                        >
+                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M15 6l-6 6 6 6" />
+                            </svg>
                         </button>
-                        <button class="btn" data-step="next" aria-label="Next move">
-                            &rsaquo;
+                        <button class="btn btn-quiet" data-step="next" aria-label="Next move">
+                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M9 6l6 6-6 6" />
+                            </svg>
                         </button>
-                        <button class="btn" data-step="last" aria-label="Latest move">
-                            &raquo;
+                        <button class="btn btn-quiet" data-step="last" aria-label="Latest move">
+                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M5 6l6 6-6 6M13 6l6 6-6 6" />
+                            </svg>
                         </button>
                     </div>
                     <p id="review-score" class="review-score" hidden></p>
@@ -108,7 +124,7 @@
                     </div>
                 </section>
                 <div id="announcer" class="visually-hidden" role="status" aria-live="polite"></div>
-                <div class="panel-group button-grid" role="group" aria-label="This game">
+                <div class="panel-group action-row" role="group" aria-label="This game">
                     <button id="undo-button" class="btn" aria-label="Undo last move">Undo</button>
                     <button id="hint-button" class="btn" aria-label="Show a suggested move">
                         Hint
@@ -140,26 +156,30 @@
                     <button id="reset-button" class="btn btn-primary">New Game</button>
                 </div>
                 <div
-                    class="panel-group button-grid"
+                    class="panel-group action-row"
                     role="group"
                     aria-label="Copy, save or load a game"
                 >
-                    <button id="pgn-button" class="btn" aria-label="Copy the game as PGN">
+                    <button id="pgn-button" class="btn btn-quiet" aria-label="Copy the game as PGN">
                         Copy PGN
                     </button>
                     <button
                         id="download-button"
-                        class="btn"
+                        class="btn btn-quiet"
                         aria-label="Save the game as a PGN file"
                     >
                         Save PGN
                     </button>
-                    <button id="fen-button" class="btn" aria-label="Copy the position as FEN">
+                    <button
+                        id="fen-button"
+                        class="btn btn-quiet"
+                        aria-label="Copy the position as FEN"
+                    >
                         Copy FEN
                     </button>
                     <button
                         id="import-button"
-                        class="btn"
+                        class="btn btn-quiet"
                         aria-label="Load a game from PGN or a position from FEN"
                     >
                         Load

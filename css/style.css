@@ -34,6 +34,9 @@
     --piece-white: #ffffff;
     --piece-black: #1a1a1a;
     --hover-bg: rgba(255, 255, 255, 0.08);
+    /* Quiet buttons: a faint fill instead of an outline */
+    --quiet-fill: rgba(255, 255, 255, 0.06);
+    --quiet-fill-hover: rgba(255, 255, 255, 0.12);
     /* Scales */
     --space-1: 4px;
     --space-2: 8px;
@@ -47,10 +50,19 @@
     --shadow-dialog: 0 5px 15px rgba(0, 0, 0, 0.5);
     /* Controls */
     --control-height: 44px; /* Smallest comfortable touch target */
+    --control-height-compact: 36px; /* Secondary controls where a mouse is used; see below */
+    --text-sm: 0.875rem;
     --focus-ring: #ffffff;
     --show-coords: none; /* 'block' to show coordinates, 'none' to hide */
     --show-possible-moves: block; /* Default to show */
     --show-last-move: block; /* Default to show */
+}
+
+/* A finger needs the full height on every control */
+@media (pointer: coarse) {
+    :root {
+        --control-height-compact: 44px;
+    }
 }
 
 html {
@@ -171,7 +183,7 @@ body {
     min-height: 168px;
     overflow-y: auto;
     border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius) var(--border-radius) 0 0; /* The step buttons close it off below */
     background-color: var(--inset-bg);
     scrollbar-width: thin;
     scrollbar-color: var(--accent-color) var(--border-color);
@@ -253,8 +265,9 @@ body {
     border-radius: var(--border-radius);
 }
 
-/* Buttons: one shape, three roles. Plain for most actions, primary for the
-   one that starts something, and red while waiting for a confirming click. */
+/* Buttons: one shape, three levels. Primary for the one that starts
+   something, outlined for what acts on the game, quiet for the rest. Any of
+   them turns red while it waits for a confirming click. */
 .btn {
     min-height: var(--control-height);
     padding: 0 14px;
@@ -291,6 +304,31 @@ body {
     border-color: var(--accent-fill-hover);
 }
 
+.btn-quiet {
+    min-height: var(--control-height-compact);
+    border-color: transparent;
+    background-color: var(--quiet-fill);
+    font-size: var(--text-sm);
+    font-weight: 500;
+}
+
+.btn-quiet:hover:not(:disabled) {
+    background-color: var(--quiet-fill-hover);
+}
+
+/* A line icon in the colour of the button's text */
+.btn .icon {
+    display: block;
+    width: 20px;
+    height: 20px;
+    margin: 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
 .btn.confirming,
 .btn.confirming:hover:not(:disabled) {
     background-color: var(--danger-fill);
@@ -303,6 +341,19 @@ body {
     gap: var(--space-2);
     justify-content: center;
     flex-wrap: wrap;
+}
+
+/* Related actions side by side, each as wide as its label needs; they wrap
+   onto a second line where the panel is too narrow for one */
+.action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.action-row .btn {
+    flex: 1 1 auto;
+    padding: 0 var(--space-2);
 }
 
 /* Related actions in even columns */
@@ -606,18 +657,39 @@ body.coords-visible {
     color: var(--on-accent);
 }
 
-/* First, previous, next and last position, under the move list */
+/* First, previous, next and last position: one strip joined to the bottom of
+   the move list. The 1px gaps let the strip's own colour show as dividers. */
 .step-buttons {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: var(--space-2);
-    margin-top: var(--space-2);
+    gap: 1px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    background-color: var(--border-color);
 }
 
 .step-buttons .btn {
     padding: 0;
-    font-size: 1.25rem;
-    line-height: 1;
+    border: none;
+    border-radius: 0;
+    background-color: var(--inset-bg);
+}
+
+.step-buttons .btn:hover:not(:disabled) {
+    background-color: var(--panel-bg);
+}
+
+/* Inside the strip, so its clipped corners do not cut the ring */
+.step-buttons .btn:focus-visible {
+    outline-offset: -2px;
+}
+
+/* Off, not faded: a faded button would let the divider colour through */
+.step-buttons .btn:disabled {
+    opacity: 1;
+    color: var(--control-border);
 }
 
 /* What the engine makes of the position being looked at */
@@ -705,6 +777,8 @@ body.coords-visible {
     --danger-text: #b3261e;
     --focus-ring: #1a1a1a;
     --hover-bg: rgba(0, 0, 0, 0.06);
+    --quiet-fill: rgba(0, 0, 0, 0.05);
+    --quiet-fill-hover: rgba(0, 0, 0, 0.1);
 }
 
 @media (prefers-color-scheme: light) {
@@ -724,6 +798,8 @@ body.coords-visible {
         --danger-text: #b3261e;
         --focus-ring: #1a1a1a;
         --hover-bg: rgba(0, 0, 0, 0.06);
+        --quiet-fill: rgba(0, 0, 0, 0.05);
+        --quiet-fill-hover: rgba(0, 0, 0, 0.1);
     }
 }
 
