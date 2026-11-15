@@ -118,11 +118,11 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 The game features an elegant, professional-looking interface with a dark theme and subtle visual cues:
 
 <p align="center">
-  <img src="assets/screenshots/ui-without-settings.png" alt="UI Without Settings Panel" width="45%" style="margin-right: 2%;">
-  <img src="assets/screenshots/ui-with-settings.png" alt="UI With Settings Panel" width="45%">
+  <img src="assets/screenshots/game-in-progress.png" alt="A game in progress on the clock: the board with each player's bar, the move list, and the game controls" width="45%" style="margin-right: 2%;" valign="top">
+  <img src="assets/screenshots/settings-open.png" alt="Looking back at an earlier move in the light theme with the green board, with Settings open" width="45%" valign="top">
 </p>
 
-<p align="center"><em>Game interface without settings panel (left) and with settings panel (right)</em></p>
+<p align="center"><em>A game in progress on the clock (left), and looking back at an earlier move in the light theme with "Settings" open (right)</em></p>
 
 ---
 
@@ -158,7 +158,7 @@ That's it! No build process or dependencies are required.
 4. Click on a highlighted square to move the selected piece (or drop if dragging)
 5. The board updates, move is added to the Move History, and turn switches
 6. If a move results in check, the opponent's king will be highlighted in red
-7. A pawn that reaches the last rank becomes a queen
+7. A pawn that reaches the last rank is promoted; choose a queen, rook, bishop or knight
 8. Game ends with checkmate, stalemate or a draw (insufficient material, threefold repetition, fifty-move rule)
 9. Click "Undo" to take back the last move, or "New Game" to reset the board (a game in progress asks for a second click)
 10. Click "Copy PGN" to copy the game for an analysis board or to share it, or "Save PGN" to save it as a file
@@ -167,7 +167,7 @@ That's it! No build process or dependencies are required.
     - "Load" replaces the game with a PGN game you paste, keeping its result (a resigned, drawn or timed-out game stays finished; Undo reopens it), or starts a new game from a FEN position you paste. "Open file" in that dialog reads a `.pgn` or `.fen` file instead, and a file can also be dropped on the dialog. It also lists your last 20 games under "Past games" (a game goes there when you start or load another); click one to open it again
     - "Copy FEN" copies the position on the board
     - "Hint" marks the move the built-in engine would play for the side to move; nothing is played
-    - The pieces each side has captured, and the material lead, are shown under the Move History
+    - The pieces each side has captured, and the material lead, are shown in that player's bar beside the board
 11. Keyboard: Tab to the board, move between squares with the arrow keys, and press Enter or Space to select a piece or move it
 12. With a clock, a player who has 20 and then 10 seconds left is warned by an announcement for screen readers and, with sound effects on, a double beep
 13. To play against the computer, pick a level under "Opponent" and a side under "Play as"; the board turns to the side you pick, and "Flip board" turns it back. Undo then takes back your move and the computer's reply
@@ -208,8 +208,8 @@ Static_Chess/
 │   └── promotion.js     # Pawn promotion chooser
 ├── assets/              # Static assets
 │   ├── screenshots/     # UI screenshots for documentation
-│   │   ├── ui-with-settings.png
-│   │   └── ui-without-settings.png
+│   │   ├── game-in-progress.png
+│   │   └── settings-open.png
 │   └── [piece SVGs]     # SVG files for chess pieces
 │       ├── wp.svg, bp.svg   # White and black pawns
 │       ├── wr.svg, br.svg   # White and black rooks
