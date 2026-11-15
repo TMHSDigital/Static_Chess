@@ -58,6 +58,11 @@ function loadGame(options = {}) {
   const promotion = require('../../js/promotion');
   Object.assign(global, promotion);
 
+  // The files game.js builds on, in the order index.html loads them
+  for (const name of ['notation', 'saved-game', 'clock', 'engine-bridge']) {
+    Object.assign(global, require(`../../js/${name}`));
+  }
+
   const game = require('../../js/game');
   for (const name of [
     'moveHistory',

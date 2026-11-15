@@ -26,7 +26,11 @@ Static_Chess/
 │   ├── drag.js          # Drag and drop functionality (integrated via click flow)
 │   ├── ai.js            # Computer opponent: evaluation and search
 │   ├── ai-worker.js     # Web Worker that runs the search off the main thread
-│   └── promotion.js     # Pawn promotion chooser
+│   ├── promotion.js     # Pawn promotion chooser
+│   ├── notation.js      # Writing a move in SAN; taking PGN text apart
+│   ├── saved-game.js    # Checking a saved game read from storage
+│   ├── clock.js         # The arithmetic of a chess clock
+│   └── engine-bridge.js # Requests to the engine, through the worker or on the page
 ├── tests/               # Jest tests (dev only)
 │   ├── helpers/         # Shared loader that builds a fresh page and game per test
 │   ├── unit/            # Rules, engine, undo, persistence, clock, import, input, settings, service worker
@@ -116,11 +120,13 @@ A saved game is validated before it is used (`validateSavedGame()`); anything un
 
 ## How the scripts depend on each other
 
-The scripts are plain `<script>` files in one global scope, loaded in the order in `index.html`: `config`, `utils`, `pieces`, `rules`, `ai`, `board`, `drag`, `promotion`, `game`, `main`.
+The scripts are plain `<script>` files in one global scope, loaded in the order in `index.html`: `config`, `utils`, `pieces`, `rules`, `ai`, `board`, `drag`, `promotion`, `notation`, `saved-game`, `clock`, `engine-bridge`, `game`, `main`.
 
 - `rules.js` depends only on `pieces.js` and `utils.js`; `ai.js` builds on `rules.js` (`allLegalMoves`, `allLegalCaptures`, `applyMove`, `isInCheck`, `positionKey`). Neither touches the DOM, which is what lets `ai-worker.js` load them in a Web Worker
 - `board.js` owns the selection (`getSelectedSquare()`, `getPossibleMoves()` and their setters) and renders what it is given; it reads nothing from `game.js`. The last move to highlight is an argument of `updateBoardVisuals()`
-- `game.js` owns the game state and calls into `board.js`, `rules.js`, `promotion.js` and `ai.js`
+- `game.js` owns the game state and calls into `board.js`, `rules.js`, `promotion.js` and the four files below
+- `notation.js`, `saved-game.js` and `clock.js` hold what needs no page: writing SAN and reading PGN text, validating a saved game, and clock arithmetic. They take what they work on as arguments and can be loaded and tested with no document (`tests/unit/no-dom.test.js`)
+- `engine-bridge.js` is the only file that talks to the worker. It knows nothing about the game: `game.js` hands it a position and gets a move back
 - `drag.js` calls `board.js` for the selection and `game.js` for `isBoardLocked()`, `isOwnPiece()`, `generateLegalMovesForPiece()`, `playChosenMove()` and `refreshBoardVisuals()`; it reads no state of the game directly
 - Cross-file calls are direct, with no `window.` lookups or `typeof` guards, so a missing script is a `ReferenceError` rather than a click that does nothing. The names involved are listed once in `eslint.config.mjs`
 - The one shared flag on `window` is `dragJustEnded`, which lets the click handler ignore the click that follows a drag
@@ -201,8 +207,8 @@ The implementation includes:
    - `evaluatePosition()` counts material, plus small bonuses for central minor pieces, advanced pawns and a king kept at home
    - Moves within a few hundredths of a pawn of the best are treated as equal and one is picked at random; a forced mate always takes the quickest line
 2. `setOpponent(level, humanColor)` in `game.js` turns the opponent on or off. `main.js` calls it from the "Opponent" and "Play as" selectors, which are saved like the other settings
-3. `requestAIMove()` runs after every move, undo, reset and load. If it is the computer's turn it posts the position to `ai-worker.js` and plays the answer with `makeMove()`. Where a Worker cannot be created (a page opened from a file, or the tests) the search runs on the main thread after a `setTimeout`
-4. Each request has an id. Undo, New Game and changing the opponent bump the id, so an answer that arrives late is dropped. A worker cannot be interrupted, so if it is still searching at that moment `stopWorkerSearch()` terminates it and the next request starts a new one instead of waiting behind the abandoned search
+3. `requestAIMove()` runs after every move, undo, reset and load. If it is the computer's turn it asks the engine through `askEngine()` in `engine-bridge.js`, which posts the position to `ai-worker.js`, and plays the answer with `makeMove()`. Where a Worker cannot be created (a page opened from a file, or the tests) the search runs on the main thread after a `setTimeout`
+4. Each request has an id. Undo, New Game and changing the opponent call `dropEngineRequests()`, so an answer that arrives late is dropped (`isLatestEngineRequest()`). A worker cannot be interrupted, so if it is still searching at that moment `stopWorkerSearch()` terminates it and the next request starts a new one instead of waiting behind the abandoned search
 5. In a game on the clock the request carries `budgetMs` from `searchBudget()`: a thirtieth of the computer's remaining time plus the increment, between 50 ms and three times the level's usual allowance. It replaces the level's thinking time, and under 150 ms `baseDepthFor()` lowers the depth that is always searched to two half-moves, under 75 ms to one. With less than ten seconds left the computer also skips its usual pause before moving
 6. While it is the computer's turn `isBoardLocked()` is true: clicks and drags are ignored and the status line says the computer is thinking
 7. Undo takes back the computer's reply together with the player's move
@@ -275,7 +281,7 @@ Draws are declared automatically; there is no claim button. The clock is part of
 
 SAN generation with disambiguation is implemented:
 
-1. `generateNotationWithDisambiguation()` in `game.js` uses the position before the move to resolve conflicts (file first, then rank, then both). Only pieces that could legally have made the move count, so a pinned twin adds nothing
+1. `writeSAN()` in `notation.js` uses the position before the move to resolve conflicts (file first, then rank, then both). Only pieces that could legally have made the move count, so a pinned twin adds nothing
 2. Includes capture markers, checks, mates, promotions, and en passant indicator
 3. Future work: handle all edge cases for full SAN parity
 
@@ -299,7 +305,7 @@ SAN generation with disambiguation is implemented:
 
 ### 12. Hint
 
-1. `requestHint()` asks the engine, at `CONFIG.HINT_LEVEL`, for the move it would play for the side to move, through the same `askEngine()` the computer opponent uses
+1. `requestHint()` asks the engine, at `CONFIG.HINT_LEVEL`, for the move it would play for the side to move, through the same `askEngineAbout()` the computer opponent uses
 2. The move is not played. `showHintOnBoard()` marks its two squares and `announce()` reads it out
 3. The hint is dropped when the position changes, and a hint still being worked out is cancelled with the engine request it shares
 

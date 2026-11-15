@@ -221,7 +221,11 @@ Static_Chess/
 │   ├── drag.js          # Drag and drop functionality (integrated with click flow)
 │   ├── ai.js            # Computer opponent (evaluation and search)
 │   ├── ai-worker.js     # Runs the search in a Web Worker
-│   └── promotion.js     # Pawn promotion chooser
+│   ├── promotion.js     # Pawn promotion chooser
+│   ├── notation.js      # Writing a move in SAN; taking PGN text apart
+│   ├── saved-game.js    # Checking a saved game read from storage
+│   ├── clock.js         # The arithmetic of a chess clock
+│   └── engine-bridge.js # Requests to the engine, through the worker or on the page
 ├── assets/              # Static assets
 │   ├── icons/           # App icon (SVG, and PNG at 192px and 512px)
 │   ├── social-card.png  # Image shown when a link to the game is shared
@@ -273,7 +277,9 @@ The project follows a clear separation of concerns:
   - `pieces.js`: Piece objects and basic movement patterns
   - `rules.js`: Legal move generation, check, castling, en passant, promotion and draw rules, with no DOM access
   - `board.js`: DOM rendering, keyboard navigation, and diff-based updates
-  - `game.js`: Game state and move flow, undo, SAN, saving, status and announcements
+  - `game.js`: Game state and move flow, undo, saving, status and announcements
+  - `notation.js`, `saved-game.js`, `clock.js`: SAN and PGN text, saved-game validation and clock arithmetic, with no DOM access
+  - `engine-bridge.js`: Sends a position to the engine and brings its move back
   - `main.js`: Bootstraps the application
   - `drag.js`: Drag and drop integrated via existing click handlers
   - `promotion.js`: Dialog for choosing the promotion piece

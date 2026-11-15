@@ -100,7 +100,7 @@ This is a rough guideline for feature implementation:
 
 These are areas that need improvement in the current codebase:
 
-1. **Splitting game.js** - At over 2,000 lines it holds the move flow, the clock, saving, the engine bridge, import and export and most of the page updates in one scope (`board.js`, at under 400 lines, is no longer the concern)
+1. **Splitting game.js** - Notation, saved-game validation, clock arithmetic and the engine bridge are in files of their own. At about 2,000 lines `game.js` still holds the move flow together with most of the page updates and the Load dialog; those are the next to move out
 2. **Browser-level tests** - Jest suites cover the rules, undo, persistence, input, rendering, settings and accessibility in jsdom; there is no automated check in a real browser yet
 3. **Performance optimization** - Improve rendering and move calculation performance
 4. **Accessibility testing** - The board is keyboard-operable and moves are announced; it has not been tested with a range of screen readers

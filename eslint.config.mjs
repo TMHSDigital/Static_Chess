@@ -78,6 +78,22 @@ const appGlobals = {
   ...shared(['initDragAndDrop']),
   // promotion.js
   ...shared(['showPromotionChooser', 'closePromotionChooser', 'isPromotionChooserOpen']),
+  // notation.js
+  ...shared([
+    'writeSAN',
+    'firstPGNGame',
+    'pgnResult',
+    'pgnTag',
+    'pgnMoveTokens',
+    'looksLikeFEN',
+    'pgnMovetext',
+  ]),
+  // saved-game.js
+  ...shared(['SAVED_GAME_VERSION', 'STANDARD_START', 'validateSavedGame']),
+  // clock.js
+  ...shared(['makeClock', 'timeLeft', 'formatClock']),
+  // engine-bridge.js
+  ...shared(['askEngine', 'dropEngineRequests', 'isLatestEngineRequest']),
   // game.js
   ...shared([
     'initializeGame',

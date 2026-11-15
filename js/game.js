@@ -3,8 +3,6 @@
  * the page updates that follow. The rules of chess themselves are in rules.js.
  */
 
-// How a game begins unless it is started from another position: White to move, move 1
-const STANDARD_START = { player: WHITE, halfmoveClock: 0, fullmove: 1, fen: null };
 let gameStart = STANDARD_START; // How this game began; fen is its first position unless that is the usual one
 
 let boardState = initialPosition().board;
@@ -68,10 +66,7 @@ const archiveList = document.getElementById('archive-list');
 // Computer opponent
 let opponentLevel = null; // null for two players, otherwise a key of AI_LEVELS ('easy', 'medium', 'hard')
 let humanColor = WHITE; // The side the person plays when there is a computer opponent
-let aiRequestId = 0; // Goes up whenever a pending computer move must be dropped
 let aiThinking = false;
-let aiWorker = null; // The Web Worker, or false once it has proved unavailable
-let aiWorkerBusy = false; // True from a request to the worker until its answer
 
 /**
  * The live position as one record. These two functions are the only places
@@ -626,11 +621,15 @@ function playMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
     enPassantTarget = result.position.enPassantTarget;
     halfmoveClock = move.piece.type === PAWN || move.captured ? 0 : halfmoveClock + 1; // Fifty-move rule counter
     switchPlayer();
-    move.notation = generateNotationWithDisambiguation(move, {
-        board: before.boardState,
-        kingPositions: before.kingPositions,
-        enPassantTarget: before.enPassantTarget,
-    });
+    move.notation = writeSAN(
+        move,
+        {
+            board: before.boardState,
+            kingPositions: before.kingPositions,
+            enPassantTarget: before.enPassantTarget,
+        },
+        result.position
+    );
     moveHistory.push(move);
 
     // --- Has the game ended? ---
@@ -906,36 +905,10 @@ function setOpponent(level, color = WHITE) {
 
 /** Drops a computer move that is being worked out or waiting to be played. */
 function cancelAIMove() {
-    aiRequestId++;
-    stopWorkerSearch();
+    dropEngineRequests();
     aiThinking = false;
     hintPending = false; // A hint being worked out shares the engine and is dropped with it
     hintMove = null;
-}
-
-/**
- * Stops a search the worker is still running. A worker cannot be interrupted,
- * so it is shut down and a new one is started with the next request; that
- * request then does not have to wait for a search nobody wants any more.
- */
-function stopWorkerSearch() {
-    if (aiWorker && aiWorkerBusy) {
-        aiWorker.terminate();
-        aiWorker = null;
-    }
-    aiWorkerBusy = false;
-}
-
-/** @returns {Worker|null} The search worker, or null where workers are not available. */
-function getAIWorker() {
-    if (aiWorker === null) {
-        try {
-            aiWorker = typeof Worker === 'function' ? new Worker('js/ai-worker.js') : false;
-        } catch {
-            aiWorker = false; // For example a page opened straight from a file
-        }
-    }
-    return aiWorker || null;
 }
 
 /**
@@ -954,11 +927,11 @@ function requestAIMove() {
     const pause =
         clock && clockRemaining(color) < CONFIG.AI_HURRY_BELOW_MS ? 0 : CONFIG.AI_MOVE_DELAY_MS;
 
-    const id = askEngine(livePosition(), color, opponentLevel, (move) => {
+    const id = askEngineAbout(livePosition(), color, opponentLevel, (move) => {
         // A short pause, so the reply does not land in the same instant as the player's move
         const wait = Math.max(0, pause - (Date.now() - started));
         setTimeout(() => {
-            if (id !== aiRequestId) return; // Undone, reset or switched off in the meantime
+            if (!isLatestEngineRequest(id)) return; // Undone, reset or switched off in the meantime
             aiThinking = false;
             // The move was worked out for one position: never play it on another
             const stillItsTurn = !isGameOver && currentPlayer === color;
@@ -978,50 +951,21 @@ function requestAIMove() {
 }
 
 /**
- * Asks the engine for a move. The search runs in a Web Worker so the page
- * stays responsive; without one it runs here after the page has had a chance
- * to draw. Only the latest request is answered: a newer one, or cancelAIMove,
- * drops it.
+ * Asks the engine for a move in a position of this game, telling it what only
+ * the game knows: the positions that have occurred, so it can avoid repeating
+ * them, and in a game on the clock how long it may think.
  * @param {object} position - A rules.js position.
  * @param {string} color - The side to find a move for.
  * @param {string} level - A key of AI_LEVELS.
  * @param {(move: object|null) => void} onMove - Called with the engine's move.
- * @returns {number} The id of the request, to compare with aiRequestId later.
+ * @returns {number} The id of the request, for isLatestEngineRequest.
  */
-function askEngine(position, color, level, onMove) {
-    const id = ++aiRequestId;
-    stopWorkerSearch(); // A request still being worked on is replaced by this one
-    // The positions the game has been through, so the engine can avoid repeating them
+function askEngineAbout(position, color, level, onMove) {
     const seen = positionHistory.map((past) =>
         positionKey(past.boardState, past.currentPlayer, past.enPassantTarget)
     );
-    // In a game on the clock the engine gets a share of the time that side has left
     const budgetMs = clock ? searchBudget(clockRemaining(color), clock.increment, level) : null;
-    const thinkHere = () =>
-        setTimeout(() => {
-            if (id !== aiRequestId) return;
-            onMove(chooseAIMove(position, color, level, Math.random, { seen, budgetMs }));
-        }, 0);
-
-    const worker = getAIWorker();
-    if (!worker) {
-        thinkHere();
-        return id;
-    }
-    worker.onmessage = (event) => {
-        if (event.data.id !== id) return;
-        aiWorkerBusy = false;
-        onMove(event.data.move);
-    };
-    worker.onerror = (event) => {
-        if (event && event.preventDefault) event.preventDefault();
-        aiWorker = false; // Do not try the worker again
-        aiWorkerBusy = false;
-        thinkHere();
-    };
-    aiWorkerBusy = true;
-    worker.postMessage({ id, position, color, level, seen, budgetMs });
-    return id;
+    return askEngine({ position, color, level, seen, budgetMs }, onMove);
 }
 
 // --- Clock ---
@@ -1043,31 +987,12 @@ function setTimeControl(key) {
 
 /** @returns {object|null} A full clock for the chosen time control, or null without one. */
 function newClock() {
-    if (!chosenTimeControl) return null;
-    const control = CONFIG.TIME_CONTROLS[chosenTimeControl];
-    const base = control.minutes * 60000;
-    return {
-        control: chosenTimeControl,
-        base,
-        increment: (control.increment || 0) * 1000,
-        remaining: { [WHITE]: base, [BLACK]: base },
-        turnStartedAt: null,
-    };
+    return makeClock(chosenTimeControl);
 }
 
 /** @returns {number} Milliseconds a side has left right now; never below zero. */
 function clockRemaining(color) {
-    if (!clock) return 0;
-    const running = clock.turnStartedAt !== null && color === currentPlayer;
-    const used = running ? Date.now() - clock.turnStartedAt : 0;
-    return Math.max(0, clock.remaining[color] - used);
-}
-
-/** @returns {string} A time as "m:ss", with tenths of a second in the last ten seconds. */
-function formatClock(ms) {
-    if (ms < 10000) return `0:0${Math.floor(ms / 1000)}.${Math.floor((ms % 1000) / 100)}`;
-    const seconds = Math.ceil(ms / 1000);
-    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+    return timeLeft(clock, color, currentPlayer);
 }
 
 /** Shows both clocks, or hides them in a game without one. */
@@ -1171,8 +1096,8 @@ function requestHint() {
     updateStatusDisplay();
     refreshBoardVisuals();
     const position = livePosition();
-    const id = askEngine(position, currentPlayer, CONFIG.HINT_LEVEL, (move) => {
-        if (id !== aiRequestId) return;
+    const id = askEngineAbout(position, currentPlayer, CONFIG.HINT_LEVEL, (move) => {
+        if (!isLatestEngineRequest(id)) return;
         hintPending = false;
         hintMove = move;
         updateStatusDisplay();
@@ -1188,10 +1113,7 @@ function requestHint() {
 
 /** Removes the hint, and drops one that is still being worked out. */
 function clearHint() {
-    if (hintPending) {
-        aiRequestId++;
-        stopWorkerSearch();
-    }
+    if (hintPending) dropEngineRequests();
     hintPending = false;
     hintMove = null;
 }
@@ -1296,7 +1218,6 @@ function isStalemate(playerColor) {
 // --- Persistence ---
 
 const SAVED_GAME_KEY = CONFIG.STORAGE_KEYS.GAME_STATE;
-const SAVED_GAME_VERSION = 1;
 
 /**
  * Saves the current game state to localStorage.
@@ -1327,164 +1248,6 @@ function saveGameState() {
 /** Removes the saved game. Storage may be unavailable, which must not stop the game. */
 function clearSavedGame() {
     removeStored(SAVED_GAME_KEY);
-}
-
-/** @returns {boolean} True for a {row, col} pair that is on the board. */
-function isValidCoords(coords) {
-    return (
-        !!coords &&
-        Number.isInteger(coords.row) &&
-        Number.isInteger(coords.col) &&
-        isWithinBounds(coords.row, coords.col)
-    );
-}
-
-/** @returns {boolean} True for an 8x8 board of known pieces with exactly one king per side. */
-function isValidBoard(board) {
-    if (!Array.isArray(board) || board.length !== 8) return false;
-    const types = [PAWN, ROOK, KNIGHT, BISHOP, QUEEN, KING];
-    const kings = { [WHITE]: 0, [BLACK]: 0 };
-    for (const row of board) {
-        if (!Array.isArray(row) || row.length !== 8) return false;
-        for (const cell of row) {
-            if (cell === null) continue;
-            if (typeof cell !== 'object' || !types.includes(cell.type) || !(cell.color in kings))
-                return false;
-            if (cell.type === KING) kings[cell.color]++;
-        }
-    }
-    return kings[WHITE] === 1 && kings[BLACK] === 1;
-}
-
-/** @returns {number} A saved half-move counter, or 0 if it is missing or not a count. */
-function cleanClock(value) {
-    return Number.isInteger(value) && value >= 0 ? value : 0;
-}
-
-/** Finds both kings on a board. */
-function findKingPositions(board) {
-    const positions = {};
-    for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-            const piece = board[r][c];
-            if (piece && piece.type === KING) positions[piece.color] = { row: r, col: c };
-        }
-    }
-    return positions;
-}
-
-/**
- * Checks a position record read from storage, either the saved game itself or
- * an entry of its undo stack.
- * @param {object} saved
- * @param {string} statusIfMissing - Status line to use when none was saved.
- * @returns {object|null} A record for restoreSnapshot, or null if it cannot be trusted.
- */
-function cleanSnapshot(saved, statusIfMissing) {
-    if (!saved || typeof saved !== 'object') return null;
-    if (!isValidBoard(saved.boardState)) return null;
-    if (saved.currentPlayer !== WHITE && saved.currentPlayer !== BLACK) return null;
-    const target = saved.enPassantTarget === undefined ? null : saved.enPassantTarget;
-    if (target !== null && !isValidCoords(target)) return null;
-    return {
-        boardState: saved.boardState,
-        currentPlayer: saved.currentPlayer,
-        isGameOver: !!saved.isGameOver,
-        kingPositions: findKingPositions(saved.boardState),
-        currentStatus:
-            typeof saved.currentStatus === 'string' ? saved.currentStatus : statusIfMissing,
-        enPassantTarget: target,
-        halfmoveClock: cleanClock(saved.halfmoveClock),
-    };
-}
-
-/**
- * Checks a parsed saved game and returns a clean state object, or null if it
- * cannot be trusted. Nothing in the live game is touched here.
- */
-function validateSavedGame(saved) {
-    if (!saved || typeof saved !== 'object') return null;
-    if (saved.version !== undefined && saved.version !== SAVED_GAME_VERSION) return null;
-    const position = cleanSnapshot(saved, 'Game loaded');
-    if (!position) return null;
-
-    const history = saved.moveHistory === undefined ? [] : saved.moveHistory;
-    if (!Array.isArray(history)) return null;
-    for (const move of history) {
-        if (
-            !move ||
-            !isValidCoords(move.from) ||
-            !isValidCoords(move.to) ||
-            typeof move.notation !== 'string'
-        ) {
-            return null;
-        }
-    }
-
-    // The undo stack is optional: saves from older versions do not have one.
-    // If it is missing or damaged the game still loads, with nothing to undo.
-    let undoStack = [];
-    if (Array.isArray(saved.positionHistory) && saved.positionHistory.length === history.length) {
-        const snapshots = saved.positionHistory.map((entry) =>
-            entry && entry.enPassantTarget !== undefined ? cleanSnapshot(entry, '') : null
-        );
-        if (snapshots.every(Boolean)) undoStack = snapshots;
-    }
-
-    // Saves from before results were stored: work the result out from the last move
-    const over = position.isGameOver;
-    let result = null;
-    if (over) {
-        const last = history[history.length - 1];
-        if (['1-0', '0-1', '1/2-1/2'].includes(saved.gameResult)) result = saved.gameResult;
-        else if (last && last.isCheckmate) result = saved.currentPlayer === WHITE ? '0-1' : '1-0';
-        else result = '1/2-1/2';
-    }
-
-    // The clock is optional; a damaged one is dropped and the game goes on without
-    let savedClock = null;
-    const c = saved.clock;
-    const isTime = (value) => Number.isFinite(value) && value >= 0;
-    if (
-        c &&
-        typeof c === 'object' &&
-        c.remaining &&
-        [c.base, c.increment, c.remaining[WHITE], c.remaining[BLACK]].every(isTime)
-    ) {
-        savedClock = {
-            control: typeof c.control === 'string' ? c.control : '',
-            base: c.base,
-            increment: c.increment,
-            remaining: { [WHITE]: c.remaining[WHITE], [BLACK]: c.remaining[BLACK] },
-            turnStartedAt: c.running === true && !over ? Date.now() : null,
-        };
-    }
-
-    // How the game began is optional: saves from older versions began in the usual way
-    const begun = saved.gameStart;
-    const start =
-        begun &&
-        typeof begun === 'object' &&
-        (begun.player === WHITE || begun.player === BLACK) &&
-        Number.isInteger(begun.fullmove) &&
-        begun.fullmove >= 1
-            ? {
-                  player: begun.player,
-                  halfmoveClock: cleanClock(begun.halfmoveClock),
-                  fullmove: begun.fullmove,
-                  fen: typeof begun.fen === 'string' ? begun.fen : null,
-              }
-            : STANDARD_START;
-
-    return {
-        ...position,
-        gameStart: start,
-        clock: savedClock,
-        gameResult: result,
-        endedWithoutMove: over && saved.endedWithoutMove === true,
-        moveHistory: history,
-        positionHistory: undoStack,
-    };
 }
 
 /**
@@ -1545,12 +1308,6 @@ function readArchive() {
     } catch {
         return [];
     }
-}
-
-/** @returns {string} What makes a PGN the game it is: where it began, its moves and its result. */
-function pgnMovetext(pgn) {
-    const start = /^\[FEN "([^"]*)"\]/m.exec(pgn);
-    return `${start ? start[1] : ''} ${pgn.trim().split('\n').pop()}`;
 }
 
 /**
@@ -1969,133 +1726,6 @@ const IMPORT_NO_MOVES = 'No moves found in the text.';
 const IMPORT_TOO_LONG = `That text is too long to be a game (over ${CONFIG.IMPORT_MAX_LENGTH.toLocaleString('en-US')} characters).`;
 
 /**
- * @param {string} text - PGN that may hold several games.
- * @returns {string} The first game: everything up to the tags of a second one.
- */
-function firstPGNGame(text) {
-    const lines = String(text).split('\n');
-    let inMoves = false;
-    const end = lines.findIndex((line) => {
-        const isTag = /^\s*\[\w+\s+"[^"\n]*"\]\s*$/.test(line);
-        if (!isTag && line.trim()) inMoves = true;
-        return isTag && inMoves;
-    });
-    return (end === -1 ? lines : lines.slice(0, end)).join('\n');
-}
-
-/**
- * Finds how a game given as PGN ended: the result after the moves, or else
- * the Result tag. The comment this app writes before the result of a game
- * ended by resignation, agreement or on time becomes the status again.
- * @param {string} text
- * @returns {{result: string, status: string}|null} Null for a game in progress.
- */
-function pgnResult(text) {
-    const game = firstPGNGame(text).trimEnd();
-    // The result is the last word of the game; the comment, if any, stands right before it
-    const closing = /(?:^|\s)(1-0|0-1|1\/2-1\/2|\*)$/.exec(game.slice(-8));
-    const tagged = pgnTag(game, 'Result');
-    const result = closing ? closing[1] : tagged;
-    if (!['1-0', '0-1', '1/2-1/2'].includes(result)) return null;
-
-    let comment = '';
-    if (closing) {
-        const before = game.slice(0, game.length - closing[1].length).trimEnd();
-        const open = before.endsWith('}') ? before.lastIndexOf('{') : -1;
-        if (open !== -1) comment = before.slice(open + 1, -1).trim();
-    }
-    const ownWording =
-        /^(?:(?:White|Black) resigned\. (?:White|Black) wins\.|Draw by agreement\.|(?:White|Black) ran out of time[.,] .+)$/;
-    const fallback = {
-        '1-0': 'White won (result from the loaded game).',
-        '0-1': 'Black won (result from the loaded game).',
-        '1/2-1/2': 'Draw (result from the loaded game).',
-    };
-    return { result, status: ownWording.test(comment) ? comment : fallback[result] };
-}
-
-/**
- * @param {string} game - One game as PGN.
- * @param {string} name - A tag name, such as "Result" or "FEN".
- * @returns {string|null} The value of that tag, or null if the game has none.
- */
-function pgnTag(game, name) {
-    for (const line of game.split('\n')) {
-        const tag = /^\s*\[(\w+)\s+"([^"]*)"\]/.exec(line);
-        if (tag && tag[1] === name) return tag[2];
-    }
-    return null;
-}
-
-/**
- * Removes comments in braces. A brace that is never closed is left as it is,
- * so the text after it is not silently dropped.
- */
-function stripBraceComments(text) {
-    const kept = [];
-    let position = 0;
-    for (;;) {
-        const open = text.indexOf('{', position);
-        const close = open === -1 ? -1 : text.indexOf('}', open);
-        if (close === -1) break;
-        kept.push(text.slice(position, open));
-        position = close + 1;
-    }
-    kept.push(text.slice(position));
-    return kept.join(' ');
-}
-
-/**
- * Removes variations: everything between a parenthesis and the one that
- * closes it, however deeply nested. A parenthesis without a partner is left
- * as it is.
- */
-function stripVariations(text) {
-    // First find the partner of every opening parenthesis that has one
-    const closes = new Map();
-    const unclosed = [];
-    for (let i = 0; i < text.length; i++) {
-        if (text[i] === '(') unclosed.push(i);
-        else if (text[i] === ')' && unclosed.length > 0) closes.set(unclosed.pop(), i);
-    }
-    if (closes.size === 0) return text;
-
-    const kept = [];
-    let position = 0;
-    for (let i = 0; i < text.length; i++) {
-        if (!closes.has(i)) continue;
-        kept.push(text.slice(position, i));
-        i = closes.get(i); // Skips whatever is nested inside as well
-        position = i + 1;
-    }
-    kept.push(text.slice(position));
-    return kept.join(' ');
-}
-
-/**
- * Takes the moves out of PGN text: tags, comments, variations, annotation
- * codes, move numbers and the result are dropped. Every step reads the text
- * once from start to end, so damaged text (braces or parentheses that are
- * never closed, thousands of blank lines) takes no longer than a real game.
- * @param {string} text
- * @returns {string[]} The moves in standard algebraic notation.
- */
-function pgnMoveTokens(text) {
-    const withoutTags = firstPGNGame(text)
-        .split('\n')
-        .filter((line) => !/^\s*\[[^\]]*\]\s*$/.test(line)) // Tag pairs
-        .join('\n');
-    const body = stripVariations(
-        stripBraceComments(withoutTags).replace(/;[^\n]*/g, ' ') // Comments to the end of the line
-    );
-    return body
-        .replace(/\$\d+/g, ' ') // Annotation codes
-        .replace(/\d+\.+/g, ' ') // Move numbers, also when attached: "1.e4"
-        .split(/\s+/)
-        .filter((token) => token && !['1-0', '0-1', '1/2-1/2', '*'].includes(token));
-}
-
-/**
  * Replaces the current game with one given as PGN. Every move is checked
  * first; if one cannot be played, nothing is changed. A game with a FEN tag
  * begins from that position instead of the usual one. A result the moves do
@@ -2156,11 +1786,6 @@ function importPGN(text, validateOnly = false) {
     announce(`Game loaded, ${moves.length} moves. ${currentStatus}`);
     requestAIMove();
     return { ok: true, moves: moves.length };
-}
-
-/** @returns {boolean} True for text that begins like a FEN position: eight ranks of pieces and numbers. */
-function looksLikeFEN(text) {
-    return /^\s*[pnbrqk1-8]+(\/[pnbrqk1-8]+){7}(\s|$)/i.test(String(text));
 }
 
 /**
@@ -2304,66 +1929,6 @@ function handleImportKeydown(event) {
     }
 }
 
-/**
- * Writes a move in standard algebraic notation. A file or rank is added only
- * when another piece of the same type could legally have made the move.
- * @param {object} move - The move as recorded by applyMove.
- * @param {object} positionBefore - The rules.js position the move was played in.
- * @returns {string}
- */
-function generateNotationWithDisambiguation(move, positionBefore) {
-    const piece = move.piece;
-    const toAlg = coordsToAlgebraic(move.to.row, move.to.col);
-    if (move.isCastling) {
-        return move.to.col > move.from.col ? 'O-O' : 'O-O-O';
-    }
-
-    let disambiguation = '';
-    if (piece.type !== PAWN) {
-        // Other pieces of the same type that could legally have gone to the square.
-        // A piece that is pinned could not, so it does not count, which is also
-        // how findSANMove reads the move back.
-        const rivals = [];
-        for (let r = 0; r < 8; r++) {
-            for (let c = 0; c < 8; c++) {
-                if (r === move.from.row && c === move.from.col) continue;
-                const other = positionBefore.board[r][c];
-                if (!other || other.type !== piece.type || other.color !== piece.color) continue;
-                const reaches = legalMovesFrom(positionBefore, r, c).some(
-                    (to) => to.row === move.to.row && to.col === move.to.col
-                );
-                if (reaches) rivals.push({ row: r, col: c });
-            }
-        }
-        // SAN rule: the file if it is enough to tell the pieces apart, else the
-        // rank, else both.
-        if (rivals.length > 0) {
-            const from = coordsToAlgebraic(move.from.row, move.from.col);
-            if (!rivals.some((o) => o.col === move.from.col)) disambiguation = from[0];
-            else if (!rivals.some((o) => o.row === move.from.row)) disambiguation = from[1];
-            else disambiguation = from;
-        }
-    }
-
-    let notation = '';
-    if (piece.type !== PAWN) {
-        notation += piece.type.toUpperCase() + disambiguation;
-    }
-    if (move.captured) {
-        if (piece.type === PAWN) {
-            notation += coordsToAlgebraic(move.from.row, move.from.col)[0];
-        }
-        notation += 'x';
-    }
-    notation += toAlg;
-    if (move.promotion) notation += '=' + move.promotion.toUpperCase();
-    const nextPlayer = currentPlayer;
-    if (isCheckmate(nextPlayer)) notation += '#';
-    else if (isKingInCheck(nextPlayer, boardState)) notation += '+';
-    if (move.isEnPassant) notation += ' e.p.';
-    return notation;
-}
-
 // Export for Node/Jest tests (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -2384,7 +1949,6 @@ if (typeof module !== 'undefined' && module.exports) {
         isKingInCheck,
         isCheckmate,
         isStalemate,
-        generateNotationWithDisambiguation,
         handleResetClick,
         buildPGN,
         hasInsufficientMaterial,

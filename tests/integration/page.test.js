@@ -69,6 +69,10 @@ describe('the real page', () => {
         'board',
         'drag',
         'promotion',
+        'notation',
+        'saved-game',
+        'clock',
+        'engine-bridge',
         'game',
         'main',
       ].map((name) => `js/${name}.js`)

@@ -48,7 +48,7 @@ test('castling moves the rook', () => {
 });
 ```
 
-`loadGame()` gives every test a fresh page and game. It returns helpers for playing moves (`play`), setting up a position (`setPosition`), and reading the board (`at`, `movesFrom`); see `tests/helpers/load-game.js`. The helper puts the functions each file exports into the global scope, as the browser does. If you add a new source file, load it there, add it to the `<script>` tags in `index.html`, and add it to `APP_FILES` in `sw.js` so it is saved for offline use; `tests/unit/offline.test.js` fails if a file under `js/`, `css/` or `assets/` is missing from that list. A new top-level file that is not part of the game belongs in the `exclude` list of `_config.yml`, which keeps it off the published site.
+`loadGame()` gives every test a fresh page and game. It returns helpers for playing moves (`play`), setting up a position (`setPosition`), and reading the board (`at`, `movesFrom`); see `tests/helpers/load-game.js`. The helper puts the functions each file exports into the global scope, as the browser does. If you add a new source file, load it there (files `game.js` builds on are listed in one loop), add it to the `<script>` tags in `index.html`, and add it to `APP_FILES` in `sw.js` so it is saved for offline use; `tests/unit/offline.test.js` fails if a file under `js/`, `css/` or `assets/` is missing from that list. A new top-level file that is not part of the game belongs in the `exclude` list of `_config.yml`, which keeps it off the published site.
 
 Do not `require('jsdom')` in a test. `JSDOM` is a global, provided by `tests/helpers/jsdom-environment.js`, because jsdom 31 breaks when it is loaded inside Jest's module sandbox.
 
