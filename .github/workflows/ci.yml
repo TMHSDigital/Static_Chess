@@ -12,6 +12,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # A test that leaves a timer running must fail fast, not hang
     strategy:
       fail-fast: false
       matrix:
