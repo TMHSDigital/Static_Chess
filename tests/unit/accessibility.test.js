@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const { loadGame } = require('../helpers/load-game');
 
 const doc = (g) => g.window.document;
@@ -148,8 +150,9 @@ describe('announcements', () => {
   });
 
   test('the page links to the source repository and issue tracker', () => {
-    const g = loadGame();
-    const links = Array.from(doc(g).querySelectorAll('.about a')).map((a) => ({
+    const html = fs.readFileSync(path.join(__dirname, '../../index.html'), 'utf8');
+    const pageDoc = new globalThis.JSDOM(html).window.document;
+    const links = Array.from(pageDoc.querySelectorAll('.about a')).map((a) => ({
       text: a.textContent.trim(),
       href: a.getAttribute('href'),
     }));
