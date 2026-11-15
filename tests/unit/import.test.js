@@ -63,6 +63,33 @@ describe('reading PGN', () => {
     }
   });
 
+  test('a game that played on through a threefold repetition loads in full and is still running', () => {
+    const g = loadGame();
+    const repeated = '1. Nf3 Nf6 2. Ng1 Ng8 3. Nf3 Nf6 4. Ng1 Ng8';
+    expect(g.game.importPGN(`${repeated} 5. e4 e5`)).toEqual({ ok: true, moves: 10 });
+    expect(g.game.isGameOver).toBe(false);
+    expect(g.game.gameResult).toBeNull();
+    expect(el(g, 'game-status').textContent).toBe("White's turn");
+    expect(g.at('e4').type).toBe('p');
+    g.play('g1f3');
+    expect(notations(g)).toHaveLength(11);
+
+    const drawn = loadGame(); // The same game stopped at the repetition is a draw
+    expect(drawn.game.importPGN(repeated)).toEqual({ ok: true, moves: 8 });
+    expect(drawn.game.isGameOver).toBe(true);
+    expect(drawn.game.gameResult).toBe('1/2-1/2');
+    expect(el(drawn, 'game-status').textContent).toBe('Draw by threefold repetition.');
+  });
+
+  test('no move is added to a finished game', () => {
+    const g = loadGame();
+    g.play('f2f3', 'e7e5', 'g2g4', 'd8h4');
+    expect(g.game.isGameOver).toBe(true);
+    g.game.makeMove(6, 0, 5, 0); // a3
+    expect(notations(g)).toHaveLength(4);
+    expect(g.at('a2').type).toBe('p');
+  });
+
   test('reads moves as other sites write them', () => {
     const g = loadGame();
     const result = g.game.importPGN(

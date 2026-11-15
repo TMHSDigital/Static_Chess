@@ -385,6 +385,7 @@ function livePosition() {
  * @param {string} [promotionType] - Piece a pawn reaching the last rank becomes; queen by default.
  */
 function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
+    if (isGameOver) return; // Nothing is added to a finished game
     if (!boardState[startRow][startCol]) return; // Should not happen if logic is correct
     viewPly = null; // A move (for example the computer's reply) brings the live game back
     drawOffered = false; // Playing on declines a draw offer
@@ -449,17 +450,10 @@ function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
         currentStatus = 'Stalemate! Game is a draw.';
     }
     if (!isGameOver) {
-        const drawReason = findDrawReason();
-        if (drawReason) {
-            move.isDraw = true;
-            isGameOver = true;
-            gameResult = '1/2-1/2';
-            currentStatus = `Draw by ${drawReason}.`;
-        }
-    }
-    if (!isGameOver) {
         currentStatus = `${currentPlayer === WHITE ? 'White' : 'Black'}'s turn`;
     }
+    // A loaded game may play on through a draw nobody claimed: importPGN checks once, at the end
+    if (!replaying) endIfAutomaticDraw(move);
     debugLog(move.notation, '-', currentStatus);
     if (clock && !isGameOver) clock.turnStartedAt = Date.now(); // The other side is on the clock
     runClockTimer();
@@ -467,6 +461,20 @@ function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
     showMoveResult(move, opponentKingInCheck);
     saveGameState();
     requestAIMove();
+}
+
+/**
+ * Ends the game as a draw if the position on the board is drawn by the rules
+ * (insufficient material, threefold repetition or the fifty-move rule).
+ * @param {object} move - The move that led to the position.
+ */
+function endIfAutomaticDraw(move) {
+    const drawReason = isGameOver ? null : findDrawReason();
+    if (!drawReason) return;
+    move.isDraw = true;
+    isGameOver = true;
+    gameResult = '1/2-1/2';
+    currentStatus = `Draw by ${drawReason}.`;
 }
 
 /**
@@ -1666,6 +1674,7 @@ function importPGN(text, validateOnly = false) {
         for (const move of moves) {
             makeMove(move.from.row, move.from.col, move.to.row, move.to.col, move.promotion);
         }
+        endIfAutomaticDraw(moveHistory[moveHistory.length - 1]);
     } finally {
         replaying = false;
     }

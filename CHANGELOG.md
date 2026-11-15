@@ -25,6 +25,7 @@ All notable changes to this project will be documented in this file.
 - The pawn promotion chooser ran off the edge of very narrow screens
 - Switches showed no keyboard focus, and white text on the teal buttons and the running clock was below AA contrast
 - Load PGN: text that cannot be played now shows its error on the first click, instead of first asking to discard the current game
+- Load PGN: a game that played on through a threefold repetition or another unclaimed draw loads in full and can be continued, instead of being marked drawn with the later moves still applied
 - Load PGN with a clock selected: the loaded game is no longer put on a running clock with the increment added for every move, and Undo works in it
 - Playing as Black against the computer: reopening the page no longer lets the computer play an extra move on the saved game
 
