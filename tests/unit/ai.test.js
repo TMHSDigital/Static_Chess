@@ -175,8 +175,8 @@ describe('playing against the computer', () => {
 });
 
 describe('opponent settings', () => {
-  function startApp(storage = {}) {
-    const g = loadGame({ storage });
+  function startApp(storage = {}, options = {}) {
+    const g = loadGame({ storage, ...options });
     const doc = g.window.document;
     const select = (id, values) => {
       const wrapper = doc.createElement('div');
@@ -251,5 +251,36 @@ describe('opponent settings', () => {
     app.choose(app.opponent, 'human');
     expect(app.game.computerColor()).toBeNull();
     expect(app.stored('opponent')).toBe('human');
+  });
+
+  /** Starts the page as a browser does: settings and a saved game in storage, then main.js. */
+  function reopen(moves) {
+    const earlier = loadGame();
+    earlier.play(...moves);
+    const key = global.CONFIG.STORAGE_KEYS.GAME_STATE;
+    const saved = earlier.window.localStorage.getItem(key);
+    return startApp({ opponent: 'easy', playerSide: 'b', [key]: saved }, { deferStart: true });
+  }
+
+  test("reopening a game on the player's turn as Black plays no computer move", () => {
+    const app = reopen(['e2e4', 'e7e5', 'g1f3']);
+    jest.runAllTimers();
+    expect(app.game.moveHistory.map((m) => m.notation)).toEqual(['e4', 'e5', 'Nf3']);
+    expect(app.game.currentPlayer).toBe('b');
+    expect(statusText(app)).toBe("Black's turn");
+  });
+
+  test('reopening a finished game adds no move', () => {
+    const app = reopen(['f2f3', 'e7e5', 'g2g4', 'd8h4']);
+    jest.runAllTimers();
+    expect(app.game.isGameOver).toBe(true);
+    expect(app.game.moveHistory).toHaveLength(4);
+  });
+
+  test("reopening a game on the computer's turn still gets its move", () => {
+    const app = reopen(['e2e4', 'e7e5']);
+    jest.runAllTimers();
+    expect(app.game.moveHistory).toHaveLength(3);
+    expect(app.game.currentPlayer).toBe('b');
   });
 });

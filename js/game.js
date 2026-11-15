@@ -71,7 +71,10 @@ const AI_DRAW_MARGIN = 50; // The computer agrees to a draw unless it is at leas
  * Initializes the game state, either from scratch or localStorage.
  */
 function initializeGame() {
-    loadGameState(); // Try loading saved state first
+    if (loadGameState()) {
+        // A computer move asked for before the saved game was loaded belongs to another position
+        cancelAIMove();
+    }
     if (moveHistory.length === 0) {
         // If no saved state or new game
         resetGame();
@@ -750,7 +753,15 @@ function requestAIMove() {
         setTimeout(() => {
             if (id !== aiRequestId) return; // Undone, reset or switched off in the meantime
             aiThinking = false;
-            if (move) {
+            // The move was worked out for one position: never play it on another
+            const stillItsTurn = !isGameOver && currentPlayer === color;
+            const legal =
+                stillItsTurn &&
+                move &&
+                generateLegalMovesForPiece(move.from.row, move.from.col).some(
+                    (target) => target.row === move.to.row && target.col === move.to.col
+                );
+            if (legal) {
                 makeMove(move.from.row, move.from.col, move.to.row, move.to.col, move.promotion);
             } else {
                 updateStatusDisplay();
