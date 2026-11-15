@@ -776,3 +776,28 @@ body.coords-visible {
 .import-panel .buttons-row {
     justify-content: flex-end;
 }
+
+/* Links to the source repository and issue tracker */
+.about {
+    margin: 0;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--muted-text);
+}
+
+.about a {
+    color: var(--muted-text);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.about a:hover,
+.about a:focus-visible {
+    color: var(--text-color);
+}
+
+.about a:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
