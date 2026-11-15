@@ -52,6 +52,7 @@ All notable changes to this project will be documented in this file.
 - The status line sits above the board, and each player has a bar on their side of the board with their name, captured pieces and clock, so all of it is in view on a phone
 - The side panel is as tall as the board and the move list takes the height that is left; its controls are grouped (this game, new game, copy or load) and every control is at least 44px tall
 - Choosing a side under "Play as" turns the board to that side; "Flip board" still turns it by hand
+- In a game on the clock the computer budgets its thinking time: it thinks longer when it has plenty of time and moves at once when it has little, instead of spending the same time on every move
 - The computer works out its moves about three to four times faster, so the hard level and Hint look deeper in the same time
 - The easy level is no longer random: it takes a piece left hanging and gives mate in one, but still plays a random move about three times in ten
 - The last move is shown as a tint on both squares instead of corner marks, and the dots for possible moves no longer pulse

@@ -250,6 +250,36 @@ function scoreRootMoves(position, color, moves, depth, tolerance) {
 }
 
 /**
+ * How long the computer may think about one move in a game with a clock: a
+ * thirtieth of what it has left plus the increment, at least 50 ms and at most
+ * three times the level's usual thinking time.
+ * @param {number} remainingMs - What is left on the computer's clock.
+ * @param {number} incrementMs - What a move adds to it.
+ * @param {string} level - A key of AI_LEVELS.
+ * @returns {number} Milliseconds.
+ */
+function searchBudget(remainingMs, incrementMs, level) {
+    const settings = AI_LEVELS[String(level).toLowerCase()] || AI_LEVELS.easy;
+    const most = (settings.timeMs || 1000) * 3;
+    return Math.round(Math.max(50, Math.min(most, remainingMs / 30 + incrementMs)));
+}
+
+/**
+ * The depth a level always searches to. With very little time for the move it
+ * is cut to two half-moves, then to one, so the reply still comes at once.
+ * @param {string} level - A key of AI_LEVELS.
+ * @param {number|null} [budgetMs] - Time for this move, or nothing in a game without a clock.
+ * @returns {number} Half-moves.
+ */
+function baseDepthFor(level, budgetMs) {
+    const settings = AI_LEVELS[String(level).toLowerCase()] || AI_LEVELS.easy;
+    if (budgetMs === null || budgetMs === undefined) return settings.depth;
+    if (budgetMs < 75) return 1;
+    if (budgetMs < 150) return Math.min(settings.depth, 2);
+    return settings.depth;
+}
+
+/**
  * A quick opinion of a position: a search two half-moves deep, short enough
  * to run on the page while someone steps through a game.
  * @param {object} position - A rules.js position.
@@ -274,9 +304,11 @@ function assessPosition(position, color) {
  * @param {string} color - The side to move.
  * @param {string} [level] - A key of AI_LEVELS; unknown levels play as 'easy'.
  * @param {() => number} [random] - Source of randomness in [0, 1); pass a fixed one in tests.
- * @param {{timed?: boolean, depth?: number, seen?: string[]}} [options] - timed: let a
- *   level with a time allowance think deeper until it is used up (not repeatable, so
- *   tests leave it off). depth: search this deep instead of the level's own depth.
+ * @param {{timed?: boolean, depth?: number, seen?: string[], budgetMs?: number|null}} [options] -
+ *   timed: let a level with a time allowance think deeper until it is used up (not
+ *   repeatable, so tests leave it off). depth: search this deep instead of the level's
+ *   own depth. budgetMs: time for this move in a game with a clock (searchBudget); it
+ *   replaces the level's allowance and, when very short, lowers the depth always searched.
  *   seen: positionKey of every earlier position in the game; when the engine is
  *   better it avoids going back to one, so it does not shuffle into a draw.
  * @returns {{from: {row, col}, to: {row, col}, promotion: string}|null} null if there is no legal move.
@@ -305,7 +337,9 @@ function chooseAIMove(position, color, level = 'easy', random = Math.random, opt
     // Moves that may yet be chosen need exact scores, also after the penalty for repeating
     const exactWithin = tolerance + (seen.size > 0 ? AI_REPEAT_PENALTY : 0);
     const isMate = (score) => Math.abs(score) > AI_MATE_SCORE - 1000;
-    const baseDepth = options.depth || settings.depth;
+    const budgetMs = options.budgetMs === undefined ? null : options.budgetMs;
+    const baseDepth = options.depth || baseDepthFor(level, budgetMs);
+    const allowance = budgetMs === null ? settings.timeMs : budgetMs;
     const timed = !!options.timed && settings.timeMs > 0;
     const maxDepth = timed ? Math.max(baseDepth, settings.maxDepth) : baseDepth;
     const started = Date.now();
@@ -315,11 +349,11 @@ function chooseAIMove(position, color, level = 'easy', random = Math.random, opt
     try {
         for (let depth = timed ? 1 : baseDepth; depth <= maxDepth; depth++) {
             // The level's own depth is always finished; anything deeper stops when time is up
-            aiSearchDeadline = depth > baseDepth ? started + settings.timeMs : Infinity;
+            aiSearchDeadline = depth > baseDepth ? started + allowance : Infinity;
             scored = scoreRootMoves(position, color, ordered, depth, exactWithin);
             const best = Math.max(...scored.map((entry) => entry.score));
             if (isMate(best)) break; // A forced mate, either way: looking deeper changes nothing
-            if (depth >= baseDepth && Date.now() - started > settings.timeMs / 2) break;
+            if (depth >= baseDepth && Date.now() - started > allowance / 2) break;
             // Start the next depth with the best moves first, which lets it cut off far more
             ordered = [...scored].sort((a, b) => b.score - a.score).map((entry) => entry.move);
         }
@@ -348,5 +382,12 @@ function chooseAIMove(position, color, level = 'easy', random = Math.random, opt
 
 // Export for Node/Jest tests (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { AI_LEVELS, evaluatePosition, assessPosition, chooseAIMove };
+    module.exports = {
+        AI_LEVELS,
+        evaluatePosition,
+        assessPosition,
+        searchBudget,
+        baseDepthFor,
+        chooseAIMove,
+    };
 }

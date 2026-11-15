@@ -61,7 +61,15 @@ describe('the computer opponent in a Web Worker', () => {
     expect(workers[0].url).toBe('js/ai-worker.js');
     expect(workers[0].messages).toHaveLength(1);
     const message = workers[0].messages[0];
-    expect(Object.keys(message).sort()).toEqual(['color', 'id', 'level', 'position', 'seen']);
+    expect(Object.keys(message).sort()).toEqual([
+      'budgetMs',
+      'color',
+      'id',
+      'level',
+      'position',
+      'seen',
+    ]);
+    expect(message.budgetMs).toBeNull(); // No clock in this game
     expect(message.color).toBe('b');
     expect(message.level).toBe('easy');
     expect(message.position).toEqual(g.game.livePosition());
@@ -70,6 +78,16 @@ describe('the computer opponent in a Web Worker', () => {
     jest.runAllTimers();
     expect(notations(g)).toEqual(['e4']);
     expect(statusText(g)).toBe("Black's turn (computer is thinking)");
+  });
+
+  test('in a game on the clock the worker is told how long it may think', () => {
+    const workers = installWorker();
+    const g = loadGame();
+    g.game.setTimeControl('1+0');
+    g.game.setOpponent('hard', 'w');
+    g.play('e2e4');
+    expect(workers[0].messages[0].budgetMs).toBe(2000); // A thirtieth of the minute it has
+    g.game.setOpponent(null);
   });
 
   test('its answer is played after the pause', () => {

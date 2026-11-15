@@ -203,8 +203,9 @@ The implementation includes:
 2. `setOpponent(level, humanColor)` in `game.js` turns the opponent on or off. `main.js` calls it from the "Opponent" and "Play as" selectors, which are saved like the other settings
 3. `requestAIMove()` runs after every move, undo, reset and load. If it is the computer's turn it posts the position to `ai-worker.js` and plays the answer with `makeMove()`. Where a Worker cannot be created (a page opened from a file, or the tests) the search runs on the main thread after a `setTimeout`
 4. Each request has an id. Undo, New Game and changing the opponent bump the id, so an answer that arrives late is dropped. A worker cannot be interrupted, so if it is still searching at that moment `stopWorkerSearch()` terminates it and the next request starts a new one instead of waiting behind the abandoned search
-5. While it is the computer's turn `isBoardLocked()` is true: clicks and drags are ignored and the status line says the computer is thinking
-6. Undo takes back the computer's reply together with the player's move
+5. In a game on the clock the request carries `budgetMs` from `searchBudget()`: a thirtieth of the computer's remaining time plus the increment, between 50 ms and three times the level's usual allowance. It replaces the level's thinking time, and under 150 ms `baseDepthFor()` lowers the depth that is always searched to two half-moves, under 75 ms to one. With less than ten seconds left the computer also skips its usual pause before moving
+6. While it is the computer's turn `isBoardLocked()` is true: clicks and drags are ignored and the status line says the computer is thinking
+7. Undo takes back the computer's reply together with the player's move
 
 To make it stronger, the limit is speed: each extra half-move costs roughly an order of magnitude in time, and a second buys `hard` only about one half-move beyond its fixed depth. Faster move generation in `rules.js` (it copies the board for every move tried) and a transposition table are the next steps; raising `depth` or `timeMs` in `AI_LEVELS` only trades time for strength.
 

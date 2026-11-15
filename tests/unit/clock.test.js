@@ -9,6 +9,35 @@ function timedGame(control, options = {}) {
   return g;
 }
 
+describe('the computer on the clock', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  test('with plenty of time it pauses before it moves, as in a game without a clock', () => {
+    const g = loadGame();
+    g.game.setTimeControl('5+0');
+    g.game.setOpponent('easy', 'w');
+    g.play('e2e4');
+    jest.advanceTimersByTime(global.CONFIG.AI_MOVE_DELAY_MS - 50);
+    expect(g.game.moveHistory).toHaveLength(1);
+    jest.advanceTimersByTime(50);
+    expect(g.game.moveHistory).toHaveLength(2);
+    g.game.setOpponent(null);
+  });
+
+  test('with under ten seconds left it moves without the pause', () => {
+    const g = loadGame();
+    g.game.setTimeControl('1+0');
+    g.game.setOpponent('easy', 'w');
+    g.game.clock.remaining.b = 9000;
+    g.play('e2e4');
+    jest.advanceTimersByTime(20); // Far less than the usual pause
+    expect(g.game.moveHistory).toHaveLength(2);
+    expect(g.game.clock.remaining.b).toBeGreaterThan(8900);
+    g.game.setOpponent(null);
+  });
+});
+
 describe('Chess clock', () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());

@@ -70,6 +70,7 @@ let aiThinking = false;
 let aiWorker = null; // The Web Worker, or false once it has proved unavailable
 let aiWorkerBusy = false; // True from a request to the worker until its answer
 const AI_DRAW_MARGIN = 50; // The computer agrees to a draw unless it is at least half a pawn ahead
+const AI_HURRY_BELOW_MS = 10000; // With less than this on its clock the computer moves without its usual pause
 
 /**
  * The live position as one record. These two functions are the only places
@@ -887,10 +888,12 @@ function requestAIMove() {
     const started = Date.now();
     aiThinking = true;
     updateStatusDisplay();
+    // Short of time on its own clock, the computer does not pause before it moves
+    const pause = clock && clockRemaining(color) < AI_HURRY_BELOW_MS ? 0 : CONFIG.AI_MOVE_DELAY_MS;
 
     const id = askEngine(livePosition(), color, opponentLevel, (move) => {
         // A short pause, so the reply does not land in the same instant as the player's move
-        const wait = Math.max(0, CONFIG.AI_MOVE_DELAY_MS - (Date.now() - started));
+        const wait = Math.max(0, pause - (Date.now() - started));
         setTimeout(() => {
             if (id !== aiRequestId) return; // Undone, reset or switched off in the meantime
             aiThinking = false;
@@ -929,10 +932,12 @@ function askEngine(position, color, level, onMove) {
     const seen = positionHistory.map((past) =>
         positionKey(past.boardState, past.currentPlayer, past.enPassantTarget)
     );
+    // In a game on the clock the engine gets a share of the time that side has left
+    const budgetMs = clock ? searchBudget(clockRemaining(color), clock.increment, level) : null;
     const thinkHere = () =>
         setTimeout(() => {
             if (id !== aiRequestId) return;
-            onMove(chooseAIMove(position, color, level, Math.random, { seen }));
+            onMove(chooseAIMove(position, color, level, Math.random, { seen, budgetMs }));
         }, 0);
 
     const worker = getAIWorker();
@@ -952,7 +957,7 @@ function askEngine(position, color, level, onMove) {
         thinkHere();
     };
     aiWorkerBusy = true;
-    worker.postMessage({ id, position, color, level, seen });
+    worker.postMessage({ id, position, color, level, seen, budgetMs });
     return id;
 }
 

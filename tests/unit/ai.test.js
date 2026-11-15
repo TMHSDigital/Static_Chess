@@ -95,6 +95,51 @@ describe('choosing a move', () => {
     expect(alg(g, g.ai.chooseAIMove(g.game.livePosition(), 'w', level, first))).not.toBe('d1d5');
   });
 
+  describe('thinking time on the clock', () => {
+    test('is a thirtieth of the time left plus the increment, within limits', () => {
+      const { searchBudget } = loadGame().ai;
+      expect(searchBudget(60000, 0, 'hard')).toBe(2000);
+      expect(searchBudget(9000, 0, 'hard')).toBe(300);
+      expect(searchBudget(3000, 2000, 'hard')).toBe(2100);
+      expect(searchBudget(1000, 0, 'hard')).toBe(50); // Never less
+      expect(searchBudget(0, 0, 'hard')).toBe(50);
+      expect(searchBudget(900000, 10000, 'hard')).toBe(3000); // Never more than three times its usual second
+      expect(searchBudget(900000, 10000, 'medium')).toBe(3000);
+      expect(searchBudget(60000, 0, 'no such level')).toBe(2000);
+    });
+
+    test('very little time lowers the depth that is always searched', () => {
+      const { baseDepthFor } = loadGame().ai;
+      expect(baseDepthFor('hard')).toBe(3); // No clock: as before
+      expect(baseDepthFor('hard', null)).toBe(3);
+      expect(baseDepthFor('hard', 2000)).toBe(3);
+      expect(baseDepthFor('hard', 150)).toBe(3);
+      expect(baseDepthFor('hard', 149)).toBe(2);
+      expect(baseDepthFor('hard', 75)).toBe(2);
+      expect(baseDepthFor('hard', 74)).toBe(1);
+      expect(baseDepthFor('medium', 149)).toBe(2);
+      expect(baseDepthFor('medium', 50)).toBe(1);
+      expect(baseDepthFor('easy', 50)).toBe(1);
+      expect(baseDepthFor('easy')).toBe(1);
+    });
+
+    test('with almost no time it still plays a sound move at once', () => {
+      const g = loadGame();
+      g.setPosition({ e1: 'wk*', c3: 'wn*', h8: 'bk*', d5: 'bq*' });
+      const move = g.ai.chooseAIMove(g.game.livePosition(), 'w', 'hard', first, { budgetMs: 50 });
+      expect(alg(g, move)).toBe('c3d5'); // One half-move is enough to take a hanging queen
+    });
+
+    test('without a budget the levels search as before', () => {
+      const g = loadGame();
+      g.setPosition({ g6: 'wk*', a1: 'wr*', h8: 'bk*' });
+      const position = g.game.livePosition();
+      for (const options of [{}, { budgetMs: null }, { budgetMs: 5000 }]) {
+        expect(alg(g, g.ai.chooseAIMove(position, 'w', 'hard', first, options))).toBe('a1a8');
+      }
+    });
+  });
+
   test('returns null when there is no legal move', () => {
     const g = loadGame();
     g.setPosition({ a8: 'bk*', c7: 'wk*', b6: 'wq*' });
