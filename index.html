@@ -91,6 +91,14 @@
                 </div>
             </div>
             <div class="game-info">
+                <div class="panel-group action-row" role="group" aria-label="This game">
+                    <button id="undo-button" class="btn" aria-label="Undo last move">Undo</button>
+                    <button id="hint-button" class="btn" aria-label="Show a suggested move">
+                        Hint
+                    </button>
+                    <button id="draw-button" class="btn">Offer draw</button>
+                    <button id="resign-button" class="btn">Resign</button>
+                </div>
                 <section class="panel-group moves-group" aria-labelledby="moves-title">
                     <h2 id="moves-title">Move History</h2>
                     <ul id="move-history" class="move-history"></ul>
@@ -138,14 +146,6 @@
                     </div>
                 </section>
                 <div id="announcer" class="visually-hidden" role="status" aria-live="polite"></div>
-                <div class="panel-group action-row" role="group" aria-label="This game">
-                    <button id="undo-button" class="btn" aria-label="Undo last move">Undo</button>
-                    <button id="hint-button" class="btn" aria-label="Show a suggested move">
-                        Hint
-                    </button>
-                    <button id="draw-button" class="btn">Offer draw</button>
-                    <button id="resign-button" class="btn">Resign</button>
-                </div>
                 <div class="panel-group settings-container" role="group" aria-label="New game">
                     <div class="toggle-container" id="opponent-setting">
                         <label class="toggle-label" for="opponent-select">Opponent</label>

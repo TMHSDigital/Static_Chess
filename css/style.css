@@ -147,8 +147,10 @@ body {
     aspect-ratio: 1 / 1; /* Maintain square aspect ratio */
 }
 
-/* The side panel: the move list on top, then groups of controls split by thin rules.
-   It is as tall as the board card; the move list takes whatever height is left. */
+/* The side panel: what acts on the game first, where it is next to the board
+   on any screen, then the move list and the other groups, split by thin
+   rules. It is as tall as the board card; the move list takes whatever
+   height is left. */
 .game-info {
     width: var(--info-panel-width);
     box-sizing: border-box;
@@ -166,13 +168,16 @@ body {
     padding-top: var(--space-3);
 }
 
+.game-info > .panel-group:first-child {
+    border-top: none;
+    padding-top: 0;
+}
+
 .moves-group {
     flex: 1 1 auto;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    border-top: none;
-    padding-top: 0;
 }
 
 .game-info h2 {
