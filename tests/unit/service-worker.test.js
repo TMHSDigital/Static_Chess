@@ -4,7 +4,7 @@ const path = require('path');
 const ORIGIN = 'https://example.test';
 const PAGE = `${ORIGIN}/chess/`;
 const OFFLINE = { offline: true }; // What the stubbed Response.error() returns
-const WORKER_GLOBALS = ['self', 'caches', 'fetch', 'Response'];
+const WORKER_GLOBALS = ['self', 'caches', 'fetch', 'Request', 'Response'];
 
 /** The APP_FILES list in sw.js, read from its source. */
 function appFiles() {
@@ -27,6 +27,7 @@ function startServiceWorker(network = () => Promise.reject(new Error('offline'))
   const listeners = {};
   const stores = new Map(); // Cache name -> Map of URL -> response
   const log = []; // What the worker did, in order
+  const installed = []; // Every request the install step asked the cache to fetch
 
   global.self = {
     location: { origin: ORIGIN },
@@ -41,9 +42,12 @@ function startServiceWorker(network = () => Promise.reject(new Error('offline'))
       if (!stores.has(name)) stores.set(name, new Map());
       const store = stores.get(name);
       return {
-        addAll: async (files) => {
+        addAll: async (requests) => {
           log.push('addAll');
-          for (const file of files) store.set(new URL(file, PAGE).href, response(true, file));
+          for (const request of requests) {
+            installed.push(request);
+            store.set(request.url, response(true, request.file));
+          }
         },
         put: async (request, saved) => store.set(request.url, saved),
       };
@@ -64,6 +68,14 @@ function startServiceWorker(network = () => Promise.reject(new Error('offline'))
     },
   };
   global.fetch = network;
+  // As in a worker, a relative address is taken from where the worker is
+  global.Request = class {
+    constructor(file, init = {}) {
+      this.file = file;
+      this.url = new URL(file, PAGE).href;
+      this.cache = init.cache;
+    }
+  };
   global.Response = { error: () => OFFLINE };
 
   jest.resetModules();
@@ -81,7 +93,7 @@ function startServiceWorker(network = () => Promise.reject(new Error('offline'))
     listeners.fetch({ request, respondWith: (promise) => (answer = promise) });
     return answer;
   };
-  return { stores, log, lifecycle, fetchEvent };
+  return { stores, log, installed, lifecycle, fetchEvent };
 }
 
 afterEach(() => {
@@ -98,6 +110,15 @@ describe('service worker', () => {
     const [saved] = sw.stores.values();
     expect([...saved.keys()]).toEqual(appFiles().map((file) => new URL(file, PAGE).href));
     expect(saved.size).toBeGreaterThan(20);
+  });
+
+  test("install asks the server for every file, past the browser's own HTTP cache", async () => {
+    const sw = startServiceWorker();
+    await sw.lifecycle('install');
+
+    expect(sw.installed.map((request) => request.file)).toEqual(appFiles());
+    // Otherwise a file fetched in the last ten minutes would be saved in its old version
+    expect(new Set(sw.installed.map((request) => request.cache))).toEqual(new Set(['no-cache']));
   });
 
   test("activate removes this app's older caches and no others, then claims the pages", async () => {
@@ -130,6 +151,7 @@ describe('service worker', () => {
     const request = get(`${PAGE}js/game.js`);
 
     expect(await sw.fetchEvent(request)).toBe(fresh);
+    expect(network).toHaveBeenCalledTimes(1);
     expect(network).toHaveBeenCalledWith(request, { cache: 'no-cache' });
     await settled();
     const [saved] = sw.stores.values();

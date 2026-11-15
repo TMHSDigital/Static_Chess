@@ -71,8 +71,11 @@ describe('the real page', () => {
         'promotion',
         'notation',
         'saved-game',
+        'game-store',
         'clock',
+        'review',
         'engine-bridge',
+        'game-ui',
         'game',
         'main',
       ].map((name) => `js/${name}.js`)
@@ -88,6 +91,19 @@ describe('the real page', () => {
     const { run, values } = openPage();
     expect(values('opponent-select')).toEqual(['human', ...run('Object.keys(AI_LEVELS)')]);
     expect(values('side-select')).toEqual(['w', 'b']);
+  });
+
+  test('the player bars follow the opponent setting and the side to move', () => {
+    const { window, byId } = openPage();
+    const name = (id) => byId(id).textContent;
+    expect([name('side-name-white'), name('side-name-black')]).toEqual(['White', 'Black']);
+    expect(byId('side-white').classList.contains('to-move')).toBe(true);
+    expect(byId('side-black').classList.contains('to-move')).toBe(false);
+
+    byId('opponent-select').value = 'easy';
+    byId('opponent-select').dispatchEvent(new window.Event('change', { bubbles: true }));
+    expect([name('side-name-white'), name('side-name-black')]).toEqual(['You', 'Computer (easy)']);
+    expect(byId('side-black').querySelector('.thinking').hidden).toBe(true); // Not its move
   });
 
   describe('clock setting', () => {
@@ -136,6 +152,95 @@ describe('the real page', () => {
     expect(noComputer.byId('opponent-setting').hidden).toBe(true);
     expect(noComputer.byId('side-setting').hidden).toBe(true);
     expect(noComputer.byId('clock-setting').hidden).toBe(false);
+  });
+
+  test('links to the source repository and the issue tracker', () => {
+    const page = new JSDOM(INDEX).window;
+    const links = Array.from(page.document.querySelectorAll('.game-info .about a'));
+    expect(links.map((link) => [link.textContent.trim(), link.getAttribute('href')])).toEqual([
+      ['Source on GitHub', 'https://github.com/TMHSDigital/Static_Chess'],
+      ['Report a problem', 'https://github.com/TMHSDigital/Static_Chess/issues'],
+    ]);
+    page.close();
+  });
+
+  test('a finished game offers Review and New game beside the result', () => {
+    const { window, byId } = openPage();
+    const square = (name) =>
+      window.document.querySelector(
+        `#chess-board .square[data-row="${8 - Number(name[1])}"][data-col="${name.charCodeAt(0) - 97}"]`
+      );
+    const play = (...moves) => {
+      for (const move of moves) {
+        square(move.slice(0, 2)).click();
+        square(move.slice(2)).click();
+      }
+    };
+    play('f2f3', 'e7e5', 'g2g4');
+    expect(byId('result-actions').hidden).toBe(true);
+
+    play('d8h4');
+    expect(byId('game-status').textContent).toBe('Checkmate! Black wins.');
+    expect(byId('status-bar').classList.contains('is-over')).toBe(true);
+    expect(byId('result-actions').hidden).toBe(false);
+
+    byId('review-button').click();
+    expect(byId('game-status').textContent).toBe('Viewing the starting position');
+    expect(byId('result-actions').hidden).toBe(true); // It belongs to the final position
+    expect(window.document.activeElement.dataset.ply).toBe('1'); // The arrow keys go on from here
+    expect(square('e2').querySelector('.piece')).not.toBeNull();
+
+    byId('live-button').click();
+    expect(byId('result-actions').hidden).toBe(false);
+    byId('again-button').click(); // No question: the game is over
+    expect(byId('game-status').textContent).toBe("White's turn");
+    expect(byId('move-history').querySelectorAll('button')).toHaveLength(0);
+    expect(byId('result-actions').hidden).toBe(true);
+  });
+
+  test('Left and Right step through the game from anywhere but the board; Esc returns', () => {
+    const { window, byId } = openPage();
+    const square = (name) =>
+      window.document.querySelector(
+        `#chess-board .square[data-row="${8 - Number(name[1])}"][data-col="${name.charCodeAt(0) - 97}"]`
+      );
+    const press = (target, key) =>
+      target.dispatchEvent(
+        new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+      );
+    const status = () => byId('game-status').textContent;
+    for (const move of ['e2e4', 'e7e5', 'g1f3']) {
+      square(move.slice(0, 2)).click();
+      square(move.slice(2)).click();
+    }
+
+    press(window.document.body, 'ArrowLeft');
+    expect(status()).toBe('Viewing 1... e5');
+    press(byId('hint-button'), 'ArrowLeft');
+    expect(status()).toBe('Viewing 1. e4');
+    press(window.document.body, 'ArrowRight');
+    expect(status()).toBe('Viewing 1... e5');
+
+    square('e4').focus();
+    press(square('e4'), 'ArrowLeft'); // On the board: to the next square, not the next move
+    expect(status()).toBe('Viewing 1... e5');
+    expect(window.document.activeElement).toBe(square('d4'));
+
+    byId('move-history').querySelector('button[data-ply="2"]').focus();
+    press(window.document.activeElement, 'ArrowLeft'); // In the move list: one step, not two
+    expect(status()).toBe('Viewing 1. e4');
+
+    // A square pressed with the mouse gives the focus up, so the arrows step again
+    square('e4').focus();
+    square('e4').dispatchEvent(new window.Event('pointerup', { bubbles: true }));
+    expect(window.document.activeElement).toBe(window.document.body);
+    press(window.document.body, 'ArrowRight');
+    expect(status()).toBe('Viewing 1... e5');
+
+    press(window.document.body, 'Escape');
+    expect(status()).toBe("Black's turn");
+    press(window.document.body, 'ArrowRight'); // Already at the latest move
+    expect(status()).toBe("Black's turn");
   });
 
   test('a move made with two clicks shows in the status and the move list', () => {

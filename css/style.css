@@ -1,12 +1,20 @@
 :root {
-    /* As big as the window allows once the status line and the two player bars are counted */
-    --board-size: clamp(240px, calc(100vh - 250px), 580px);
+    /* As big as the window allows, up to 720px. In height, 232px is the page
+       padding (40px) plus what the board card holds besides the board (title,
+       status, two player bars, padding). In width, 470px is the side panel
+       (360px), the gap, the card and page padding and a scrollbar, so the
+       panel stays beside the board instead of wrapping under it. */
+    --board-size: clamp(240px, min(calc(100vh - 232px), calc(100vw - 470px)), 720px);
     --light-square: #f0d9b5;
     --dark-square: #b58863;
-    --selected-square: rgba(255, 255, 0, 0.3);
-    --possible-move-square: rgba(20, 150, 20, 0.3);
-    --check-square: rgba(220, 20, 20, 0.4);
-    --last-move-square: rgba(50, 120, 190, 0.42);
+    /* Highlights on the board. They are laid over the square's own colour:
+       yellow for the piece picked up (strong) and the last move (soft), a
+       neutral dot or ring for where it can go, red for a king in check, and
+       an orange frame for a hint. A board theme may set the first three. */
+    --selected-square: rgba(255, 221, 0, 0.5);
+    --possible-move-square: rgba(0, 0, 0, 0.25);
+    --check-square: rgba(225, 30, 30, 0.6);
+    --last-move-square: rgba(255, 221, 0, 0.28);
     --info-panel-width: 360px;
     /* Surfaces: the page, the cards on it, the wells inside a card, the card around the board */
     --main-bg: #1a1a1a;
@@ -34,6 +42,9 @@
     --piece-white: #ffffff;
     --piece-black: #1a1a1a;
     --hover-bg: rgba(255, 255, 255, 0.08);
+    /* Quiet buttons: a faint fill instead of an outline */
+    --quiet-fill: rgba(255, 255, 255, 0.06);
+    --quiet-fill-hover: rgba(255, 255, 255, 0.12);
     /* Scales */
     --space-1: 4px;
     --space-2: 8px;
@@ -47,10 +58,19 @@
     --shadow-dialog: 0 5px 15px rgba(0, 0, 0, 0.5);
     /* Controls */
     --control-height: 44px; /* Smallest comfortable touch target */
+    --control-height-compact: 36px; /* Secondary controls where a mouse is used; see below */
+    --text-sm: 0.875rem;
     --focus-ring: #ffffff;
     --show-coords: none; /* 'block' to show coordinates, 'none' to hide */
     --show-possible-moves: block; /* Default to show */
     --show-last-move: block; /* Default to show */
+}
+
+/* A finger needs the full height on every control */
+@media (pointer: coarse) {
+    :root {
+        --control-height-compact: 44px;
+    }
 }
 
 html {
@@ -78,8 +98,6 @@ body {
     gap: 24px;
     justify-content: center;
     max-width: 1200px;
-    margin-top: 20px;
-    margin-bottom: 20px;
 }
 
 .board-container {
@@ -129,23 +147,38 @@ body {
     aspect-ratio: 1 / 1; /* Maintain square aspect ratio */
 }
 
-/* The side panel: the move list on top, then groups of controls split by thin rules.
-   It is as tall as the board card; the move list takes whatever height is left. */
+/* The side panel: what acts on the game first, where it is next to the board
+   on any screen, then the move list and the other groups, split by thin
+   rules. It is as tall as the board card; the move list takes whatever
+   height is left. */
 .game-info {
     width: var(--info-panel-width);
     box-sizing: border-box;
     background-color: var(--panel-bg);
-    padding: 20px;
+    padding: var(--space-4);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-card);
     display: flex;
     flex-direction: column;
-    gap: var(--space-4);
+    gap: var(--space-3);
+    /* Beside the board the panel is sized as if it were empty, so the row is as
+       tall as the board card and the panel stretches to that. What does not
+       fit, such as the open Settings, scrolls inside the panel and the page
+       stays where it is. */
+    contain: size;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--control-border) transparent;
 }
 
 .panel-group {
     border-top: 1px solid var(--border-color);
-    padding-top: var(--space-4);
+    padding-top: var(--space-3);
+}
+
+.game-info > .panel-group:first-child {
+    border-top: none;
+    padding-top: 0;
 }
 
 .moves-group {
@@ -153,8 +186,6 @@ body {
     min-height: 0;
     display: flex;
     flex-direction: column;
-    border-top: none;
-    padding-top: 0;
 }
 
 .game-info h2 {
@@ -167,11 +198,14 @@ body {
     list-style: none;
     padding: 0;
     margin: 0;
-    flex: 1 1 0; /* Long games scroll inside the list instead of stretching the panel */
-    min-height: 168px;
+    /* The list takes the height the panel has left and gives it up first: long
+       games scroll inside it, and the lines shown while looking back come out
+       of it, so nothing below it moves */
+    flex: 1 1 0;
+    min-height: 120px;
     overflow-y: auto;
     border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius) var(--border-radius) 0 0; /* The step buttons close it off below */
     background-color: var(--inset-bg);
     scrollbar-width: thin;
     scrollbar-color: var(--accent-color) var(--border-color);
@@ -238,23 +272,53 @@ body {
     font-weight: bold;
 }
 
-/* Whose turn it is, or how the game ended: the first thing to read, right above the board */
-.game-status {
+/* Whose turn it is, or how the game ended: the first thing to read, right
+   above the board. Once the game is over the bar is tinted and holds what to
+   do next; the buttons wrap under the result where the bar is too narrow. */
+.status-bar {
     min-height: var(--control-height);
     box-sizing: border-box;
-    padding: 10px var(--space-3);
+    padding: var(--space-1) var(--space-3);
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: center;
+    gap: var(--space-1) var(--space-3);
+    background-color: var(--inset-bg);
+    border-radius: var(--border-radius);
+    transition: background-color 0.15s ease;
+}
+
+.status-bar.is-over {
+    justify-content: space-between;
+    background-color: var(--accent-tint);
+    box-shadow: inset 0 0 0 1px var(--accent-color);
+}
+
+.game-status {
     font-size: 1.05rem;
     font-weight: 700;
     text-align: center;
-    background-color: var(--inset-bg);
-    border-radius: var(--border-radius);
 }
 
-/* Buttons: one shape, three roles. Plain for most actions, primary for the
-   one that starts something, and red while waiting for a confirming click. */
+.result-actions {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.result-actions[hidden] {
+    display: none;
+}
+
+.result-actions .btn {
+    min-height: var(--control-height-compact);
+    padding: 0 var(--space-3);
+    font-size: var(--text-sm);
+}
+
+/* Buttons: one shape, three levels. Primary for the one that starts
+   something, outlined for what acts on the game, quiet for the rest. Any of
+   them turns red while it waits for a confirming click. */
 .btn {
     min-height: var(--control-height);
     padding: 0 14px;
@@ -291,6 +355,31 @@ body {
     border-color: var(--accent-fill-hover);
 }
 
+.btn-quiet {
+    min-height: var(--control-height-compact);
+    border-color: transparent;
+    background-color: var(--quiet-fill);
+    font-size: var(--text-sm);
+    font-weight: 500;
+}
+
+.btn-quiet:hover:not(:disabled) {
+    background-color: var(--quiet-fill-hover);
+}
+
+/* A line icon in the colour of the button's text */
+.btn .icon {
+    display: block;
+    width: 20px;
+    height: 20px;
+    margin: 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
 .btn.confirming,
 .btn.confirming:hover:not(:disabled) {
     background-color: var(--danger-fill);
@@ -303,6 +392,19 @@ body {
     gap: var(--space-2);
     justify-content: center;
     flex-wrap: wrap;
+}
+
+/* Related actions side by side, each as wide as its label needs; they wrap
+   onto a second line where the panel is too narrow for one */
+.action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.action-row .btn {
+    flex: 1 1 auto;
+    padding: 0 var(--space-2);
 }
 
 /* Related actions in even columns */
@@ -326,7 +428,8 @@ body {
 .more-settings summary:focus-visible,
 .switch input:focus-visible + .slider,
 .move-history li button.move:focus-visible,
-.import-panel textarea:focus-visible {
+.import-panel textarea:focus-visible,
+.about a:focus-visible {
     outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
 }
@@ -334,10 +437,11 @@ body {
 /* Responsive adjustments */
 @media (max-width: 900px) {
     :root {
-        /* 85% of the window, but never wider than what is left of it after the page
-           and card padding (46px) and a scrollbar that takes up room. vw counts
-           the scrollbar, so the last term keeps a very narrow window from scrolling sideways. */
-        --board-size: min(85vw, 85vh, calc(100vw - 58px));
+        /* The widest the board gets: 85% of the window. vw counts a scrollbar that
+           takes up room, so this alone can be wider than the page. The board card
+           below is therefore also limited to the width the page really has, and the
+           board fills the card (see .chess-board in board.css). */
+        --board-size: min(85vw, 85vh);
     }
 
     body {
@@ -349,15 +453,37 @@ body {
         flex-direction: column;
         align-items: center;
         margin-top: 10px;
+        width: 100%; /* The page's width without its padding or a scrollbar */
     }
 
+    /* 26px is the card's padding (24px) plus the board's border (2px) */
+    .board-container,
     .game-info {
-        width: calc(var(--board-size) + 24px);
+        box-sizing: border-box;
+        width: min(calc(var(--board-size) + 26px), 100%);
+    }
+
+    .board-container {
+        align-self: center;
+    }
+
+    /* Under the board the panel is as tall as what it holds, and the page scrolls */
+    .game-info {
+        contain: none;
+        overflow-y: visible;
+    }
+
+    /* The moves group has one height whether or not an earlier move is being
+       looked at: the heading, at least four rows of moves, the step strip, and
+       room for a score line of two lines and the two review buttons. The list takes what
+       the others leave, so starting a review moves nothing below the group. */
+    .moves-group {
+        flex: none;
+        height: calc(246px + 2 * var(--control-height-compact));
     }
 
     .move-history {
-        flex: none;
-        height: 180px;
+        min-height: 0;
     }
 }
 
@@ -367,7 +493,7 @@ body {
     align-items: center;
     justify-content: space-between;
     gap: var(--space-3);
-    min-height: var(--control-height);
+    min-height: var(--control-height-compact);
 }
 
 .toggle-label {
@@ -379,7 +505,7 @@ body {
     position: relative;
     display: inline-block;
     width: 44px;
-    height: var(--control-height);
+    height: var(--control-height-compact);
     flex-shrink: 0;
 }
 
@@ -392,10 +518,10 @@ body {
 .slider {
     position: absolute;
     cursor: pointer;
-    top: 10px;
+    top: calc(50% - 12px); /* A 24px track in the middle of the touch target */
     left: 0;
     right: 0;
-    bottom: 10px;
+    height: 24px;
     background-color: var(--control-border);
     transition: background-color 0.2s ease;
     border-radius: 24px;
@@ -542,7 +668,7 @@ body.coords-visible {
 }
 
 .toggle-container select {
-    min-height: var(--control-height);
+    min-height: var(--control-height-compact);
     background-color: var(--panel-bg);
     color: var(--text-color);
     border: 1px solid var(--control-border);
@@ -577,24 +703,58 @@ body.coords-visible {
     background-color: var(--hover-bg);
 }
 
+/* After a game: a move the engine thinks lost ground. The reason is in the
+   button's name and tooltip, and under the list when the move is looked at. */
+.move-history li button.move.lost-ground::after {
+    content: '?';
+    margin-left: 1px;
+    font-weight: 700;
+    color: var(--danger-text);
+}
+
+.move-history li button.move.lost-ground[aria-current='true']::after {
+    color: inherit; /* On the accent fill the danger colour is too faint */
+}
+
 /* The move whose position is on the board */
 .move-history li button.move[aria-current='true'] {
     background-color: var(--accent-fill);
     color: var(--on-accent);
 }
 
-/* First, previous, next and last position, under the move list */
+/* First, previous, next and last position: one strip joined to the bottom of
+   the move list. The 1px gaps let the strip's own colour show as dividers. */
 .step-buttons {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: var(--space-2);
-    margin-top: var(--space-2);
+    gap: 1px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    background-color: var(--border-color);
 }
 
 .step-buttons .btn {
     padding: 0;
-    font-size: 1.25rem;
-    line-height: 1;
+    border: none;
+    border-radius: 0;
+    background-color: var(--inset-bg);
+}
+
+.step-buttons .btn:hover:not(:disabled) {
+    background-color: var(--panel-bg);
+}
+
+/* Inside the strip, so its clipped corners do not cut the ring */
+.step-buttons .btn:focus-visible {
+    outline-offset: -2px;
+}
+
+/* Off, not faded: a faded button would let the divider colour through */
+.step-buttons .btn:disabled {
+    opacity: 1;
+    color: var(--control-border);
 }
 
 /* What the engine makes of the position being looked at */
@@ -622,7 +782,9 @@ body.coords-visible {
 }
 
 .review-actions .btn {
+    min-height: var(--control-height-compact);
     padding: 0 6px;
+    font-size: var(--text-sm);
 }
 
 .live-button {
@@ -682,6 +844,8 @@ body.coords-visible {
     --danger-text: #b3261e;
     --focus-ring: #1a1a1a;
     --hover-bg: rgba(0, 0, 0, 0.06);
+    --quiet-fill: rgba(0, 0, 0, 0.05);
+    --quiet-fill-hover: rgba(0, 0, 0, 0.1);
 }
 
 @media (prefers-color-scheme: light) {
@@ -701,6 +865,8 @@ body.coords-visible {
         --danger-text: #b3261e;
         --focus-ring: #1a1a1a;
         --hover-bg: rgba(0, 0, 0, 0.06);
+        --quiet-fill: rgba(0, 0, 0, 0.05);
+        --quiet-fill-hover: rgba(0, 0, 0, 0.1);
     }
 }
 
@@ -709,21 +875,88 @@ body.coords-visible {
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 600;
-    min-height: var(--control-height);
-    line-height: var(--control-height);
+    min-height: var(--control-height-compact);
+    line-height: var(--control-height-compact);
     border-radius: var(--radius-sm);
+}
+
+/* Two selects in a row would otherwise touch */
+.more-settings .toggle-container + .toggle-container {
+    margin-top: var(--space-1);
+}
+
+/* Which keys do what, at the end of the settings */
+.keys-note {
+    margin: var(--space-2) 0 0;
+    font-size: var(--text-sm);
+    line-height: 1.4;
+    color: var(--muted-text);
 }
 
 .more-settings summary:hover {
     background-color: var(--hover-bg);
 }
 
-/* One bar per side: its name, what it has captured, and its clock when the game has one */
+/* Links to the source repository and issue tracker at the bottom of the side panel */
+.about {
+    margin: 0;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--muted-text);
+}
+
+.about a {
+    color: var(--muted-text);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+.about a:hover,
+.about a:focus-visible {
+    color: var(--text-color);
+}
+
+/* One bar per side: who plays it, what it has captured, and its clock when
+   the game has one. The bar of the side to move is tinted. */
 .side-row {
     display: flex;
     align-items: center;
     gap: var(--space-2);
     min-height: 34px;
+    box-sizing: border-box;
+    padding: 0 var(--space-2);
+    border-radius: var(--border-radius);
+    transition: background-color 0.15s ease;
+}
+
+.side-row.to-move {
+    background-color: var(--accent-tint);
+}
+
+.side-row.to-move .side-name::before {
+    box-shadow: 0 0 0 2px var(--accent-color);
+}
+
+/* Beside the computer's name while it works out its move */
+.thinking {
+    font-size: var(--text-sm);
+    color: var(--muted-text);
+    animation: thinking-pulse 1.2s ease-in-out infinite;
+}
+
+.thinking[hidden] {
+    display: none;
+}
+
+.thinking::after {
+    content: '\2026'; /* An ellipsis */
+}
+
+@keyframes thinking-pulse {
+    50% {
+        opacity: 0.35;
+    }
 }
 
 .side-name {
@@ -752,6 +985,7 @@ body.coords-visible {
 
 .clock {
     margin-left: auto; /* Always at the right end of the bar */
+    margin-right: calc(-1 * var(--space-2) + 3px); /* Tucked into the bar's rounded end */
     padding: 3px 10px;
     border: 1px solid var(--control-border);
     border-radius: var(--radius-sm);

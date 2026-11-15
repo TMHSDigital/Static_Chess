@@ -87,7 +87,8 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 - **Chess Clock:** Five time controls, with a warning at 20 and 10 seconds; the computer budgets its time against it
 - **Game Review:** Step back through the game from the move list or with the step buttons, see what the engine makes of each position, and go on playing from any of them with "Play from here"
 - **Resign and Draw Offer:** End a game by resignation or by agreement; the result is saved and exported
-- **Hint:** Shows the move the engine would play, without playing it
+- **Hint:** Shows the move the engine would play, without playing it, also for an earlier position while looking back
+- **Moves that lost ground:** After a game, the move list marks the moves the engine thinks cost a pawn and a half or more
 - **PGN and FEN:** Copy or save the game as PGN, copy the position as FEN, and load a game or a position from pasted text or a file
 - **Past Games:** The last 20 games are kept and can be opened again
 - **Captured Pieces:** Each player's bar shows what they have taken and the material lead
@@ -127,7 +128,7 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 The game features an elegant, professional-looking interface with a dark theme and subtle visual cues:
 
 <p align="center">
-  <img src="assets/screenshots/game-in-progress.png" alt="A game in progress on the clock: the board with each player's bar, the move list, and the game controls" width="45%" style="margin-right: 2%;" valign="top">
+  <img src="assets/screenshots/game-in-progress.png" alt="A game in progress on the clock against the computer: the board with each player's bar, the game buttons, the move list, and the new-game settings" width="45%" style="margin-right: 2%;" valign="top">
   <img src="assets/screenshots/settings-open.png" alt="Looking back at an earlier move in the light theme with the green board, with Settings open" width="45%" valign="top">
 </p>
 
@@ -174,11 +175,12 @@ That's it! No build process or dependencies are required.
 8. Game ends with checkmate, stalemate or a draw (insufficient material, threefold repetition, fifty-move rule)
 9. Click "Undo" to take back the last move, or "New Game" to reset the board (a game in progress asks for a second click)
 10. Click "Copy PGN" to copy the game for an analysis board or to share it, or "Save PGN" to save it as a file
-    - Click a move in the Move History (or use the arrow keys, Home and End there) to look at the position after it. "Play from here" (asked twice) drops the later moves and lets you go on from the position you are looking at; the game as it was is kept under "Past games". While you look back, a line under the list says what the engine makes of the position ("Engine thinks White is ahead by 1.3"). The four buttons under the list step to the starting position, the previous move, the next move and the latest move; "Back to game" returns to the live position
+    - Click a move in the Move History (or use the arrow keys, Home and End there) to look at the position after it. Left and Right also step through the moves from anywhere else on the page, and Esc returns to the game. When a game is over, "Review" beside the result starts from the first position. "Play from here" (asked twice) drops the later moves and lets you go on from the position you are looking at; the game as it was is kept under "Past games". While you look back, a line under the list says what the engine makes of the position ("Engine thinks White is ahead by 1.3"). The four buttons under the list step to the starting position, the previous move, the next move and the latest move; "Back to game" returns to the live position
     - "Resign" ends the game after a second click. "Offer draw" is accepted by the other side with a second click, or answered at once by the computer. Undo reopens a game ended this way
     - "Load" replaces the game with a PGN game you paste, keeping its result (a resigned, drawn or timed-out game stays finished; Undo reopens it), or starts a new game from a FEN position you paste. "Open file" in that dialog reads a `.pgn` or `.fen` file instead, and a file can also be dropped on the dialog. It also lists your last 20 games under "Past games" (a game goes there when you start or load another); click one to open it again
     - "Copy FEN" copies the position on the board
-    - "Hint" marks the move the built-in engine would play for the side to move; nothing is played
+    - "Hint" marks the move the built-in engine would play for the side to move; nothing is played. While you look back it works on the position on screen
+    - When a game is over, moves marked "?" in the Move History are ones the engine thinks lost ground; hover over one, or look at it, to read why. The engine only looks a few moves ahead, so take it as an opinion
     - The pieces each side has captured, and the material lead, are shown in that player's bar beside the board
 11. Keyboard: Tab to the board, move between squares with the arrow keys, and press Enter or Space to select a piece or move it
 12. With a clock, a player who has 20 and then 10 seconds left is warned by an announcement for screen readers and, with sound effects on, a double beep
@@ -222,10 +224,13 @@ Static_Chess/
 │   ├── ai.js            # Computer opponent (evaluation and search)
 │   ├── ai-worker.js     # Runs the search in a Web Worker
 │   ├── promotion.js     # Pawn promotion chooser
-│   ├── notation.js      # Writing a move in SAN; taking PGN text apart
+│   ├── notation.js      # Writing SAN and PGN; reading PGN and FEN into checked moves
 │   ├── saved-game.js    # Checking a saved game read from storage
-│   ├── clock.js         # The arithmetic of a chess clock
-│   └── engine-bridge.js # Requests to the engine, through the worker or on the page
+│   ├── game-store.js    # The saved game and the past games in the browser's storage
+│   ├── clock.js         # The arithmetic and the rules of a chess clock
+│   ├── review.js        # The engine's scores put into words
+│   ├── engine-bridge.js # Requests to the engine, through the worker or on the page
+│   └── game-ui.js       # Status, buttons, clocks, move list and the Load dialog
 ├── assets/              # Static assets
 │   ├── icons/           # App icon (SVG, and PNG at 192px and 512px)
 │   ├── social-card.png  # Image shown when a link to the game is shared
@@ -277,9 +282,10 @@ The project follows a clear separation of concerns:
   - `pieces.js`: Piece objects and basic movement patterns
   - `rules.js`: Legal move generation, check, castling, en passant, promotion and draw rules, with no DOM access
   - `board.js`: DOM rendering, keyboard navigation, and diff-based updates
-  - `game.js`: Game state and move flow, undo, saving, status and announcements
-  - `notation.js`, `saved-game.js`, `clock.js`: SAN and PGN text, saved-game validation and clock arithmetic, with no DOM access
-  - `engine-bridge.js`: Sends a position to the engine and brings its move back
+  - `game.js`: Game state and move flow, undo, saving, and what the status and announcements say
+  - `game-ui.js`: Draws the status line, buttons, clocks, move list and the Load dialog from what `game.js` tells it
+  - `notation.js`, `saved-game.js`, `game-store.js`, `clock.js`, `review.js`: SAN, PGN and FEN text, saved-game validation, storage, clock rules and the wording of engine scores, with no DOM access
+  - `engine-bridge.js`: Sends positions to the engine and brings its move or its scores back
   - `main.js`: Bootstraps the application
   - `drag.js`: Drag and drop integrated via existing click handlers
   - `promotion.js`: Dialog for choosing the promotion piece
@@ -342,7 +348,7 @@ See the [Development Roadmap](docs/ROADMAP.md) for a detailed plan of upcoming f
 - **Stronger Computer Opponent:** Faster move generation and a transposition table, to search deeper in the same time
 - **Sound Effects:** Recorded sounds as an alternative to the built-in synthesized tones
 - **Named Saved Games:** Keep several games in progress under names; today the last 20 games are kept as past games
-- **Game Analysis:** Mark the moves where the engine's score drops
+- **Game Analysis:** Deeper analysis than the quick look the engine now takes at each move of a finished game
 
 </details>
 

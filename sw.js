@@ -36,8 +36,11 @@ const APP_FILES = [
     'js/promotion.js',
     'js/notation.js',
     'js/saved-game.js',
+    'js/game-store.js',
     'js/clock.js',
+    'js/review.js',
     'js/engine-bridge.js',
+    'js/game-ui.js',
     'js/game.js',
     'js/main.js',
     'assets/wk.svg',
@@ -61,7 +64,11 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches
             .open(CACHE_NAME)
-            .then((cache) => cache.addAll(APP_FILES))
+            // 'no-cache' as in the fetch handler below: every file comes from the
+            // server, not from the browser's HTTP cache, so the saved copy is one release
+            .then((cache) =>
+                cache.addAll(APP_FILES.map((file) => new Request(file, { cache: 'no-cache' })))
+            )
             .then(() => self.skipWaiting())
     );
 });
@@ -97,7 +104,11 @@ self.addEventListener('fetch', (event) => {
                 });
             }, NETWORK_WAIT_MS);
 
-            // Revalidate fresh HTTP cache entries as well as stale ones.
+            // 'no-cache' asks the server every time, also while the browser's
+            // own HTTP cache still holds a copy it considers fresh. Without it
+            // "the network" can be that copy, each file with its own age, and
+            // a page can run new scripts next to old ones after a release. An
+            // unchanged file costs a 304 with no body.
             fetch(request, { cache: 'no-cache' })
                 .then((response) => {
                     clearTimeout(waiting);

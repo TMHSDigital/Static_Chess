@@ -1,49 +1,108 @@
 /**
  * @fileoverview The way from the page to the engine in ai.js. A request is
  * answered by a Web Worker (ai-worker.js), so the page stays responsive, or
- * on the page itself where a worker is not available. Only the latest request
- * counts: asking again, or dropEngineRequests(), makes an earlier answer
- * void. Nothing here knows about the game being played.
+ * on the page itself where a worker is not available. Requests travel on
+ * named channels, each with a worker of its own. On one channel only the
+ * latest request counts: asking again, or dropEngineRequests(), makes an
+ * earlier answer void. Channels do not affect each other, so a question about
+ * a game being reviewed never cancels or delays the computer's move. Nothing
+ * here knows about the game being played.
  */
 
-let engineRequestId = 0; // Goes up with every request and whenever pending ones are dropped
-let engineWorker = null; // The Web Worker, or false once it has proved unavailable
-let engineWorkerBusy = false; // True from a request to the worker until its answer
+const engineChannels = {}; // By name: { id, worker, busy }
+let engineWorkersUnavailable = false; // True once a worker could not be made or has failed
+
+/**
+ * @param {string} name - 'play' for the computer's move and hints in the live
+ *   game; the game gives review its own names.
+ * @returns {{id: number, worker: Worker|null, busy: boolean}} id goes up with
+ *   every request and whenever pending ones are dropped; busy is true from a
+ *   request to the worker until its answer.
+ */
+function engineChannel(name) {
+    if (!engineChannels[name]) engineChannels[name] = { id: 0, worker: null, busy: false };
+    return engineChannels[name];
+}
 
 /**
  * Stops a search the worker is still running. A worker cannot be interrupted,
  * so it is shut down and a new one is started with the next request; that
  * request then does not have to wait for a search nobody wants any more.
  */
-function stopWorkerSearch() {
-    if (engineWorker && engineWorkerBusy) {
-        engineWorker.terminate();
-        engineWorker = null;
+function stopWorkerSearch(channel) {
+    if (channel.worker && channel.busy) {
+        channel.worker.terminate();
+        channel.worker = null;
     }
-    engineWorkerBusy = false;
+    channel.busy = false;
 }
 
-/** @returns {Worker|null} The search worker, or null where workers are not available. */
-function getAIWorker() {
-    if (engineWorker === null) {
+/** @returns {Worker|null} The channel's search worker, or null where workers are not available. */
+function getAIWorker(channel) {
+    if (engineWorkersUnavailable) return null;
+    if (channel.worker === null) {
         try {
-            engineWorker = typeof Worker === 'function' ? new Worker('js/ai-worker.js') : false;
+            if (typeof Worker !== 'function') throw new Error('No Worker here');
+            channel.worker = new Worker('js/ai-worker.js');
         } catch {
-            engineWorker = false; // For example a page opened straight from a file
+            engineWorkersUnavailable = true; // For example a page opened straight from a file
         }
     }
-    return engineWorker || null;
+    return channel.worker;
 }
 
 /** Makes every answer still on its way void, and stops a search that is running for one. */
-function dropEngineRequests() {
-    engineRequestId++;
-    stopWorkerSearch();
+function dropEngineRequests(channelName = 'play') {
+    const channel = engineChannel(channelName);
+    channel.id++;
+    stopWorkerSearch(channel);
 }
 
 /** @returns {boolean} True if no newer request was made, and none dropped, since this one. */
-function isLatestEngineRequest(id) {
-    return id === engineRequestId;
+function isLatestEngineRequest(id, channelName = 'play') {
+    return id === engineChannel(channelName).id;
+}
+
+/**
+ * Sends a question to the engine and hands the answer on, unless the request
+ * has been replaced or dropped by then.
+ * @param {string} channelName
+ * @param {object} message - What ai-worker.js is told; the request id is added.
+ * @param {() => object} answerHere - Works the answer out on the page, in the
+ *   shape the worker replies with.
+ * @param {(answer: object) => void} onAnswer
+ * @returns {number} The id of the request.
+ */
+function sendToEngine(channelName, message, answerHere, onAnswer) {
+    const channel = engineChannel(channelName);
+    const id = ++channel.id;
+    stopWorkerSearch(channel); // A request still being worked on is replaced by this one
+    const thinkHere = () =>
+        setTimeout(() => {
+            if (id !== channel.id) return;
+            onAnswer(answerHere());
+        }, 0);
+
+    const worker = getAIWorker(channel);
+    if (!worker) {
+        thinkHere();
+        return id;
+    }
+    worker.onmessage = (event) => {
+        if (event.data.id !== id) return;
+        channel.busy = false;
+        onAnswer(event.data);
+    };
+    worker.onerror = (event) => {
+        if (event && event.preventDefault) event.preventDefault();
+        engineWorkersUnavailable = true; // Do not try a worker again
+        channel.worker = null;
+        channel.busy = false;
+        thinkHere();
+    };
+    channel.busy = true;
+    worker.postMessage({ id, ...message });
+    return id;
 }
 
 /**
@@ -55,43 +114,42 @@ function isLatestEngineRequest(id) {
  *   budgetMs: time for this move in a game on the clock, else null.
  * @param {(move: object|null) => void} onMove - Called with the engine's move,
  *   unless the request has been replaced or dropped by then.
+ * @param {string} [channelName]
  * @returns {number} The id of the request, for isLatestEngineRequest.
  */
-function askEngine(request, onMove) {
+function askEngine(request, onMove, channelName = 'play') {
     const { position, color, level, seen, budgetMs } = request;
-    const id = ++engineRequestId;
-    stopWorkerSearch(); // A request still being worked on is replaced by this one
-    const thinkHere = () =>
-        setTimeout(() => {
-            if (id !== engineRequestId) return;
-            onMove(chooseAIMove(position, color, level, Math.random, { seen, budgetMs }));
-        }, 0);
+    return sendToEngine(
+        channelName,
+        { position, color, level, seen, budgetMs },
+        () => ({ move: chooseAIMove(position, color, level, Math.random, { seen, budgetMs }) }),
+        (answer) => onMove(answer.move)
+    );
+}
 
-    const worker = getAIWorker();
-    if (!worker) {
-        thinkHere();
-        return id;
-    }
-    worker.onmessage = (event) => {
-        if (event.data.id !== id) return;
-        engineWorkerBusy = false;
-        onMove(event.data.move);
-    };
-    worker.onerror = (event) => {
-        if (event && event.preventDefault) event.preventDefault();
-        engineWorker = false; // Do not try the worker again
-        engineWorkerBusy = false;
-        thinkHere();
-    };
-    engineWorkerBusy = true;
-    worker.postMessage({ id, position, color, level, seen, budgetMs });
-    return id;
+/**
+ * Asks the engine what it makes of each of a list of positions.
+ * @param {{position: object, color: string}[]} positions - rules.js positions,
+ *   each with the side to move.
+ * @param {(scores: {score: number, mate: boolean, over: boolean}[]) => void} onScores -
+ *   Called with one assessPosition result per position, in the same order.
+ * @param {string} channelName
+ * @returns {number} The id of the request, for isLatestEngineRequest.
+ */
+function askEngineForScores(positions, onScores, channelName) {
+    return sendToEngine(
+        channelName,
+        { assess: positions },
+        () => ({ scores: positions.map((entry) => assessPosition(entry.position, entry.color)) }),
+        (answer) => onScores(answer.scores)
+    );
 }
 
 // Export for Node/Jest tests (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         askEngine,
+        askEngineForScores,
         dropEngineRequests,
         isLatestEngineRequest,
     };

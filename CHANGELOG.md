@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- Links in the side panel to the GitHub source repository and issue tracker (#78)
 - **Captured pieces**: The pieces each side has taken are shown with the material lead
 - **Game review**: Click a move in the list, or use the arrow keys, Home and End there, to see the position after it; "Back to game" returns to the live position and nothing in the game is changed
 - **Past games**: A game that is replaced by a new or a loaded one is kept. The last 20 are listed in the Load dialog with their date, opponent and result, and a click opens one again
@@ -13,6 +14,8 @@ All notable changes to this project will be documented in this file.
 - **Open and save files**: "Open file" in the Load dialog reads a PGN or FEN file (a file can also be dropped on the dialog), and "Save PGN" saves the game as a file
 - **Play from here**: While an earlier position is on the board, "Play from here" drops the later moves and continues the game from that position, also in a finished game and in one played on the clock. The game as it was goes into the past games
 - **Engine score in review**: While an earlier position is on the board, a line under the move list says who the engine thinks is ahead and by how much, or that a mate is there
+- **Hint in review**: While an earlier position is on the board, Hint marks the move the engine would have played there and reads out the score with it. It does not disturb a move the computer is working out
+- **Moves that lost ground**: Once a game is over, the engine goes through it and the move list marks with a "?" each move that, by its count, lost a pawn and a half or more or allowed a forced mate. The reason is in the move's tooltip and is shown under the list when the move is looked at
 - **Link previews**: A link to the game shared in chat or on social media now shows a preview with an image of the board
 - **404 page**: An address that does not exist on the site now shows a page in the game's style with a link back to the game
 - **Step buttons**: Four buttons under the move list go to the starting position, the previous move, the next move and the latest move, so a game can be stepped through without a keyboard
@@ -29,7 +32,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-- Online visits with an active service worker check for updated app files even when the browser's HTTP cache is still fresh. Unchanged files can still use the cached copy.
+- A move played after the player's time had run out was accepted, and the increment was credited, when the move landed before the next clock tick; such a move now ends the game on time
+- After a release, a returning visitor could get some scripts new and some from the browser's cache for up to ten minutes, which could leave the page without a board; the service worker now asks the server for every file
+- The copy of the game saved for offline use could hold files of two releases when it was saved within ten minutes of a release; it is now fetched from the server in full
 - On narrow screens the side panel was wider than the screen and its edges were cut off
 - Light theme: the card around the board stayed black with an unreadable title, and the move list, status and settings boxes were grey
 - The pawn promotion chooser ran off the edge of very narrow screens
@@ -41,7 +46,7 @@ All notable changes to this project will be documented in this file.
 - Copy FEN: where the clipboard is not available, the position is saved as a plain text file, not marked as a PGN file
 - On the clock, two bishops on squares of one colour no longer count as enough to win when the other side runs out of time
 - The computer's reply no longer waits for a search that was abandoned, for example a hint that was overtaken by a move or a move that was undone while the computer was thinking
-- In a very narrow window with a scrollbar that takes up room, the board card no longer runs over the page padding or past the window edge
+- In a very narrow window with a scrollbar that takes up room, the board card no longer runs over the page padding or past the window edge, whatever the scrollbar's width, and the board on a phone is no smaller for it
 - Offline support: a new version of the service worker removes only this app's own old caches, not those of other apps served from the same host
 - Touch: when the browser cancels a touch in the middle of a drag (a system gesture, a call, a second finger), the piece goes back to its square instead of hanging in the air, and the next tap no longer plays its move
 - Notation: a move no longer gets a file or rank because of a second piece of the same type that is pinned and could not have made it (for example "Ne4", not "Nge4")
@@ -49,9 +54,17 @@ All notable changes to this project will be documented in this file.
 - Load PGN: a game that played on through a threefold repetition or another unclaimed draw loads in full and can be continued, instead of being marked drawn with the later moves still applied
 - Load PGN with a clock selected: the loaded game is no longer put on a running clock with the increment added for every move, and Undo works in it
 - Playing as Black against the computer: reopening the page no longer lets the computer play an extra move on the saved game
+- Tests: a game left with a running clock or the computer thinking no longer keeps Jest alive or plays into the next test
 
 ### Changed
 
+- Service worker tests check HTTP revalidation and response caching together, without a duplicate fetch test.
+- **Side panel**: The buttons used during a game (Undo, Hint, Offer draw, Resign) come first, next to the board on any screen. New Game is the one filled button; Copy PGN, Save PGN, Copy FEN and Load are quieter; the four step buttons are a strip joined to the move list
+- **Layout**: The page fits a 1440x900 and a 1280x720 window without scrolling, the move list takes the height that is left, and the board grows up to 720px on large screens
+- **Player bars**: Against the computer the bars read "You" and "Computer (level)"; the bar of the side to move is tinted, and "thinking" shows beside the computer's name while it works out its move
+- **End of a game**: The result stands out in the status bar, with "Review" and "New game" buttons beside it
+- **Board highlights**: Yellow marks the piece picked up and, more softly, the last move; legal moves are a dot on an empty square and a ring around a piece that can be taken
+- **Keys**: Left and Right step through the moves and Esc returns to the game from anywhere on the page except the board, where the arrow keys still move between squares
 - "Show coordinates" labels the board edges only: the file letters along the rank nearest the player and the rank numbers down the left side, 16 labels instead of 126. They follow a flipped board and stay visible on the squares of the last move and on squares a piece can move to
 - The page carries a Content-Security-Policy that lets it load only its own files
 - The "Load PGN" button is now "Load", since it takes a FEN position as well

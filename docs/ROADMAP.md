@@ -57,12 +57,12 @@ Features are prioritized as follows:
 
 ### Tier 3: Advanced Features
 
-| Feature                  | Complexity | Dependencies | Description                                                                        | Status       |
-| ------------------------ | ---------- | ------------ | ---------------------------------------------------------------------------------- | ------------ |
-| **AI Opponent**          | High       | None         | Computer opponent with three levels (alpha-beta search)                            | ✅ Completed |
-| **Multiple Saved Games** | Medium     | None         | The last 20 games are kept and can be reopened; named slots are to do              | In progress  |
-| **Game Import/Export**   | Medium     | None         | PGN and FEN, both ways: copy, paste, and start from a position                     | ✅ Completed |
-| **Game Analysis**        | High       | AI Opponent  | A score for the position being reviewed and Hint are in; marking mistakes is to do | In progress  |
+| Feature                  | Complexity | Dependencies | Description                                                                               | Status       |
+| ------------------------ | ---------- | ------------ | ----------------------------------------------------------------------------------------- | ------------ |
+| **AI Opponent**          | High       | None         | Computer opponent with three levels (alpha-beta search)                                   | ✅ Completed |
+| **Multiple Saved Games** | Medium     | None         | The last 20 games are kept and can be reopened; named slots are to do                     | In progress  |
+| **Game Import/Export**   | Medium     | None         | PGN and FEN, both ways: copy, paste, and start from a position                            | ✅ Completed |
+| **Game Analysis**        | High       | AI Opponent  | A score and Hint for the position being reviewed, and marks on the moves that lost ground | Complete     |
 
 ## Implementation Timeline
 
@@ -92,7 +92,7 @@ This is a rough guideline for feature implementation:
 ### Phase 4: Final Polish (Ongoing)
 
 - [ ] **AI Opponent (advanced)**
-- [ ] **Game Analysis** _(the Hint button and a score for the position being reviewed are in; marking mistakes is to do)_
+- [x] **Game Analysis** _(a score and Hint for the position being reviewed; after a game the moves that lost ground are marked)_
 - [ ] **Mobile App Conversion**
 - [ ] **Multiplayer Support**
 
@@ -100,7 +100,7 @@ This is a rough guideline for feature implementation:
 
 These are areas that need improvement in the current codebase:
 
-1. **Splitting game.js** - Notation, saved-game validation, clock arithmetic and the engine bridge are in files of their own. At about 2,000 lines `game.js` still holds the move flow together with most of the page updates and the Load dialog; those are the next to move out
+1. **Splitting game.js** - Done as far as plain scripts allow. Notation with PGN and FEN, saved-game validation, storage, clock rules, review wording, the engine bridge and the page updates are in files of their own. `game.js`, at about 1,550 lines, keeps the state of the game and everything that changes it. Splitting that further means sharing the state between files, which is a design change of its own
 2. **Browser-level tests** - Jest suites cover the rules, undo, persistence, input, rendering, settings and accessibility in jsdom; there is no automated check in a real browser yet
 3. **Performance optimization** - Improve rendering and move calculation performance
 4. **Accessibility testing** - The board is keyboard-operable and moves are announced; it has not been tested with a range of screen readers

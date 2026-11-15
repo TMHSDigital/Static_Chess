@@ -174,6 +174,26 @@ describe('Chess clock', () => {
     expect(g.game.clockRemaining('b')).toBe(180000 - 5000 + 2000);
   });
 
+  test('a move made after the flag falls is not played', () => {
+    const g = timedGame('3+2');
+    g.play('e2e4'); // Black is on the clock, with the increment still to come
+    // The flag has fallen, but no tick has been able to run since
+    g.game.clock.remaining.b = 0;
+    g.play('e7e5');
+    expect(g.game.isGameOver).toBe(true);
+    expect(g.game.gameResult).toBe('1-0');
+    expect(g.game.currentStatus).toBe('Black ran out of time. White wins.');
+    expect(g.at('e7').type).toBe(g.pieces.PAWN); // The move was not played
+    expect(g.at('e5')).toBeNull();
+    expect(g.game.clock.remaining.b).toBe(0); // The increment was not credited
+    expect(el(g, 'clock-black').textContent).toBe('0:00.0');
+    expect(g.game.buildPGN()).toContain('{Black ran out of time. White wins.} 1-0');
+    expect(g.game.isBoardLocked()).toBe(true);
+    // The ticking has stopped; the timers the first move left are not this test's
+    expect(g.game.clock.turnStartedAt).toBeNull();
+    jest.clearAllTimers();
+  });
+
   test('formats times, with tenths in the last ten seconds', () => {
     const g = loadGame();
     expect(g.game.formatClock(600000)).toBe('10:00');

@@ -10,6 +10,17 @@
     min-height: 0; /* Prevents overflow */
 }
 
+/* On a narrow screen the board card has a width of its own (style.css), which
+   never exceeds the page; the board fills it and stays square */
+@media (max-width: 900px) {
+    .chess-board {
+        box-sizing: border-box;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1;
+    }
+}
+
 /* Coordinates: file letters along the rank nearest the player and rank numbers
    down the left edge, 16 labels in all. board.js puts a label element in every
    square of the four outer lines; which two lines show depends on which way
@@ -90,35 +101,42 @@
     background-size: 4px 4px;
 }
 
+/* The piece picked up. The tint is a layer over the square's own colour, not
+   a replacement for it, so it looks the same on a light and a dark square. */
 .square.selected {
-    background-color: var(--selected-square);
-    box-shadow: inset 0 0 15px rgba(255, 217, 0, 0.2);
+    background-image: linear-gradient(var(--selected-square), var(--selected-square));
+    background-size: auto;
     z-index: 1;
 }
 
+/* Where the picked-up piece can go: a dot on an empty square */
 .square.possible-move::after {
     content: '';
     position: absolute;
-    width: 25%;
-    height: 25%;
+    width: 30%;
+    height: 30%;
     background-color: var(--possible-move-square);
     border-radius: 50%;
     pointer-events: none;
-    opacity: 0.8;
     display: var(--show-possible-moves);
 }
 
-.square.possible-move.light::after {
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+/* ...and a ring around a piece it can take */
+.square.possible-move:has(.piece)::after {
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(
+        circle closest-side,
+        transparent 79%,
+        var(--possible-move-square) 80%
+    );
+    border-radius: 0;
 }
 
-.square.possible-move.dark::after {
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
-}
-
-/* Highlight for the king in check */
+/* Highlight for the king in check: laid over the square's colour, like the others */
 .square.in-check {
-    background-color: var(--check-square);
+    background-image: linear-gradient(var(--check-square), var(--check-square));
+    background-size: auto;
     animation: check-pulse 1.5s ease infinite alternate;
 }
 

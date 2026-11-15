@@ -346,6 +346,107 @@ describe('Looking back through the move list', () => {
     });
   });
 
+  describe('moves that lost ground', () => {
+    const score = (g) => el(g, 'review-score');
+    const marks = (g) =>
+      [...g.window.document.querySelectorAll('#move-history .lost-ground')].map(
+        (entry) => entry.dataset.ply
+      );
+
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    test('are marked once the game is over, with the reason in the name and the tooltip', () => {
+      const g = loadGame();
+      g.play('f2f3', 'e7e5', 'g2g4');
+      jest.runOnlyPendingTimers();
+      expect(g.game.gameScores).toBeNull(); // The game is still on
+      expect(marks(g)).toEqual([]);
+
+      g.play('d8h4');
+      expect(marks(g)).toEqual([]); // Not worked out yet
+      jest.runOnlyPendingTimers();
+
+      expect(g.game.gameScores).toHaveLength(5); // Every position, first to last
+      expect(marks(g)).toEqual(['3']);
+      const move = moveButton(g, 3);
+      expect(move.textContent).toBe('g4'); // The move itself is not rewritten
+      expect(move.title).toBe('Engine thinks 2. g4 allowed a forced mate.');
+      expect(move.getAttribute('aria-label')).toBe(
+        'g4. Engine thinks 2. g4 allowed a forced mate.'
+      );
+      expect(moveButton(g, 4).hasAttribute('aria-label')).toBe(false);
+      expect(g.game.moveCost(2)).toMatchObject({ allowedMate: true, missedMate: false });
+      expect(g.game.moveCost(3)).toBeNull(); // The mating move lost nothing
+    });
+
+    test('a piece given away is marked with about what it cost', () => {
+      const g = loadGame();
+      g.play('e2e4', 'e7e5', 'd1h5', 'b8c6', 'h5f7', 'e8f7'); // 3. Qxf7+ Kxf7
+      g.game.resign();
+      jest.runOnlyPendingTimers();
+
+      expect(marks(g)).toEqual(['5']);
+      const cost = g.game.moveCost(4);
+      expect(cost.allowedMate).toBe(false);
+      expect(cost.lost).toBeGreaterThan(600); // A queen for a pawn
+      expect(cost.lost).toBeLessThan(1100);
+      expect(moveButton(g, 5).title).toMatch(/^Engine thinks 3\. Qxf7\+ lost about \d+\.\d\.$/);
+    });
+
+    test('the line under the list says it when the move is looked at', () => {
+      const g = loadGame();
+      g.play('f2f3', 'e7e5', 'g2g4', 'd8h4');
+      jest.runOnlyPendingTimers();
+      g.game.viewMove(3);
+      expect(score(g).textContent).toBe(
+        'Engine thinks Black can force mate. Engine thinks 2. g4 allowed a forced mate.'
+      );
+      g.game.viewMove(2);
+      expect(score(g).textContent).toBe('Engine thinks the position is about equal.');
+    });
+
+    test('a game with no such move has no marks', () => {
+      const g = loadGame();
+      g.play('e2e4', 'e7e5', 'g1f3', 'b8c6');
+      g.game.resign();
+      jest.runOnlyPendingTimers();
+      expect(g.game.gameScores).toHaveLength(5);
+      expect(marks(g)).toEqual([]);
+    });
+
+    test('are forgotten when the game goes on again, and worked out anew when it ends', () => {
+      const g = loadGame();
+      g.play('f2f3', 'e7e5', 'g2g4', 'd8h4');
+      jest.runOnlyPendingTimers();
+      expect(marks(g)).toEqual(['3']);
+
+      g.game.undoLastMove();
+      expect(g.game.gameScores).toBeNull();
+      expect(marks(g)).toEqual([]);
+
+      g.play('d8h4');
+      jest.runOnlyPendingTimers();
+      expect(marks(g)).toEqual(['3']);
+
+      g.game.resetGame();
+      expect(g.game.gameScores).toBeNull();
+      expect(marks(g)).toEqual([]);
+    });
+
+    test('a finished game that is loaded again gets its marks', () => {
+      const first = loadGame();
+      first.play('f2f3', 'e7e5', 'g2g4', 'd8h4');
+      const pgn = first.game.buildPGN();
+
+      const g = loadGame();
+      g.game.importPGN(pgn);
+      jest.runOnlyPendingTimers();
+      expect(g.game.isGameOver).toBe(true);
+      expect(marks(g)).toEqual(['3']);
+    });
+  });
+
   describe('step buttons', () => {
     const step = (g, name) => el(g, 'step-buttons').querySelector(`[data-step="${name}"]`);
     const disabled = (g) =>

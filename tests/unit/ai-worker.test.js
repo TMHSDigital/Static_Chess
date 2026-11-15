@@ -80,6 +80,38 @@ describe('the computer opponent in a Web Worker', () => {
     expect(statusText(g)).toBe("Black's turn (computer is thinking)");
   });
 
+  test('the player bars say who is who, whose move it is and when the computer thinks', () => {
+    const workers = installWorker();
+    const g = loadGame();
+    expect(g.game.playersView()).toEqual({
+      w: { name: 'White', toMove: true, thinking: false },
+      b: { name: 'Black', toMove: false, thinking: false },
+    });
+
+    g.game.setOpponent('medium', 'w');
+    g.play('e2e4');
+    expect(g.game.playersView()).toEqual({
+      w: { name: 'You', toMove: false, thinking: false },
+      b: { name: 'Computer (medium)', toMove: true, thinking: true },
+    });
+
+    workers[0].reply({ id: workers[0].messages[0].id, move: E7E5 });
+    jest.runAllTimers();
+    expect(g.game.playersView().b.thinking).toBe(false);
+    expect(g.game.playersView().w.toMove).toBe(true);
+
+    g.game.viewMove(1); // Looking back: nobody is marked as to move
+    expect(g.game.playersView().w.toMove).toBe(false);
+    g.game.returnToLiveGame();
+    g.game.resign();
+    expect(g.game.playersView().w.toMove).toBe(false); // Nor in a finished game
+
+    g.game.setOpponent('hard', 'b'); // The person plays Black
+    expect(g.game.playersView().w.name).toBe('Computer (hard)');
+    expect(g.game.playersView().b.name).toBe('You');
+    g.game.stopAllTimers();
+  });
+
   test('in a game on the clock the worker is told how long it may think', () => {
     const workers = installWorker();
     const g = loadGame();
@@ -152,6 +184,84 @@ describe('the computer opponent in a Web Worker', () => {
     workers[1].reply({ id: workers[1].messages[0].id, move: E7E5 });
     jest.runAllTimers();
     expect(notations(g)).toEqual(['e4', 'e5']);
+  });
+
+  test("a hint for an earlier position has a worker of its own and leaves the computer's alone", () => {
+    const workers = installWorker();
+    const g = loadGame();
+    g.game.setTimeControl('5+0');
+    g.game.resetGame();
+    g.game.setOpponent('easy', 'w');
+    g.play('e2e4'); // The computer is thinking about its reply
+    expect(workers).toHaveLength(1);
+
+    g.game.viewMove(0);
+    g.game.requestHint();
+    expect(workers).toHaveLength(2);
+    expect(workers[0].terminated).toBeUndefined();
+    const [question] = workers[1].messages;
+    expect(question.color).toBe('w');
+    expect(question.position).toEqual(g.rules.initialPosition());
+    expect(question.seen).toEqual([]); // Nothing came before the starting position
+    expect(question.budgetMs).toBeNull(); // Not on anybody's clock
+
+    workers[1].reply({
+      id: question.id,
+      move: { from: { row: 6, col: 3 }, to: { row: 4, col: 3 } },
+    });
+    expect(g.game.hintMove.to).toEqual({ row: 4, col: 3 });
+    expect(notations(g)).toEqual(['e4']);
+
+    workers[0].reply({ id: workers[0].messages[0].id, move: E7E5 });
+    jest.runAllTimers();
+    expect(notations(g)).toEqual(['e4', 'e5']); // The reply came through
+    g.game.stopAllTimers();
+  });
+
+  test('a finished game is sent to a worker to be scored, once', () => {
+    const workers = installWorker();
+    const g = loadGame();
+    g.play('f2f3', 'e7e5', 'g2g4');
+    expect(workers).toHaveLength(0); // Nothing is scored while the game is on
+    g.play('d8h4');
+
+    expect(workers).toHaveLength(1);
+    expect(workers[0].messages).toHaveLength(1);
+    const [question] = workers[0].messages;
+    expect(Object.keys(question).sort()).toEqual(['assess', 'id']);
+    expect(question.assess.map((entry) => entry.color)).toEqual(['w', 'b', 'w', 'b', 'w']);
+    expect(question.assess[0].position).toEqual(g.rules.initialPosition());
+    expect(question.assess[4].position).toEqual(g.game.livePosition());
+
+    g.game.viewMove(2); // Looking around does not ask again
+    g.game.returnToLiveGame();
+    expect(workers[0].messages).toHaveLength(1);
+    expect(g.game.gameScores).toBeNull();
+
+    const even = { score: 0, mate: false, over: false };
+    const scores = [
+      even,
+      even,
+      even,
+      { score: -99000, mate: true, over: false },
+      { score: -99000, mate: true, over: true },
+    ];
+    workers[0].reply({ id: question.id, scores });
+    expect(g.game.gameScores).toEqual(scores);
+    const marked = [...g.window.document.querySelectorAll('#move-history .lost-ground')];
+    expect(marked.map((entry) => entry.textContent)).toEqual(['g4']);
+  });
+
+  test('scores that arrive after the game went on are ignored', () => {
+    const workers = installWorker();
+    const g = loadGame();
+    g.play('f2f3', 'e7e5', 'g2g4', 'd8h4');
+    const [question] = workers[0].messages;
+    g.game.undoLastMove();
+    expect(workers[0].terminated).toBe(true); // Nobody wants the answer any more
+
+    workers[0].reply({ id: question.id, scores: [] });
+    expect(g.game.gameScores).toBeNull();
   });
 
   test('a worker that has answered is kept for the next request', () => {
@@ -240,6 +350,31 @@ describe('ai-worker.js', () => {
       .some((target) => target.row === to.row && target.col === to.col);
     expect(legal).toBe(true);
     expect(promotion).toBe('q');
+  });
+
+  test('answers a list of positions with a score for each', () => {
+    jest.useRealTimers();
+    const g = loadGame();
+    const { sandbox, posted } = startWorker();
+    const start = g.rules.initialPosition();
+    const queenUp = g.rules.positionFromFEN('4k3/8/8/8/8/8/8/3QK3 w - - 0 1').position;
+    sandbox.onmessage({
+      data: {
+        id: 9,
+        assess: [
+          { position: start, color: 'w' },
+          { position: queenUp, color: 'w' },
+        ],
+      },
+    });
+
+    expect(posted).toHaveLength(1);
+    expect(posted[0].id).toBe(9);
+    expect(posted[0].move).toBeUndefined();
+    expect(posted[0].scores).toHaveLength(2);
+    expect(posted[0].scores[0]).toEqual({ score: expect.any(Number), mate: false, over: false });
+    expect(Math.abs(posted[0].scores[0].score)).toBeLessThan(100);
+    expect(posted[0].scores[1].score).toBeGreaterThan(700);
   });
 
   test('loads the scripts the page loads ahead of the board, in the same order', () => {
