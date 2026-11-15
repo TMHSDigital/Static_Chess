@@ -1,13 +1,20 @@
 :root {
-    /* As big as the window allows: 232px is the page padding (40px) plus what the
-       board card holds besides the board (title, status, two player bars, padding) */
-    --board-size: clamp(240px, calc(100vh - 232px), 580px);
+    /* As big as the window allows, up to 720px. In height, 232px is the page
+       padding (40px) plus what the board card holds besides the board (title,
+       status, two player bars, padding). In width, 470px is the side panel
+       (360px), the gap, the card and page padding and a scrollbar, so the
+       panel stays beside the board instead of wrapping under it. */
+    --board-size: clamp(240px, min(calc(100vh - 232px), calc(100vw - 470px)), 720px);
     --light-square: #f0d9b5;
     --dark-square: #b58863;
-    --selected-square: rgba(255, 255, 0, 0.3);
-    --possible-move-square: rgba(20, 150, 20, 0.3);
-    --check-square: rgba(220, 20, 20, 0.4);
-    --last-move-square: rgba(50, 120, 190, 0.42);
+    /* Highlights on the board. They are laid over the square's own colour:
+       yellow for the piece picked up (strong) and the last move (soft), a
+       neutral dot or ring for where it can go, red for a king in check, and
+       an orange frame for a hint. A board theme may set the first three. */
+    --selected-square: rgba(255, 221, 0, 0.5);
+    --possible-move-square: rgba(0, 0, 0, 0.25);
+    --check-square: rgba(225, 30, 30, 0.6);
+    --last-move-square: rgba(255, 221, 0, 0.28);
     --info-panel-width: 360px;
     /* Surfaces: the page, the cards on it, the wells inside a card, the card around the board */
     --main-bg: #1a1a1a;

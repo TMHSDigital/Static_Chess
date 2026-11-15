@@ -42,16 +42,18 @@ const CONFIG = {
     },
 
     // Board colour schemes. Each sets the square colours and the highlight
-    // colours that have to stay visible on them (CSS custom properties).
+    // colours that have to stay visible on them (CSS custom properties). The
+    // highlights are laid over the square colour: yellow for the piece picked
+    // up, a dot or ring for where it can go, red for a king in check.
     BOARD_THEMES: {
         classic: {
             label: 'Classic',
             colors: {
                 '--light-square': '#f0d9b5',
                 '--dark-square': '#b58863',
-                '--selected-square': 'rgba(255, 255, 0, 0.3)',
-                '--possible-move-square': 'rgba(20, 150, 20, 0.3)',
-                '--check-square': 'rgba(220, 20, 20, 0.4)',
+                '--selected-square': 'rgba(255, 221, 0, 0.5)',
+                '--possible-move-square': 'rgba(0, 0, 0, 0.25)',
+                '--check-square': 'rgba(225, 30, 30, 0.6)',
             },
         },
         green: {
@@ -59,9 +61,9 @@ const CONFIG = {
             colors: {
                 '--light-square': '#eeeed2',
                 '--dark-square': '#769656',
-                '--selected-square': 'rgba(255, 255, 0, 0.4)',
+                '--selected-square': 'rgba(255, 240, 0, 0.5)',
                 '--possible-move-square': 'rgba(0, 0, 0, 0.22)',
-                '--check-square': 'rgba(220, 20, 20, 0.5)',
+                '--check-square': 'rgba(225, 30, 30, 0.6)',
             },
         },
         blue: {
@@ -69,9 +71,9 @@ const CONFIG = {
             colors: {
                 '--light-square': '#dee3e6',
                 '--dark-square': '#8ca2ad',
-                '--selected-square': 'rgba(255, 255, 0, 0.35)',
-                '--possible-move-square': 'rgba(20, 120, 20, 0.35)',
-                '--check-square': 'rgba(220, 20, 20, 0.45)',
+                '--selected-square': 'rgba(255, 221, 0, 0.5)',
+                '--possible-move-square': 'rgba(0, 0, 0, 0.25)',
+                '--check-square': 'rgba(225, 30, 30, 0.6)',
             },
         },
         contrast: {
@@ -79,9 +81,9 @@ const CONFIG = {
             colors: {
                 '--light-square': '#ffffff',
                 '--dark-square': '#6b6b6b',
-                '--selected-square': 'rgba(255, 220, 0, 0.55)',
-                '--possible-move-square': 'rgba(0, 90, 255, 0.4)',
-                '--check-square': 'rgba(255, 0, 0, 0.6)',
+                '--selected-square': 'rgba(255, 220, 0, 0.7)',
+                '--possible-move-square': 'rgba(0, 90, 255, 0.55)',
+                '--check-square': 'rgba(255, 0, 0, 0.7)',
             },
         },
     },
