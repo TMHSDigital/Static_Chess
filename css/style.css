@@ -310,6 +310,18 @@ body {
     display: none;
 }
 
+/* A finished game being looked back on: the buttons are out of sight and out
+   of reach. Beside the board the bar is one line either way, so they go. */
+.result-actions.holds-place {
+    visibility: hidden;
+}
+
+@media (min-width: 901px) {
+    .result-actions.holds-place {
+        display: none;
+    }
+}
+
 .result-actions .btn {
     min-height: var(--control-height-compact);
     padding: 0 var(--space-3);
@@ -484,6 +496,14 @@ body {
 
     .move-history {
         min-height: 0;
+    }
+
+    /* The result's buttons have a line of their own, whether they show or only
+       hold their room while the game is looked back on: the bar is the same
+       height in both, and the board does not move when a review starts or ends */
+    .result-actions {
+        flex-basis: 100%;
+        justify-content: center;
     }
 }
 

@@ -1370,6 +1370,7 @@ function controlsView() {
     return {
         reviewing: viewPly !== null,
         gameOver: isGameOver && viewPly === null,
+        finished: isGameOver,
         canReview: moveHistory.length > 0 && positionHistory.length === moveHistory.length,
         // False for a save from an older version without the positions behind its moves
         canView: positionHistory.length === moveHistory.length,

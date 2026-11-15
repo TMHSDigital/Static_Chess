@@ -182,7 +182,10 @@ function renderControls(view) {
 
 /** @returns {boolean} True for an element that is disabled or hidden, and so cannot keep the focus. */
 function isSwitchedOff(element) {
-    return element.disabled === true || !!(element.closest && element.closest('[hidden]'));
+    return (
+        element.disabled === true ||
+        !!(element.closest && element.closest('[hidden], .holds-place'))
+    );
 }
 
 /**
@@ -211,7 +214,13 @@ function handOnFocus(control) {
 function applyControls(view) {
     // A finished game: the result stands out and offers what to do next
     if (statusBar) statusBar.classList.toggle('is-over', view.gameOver);
-    if (resultActions) resultActions.hidden = !view.gameOver;
+    if (resultActions) {
+        // While a finished game is looked back on, its buttons keep their room out
+        // of sight, so the bar keeps its height and the board does not move
+        const holdPlace = view.reviewing && view.finished;
+        resultActions.hidden = !view.gameOver && !holdPlace;
+        resultActions.classList.toggle('holds-place', holdPlace);
+    }
     if (reviewButton) reviewButton.hidden = !view.canReview;
     if (liveButton) liveButton.hidden = !view.reviewing;
     if (reviewActions) reviewActions.hidden = !view.reviewing;

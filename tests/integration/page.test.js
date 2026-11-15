@@ -198,12 +198,14 @@ describe('the real page', () => {
 
     byId('review-button').click();
     expect(byId('game-status').textContent).toBe('Viewing the starting position');
-    expect(byId('result-actions').hidden).toBe(true); // It belongs to the final position
+    // It belongs to the final position: out of sight, but it keeps its room on a phone
+    expect(byId('result-actions').classList.contains('holds-place')).toBe(true);
     expect(window.document.activeElement.dataset.ply).toBe('1'); // The arrow keys go on from here
     expect(square('e2').querySelector('.piece')).not.toBeNull();
 
     byId('live-button').click();
     expect(byId('result-actions').hidden).toBe(false);
+    expect(byId('result-actions').classList.contains('holds-place')).toBe(false);
     byId('again-button').click(); // No question: the game is over
     expect(byId('game-status').textContent).toBe("White's turn");
     expect(byId('move-history').querySelectorAll('button')).toHaveLength(0);

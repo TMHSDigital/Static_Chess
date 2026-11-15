@@ -150,6 +150,16 @@ describe('game-ui.js without a game', () => {
     expect(el('status-bar').classList.contains('is-over')).toBe(true);
     expect(el('review-button').hidden).toBe(false);
 
+    // Looking back on it: the buttons keep their room, out of sight, so the bar keeps its height
+    ui.renderControls(view({ reviewing: true, finished: true }));
+    expect(el('result-actions').hidden).toBe(false);
+    expect(el('result-actions').classList.contains('holds-place')).toBe(true);
+    expect(el('status-bar').classList.contains('is-over')).toBe(false);
+    // Looking back on a game still going on: there is no result to keep room for
+    ui.renderControls(view({ reviewing: true, finished: false }));
+    expect(el('result-actions').hidden).toBe(true);
+    expect(el('result-actions').classList.contains('holds-place')).toBe(false);
+
     // A game that ended before a move, or without the positions behind its moves
     ui.renderControls(view({ gameOver: true, canReview: false }));
     expect(el('review-button').hidden).toBe(true);
