@@ -68,6 +68,7 @@ let humanColor = WHITE; // The side the person plays when there is a computer op
 let aiRequestId = 0; // Goes up whenever a pending computer move must be dropped
 let aiThinking = false;
 let aiWorker = null; // The Web Worker, or false once it has proved unavailable
+let aiWorkerBusy = false; // True from a request to the worker until its answer
 const AI_DRAW_MARGIN = 50; // The computer agrees to a draw unless it is at least half a pawn ahead
 
 /**
@@ -843,9 +844,23 @@ function setOpponent(level, color = WHITE) {
 /** Drops a computer move that is being worked out or waiting to be played. */
 function cancelAIMove() {
     aiRequestId++;
+    stopWorkerSearch();
     aiThinking = false;
     hintPending = false; // A hint being worked out shares the engine and is dropped with it
     hintMove = null;
+}
+
+/**
+ * Stops a search the worker is still running. A worker cannot be interrupted,
+ * so it is shut down and a new one is started with the next request; that
+ * request then does not have to wait for a search nobody wants any more.
+ */
+function stopWorkerSearch() {
+    if (aiWorker && aiWorkerBusy) {
+        aiWorker.terminate();
+        aiWorker = null;
+    }
+    aiWorkerBusy = false;
 }
 
 /** @returns {Worker|null} The search worker, or null where workers are not available. */
@@ -909,6 +924,7 @@ function requestAIMove() {
  */
 function askEngine(position, color, level, onMove) {
     const id = ++aiRequestId;
+    stopWorkerSearch(); // A request still being worked on is replaced by this one
     // The positions the game has been through, so the engine can avoid repeating them
     const seen = positionHistory.map((past) =>
         positionKey(past.boardState, past.currentPlayer, past.enPassantTarget)
@@ -925,13 +941,17 @@ function askEngine(position, color, level, onMove) {
         return id;
     }
     worker.onmessage = (event) => {
-        if (event.data.id === id) onMove(event.data.move);
+        if (event.data.id !== id) return;
+        aiWorkerBusy = false;
+        onMove(event.data.move);
     };
     worker.onerror = (event) => {
         if (event && event.preventDefault) event.preventDefault();
         aiWorker = false; // Do not try the worker again
+        aiWorkerBusy = false;
         thinkHere();
     };
+    aiWorkerBusy = true;
     worker.postMessage({ id, position, color, level, seen });
     return id;
 }
@@ -1088,7 +1108,10 @@ function requestHint() {
 
 /** Removes the hint, and drops one that is still being worked out. */
 function clearHint() {
-    if (hintPending) aiRequestId++;
+    if (hintPending) {
+        aiRequestId++;
+        stopWorkerSearch();
+    }
     hintPending = false;
     hintMove = null;
 }

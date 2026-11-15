@@ -202,7 +202,7 @@ The implementation includes:
    - Moves within a few hundredths of a pawn of the best are treated as equal and one is picked at random; a forced mate always takes the quickest line
 2. `setOpponent(level, humanColor)` in `game.js` turns the opponent on or off. `main.js` calls it from the "Opponent" and "Play as" selectors, which are saved like the other settings
 3. `requestAIMove()` runs after every move, undo, reset and load. If it is the computer's turn it posts the position to `ai-worker.js` and plays the answer with `makeMove()`. Where a Worker cannot be created (a page opened from a file, or the tests) the search runs on the main thread after a `setTimeout`
-4. Each request has an id. Undo, New Game and changing the opponent bump the id, so an answer that arrives late is dropped
+4. Each request has an id. Undo, New Game and changing the opponent bump the id, so an answer that arrives late is dropped. A worker cannot be interrupted, so if it is still searching at that moment `stopWorkerSearch()` terminates it and the next request starts a new one instead of waiting behind the abandoned search
 5. While it is the computer's turn `isBoardLocked()` is true: clicks and drags are ignored and the status line says the computer is thinking
 6. Undo takes back the computer's reply together with the player's move
 

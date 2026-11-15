@@ -28,6 +28,10 @@ function installWorker(options = {}) {
       this.messages.push(message);
     }
 
+    terminate() {
+      this.terminated = true;
+    }
+
     /** Answers as ai-worker.js would. */
     reply(data) {
       this.onmessage({ data });
@@ -82,30 +86,63 @@ describe('the computer opponent in a Web Worker', () => {
     expect(statusText(g)).toBe("White's turn");
   });
 
-  test('an answer to a request that was dropped is ignored', () => {
+  test('a search that is no longer wanted is stopped, and the next request gets a fresh worker', () => {
     const workers = installWorker();
     const g = loadGame();
     g.game.setOpponent('easy', 'w');
     g.play('e2e4');
     const first = workers[0].messages[0].id;
 
-    g.game.undoLastMove();
-    workers[0].reply({ id: first, move: E7E5 });
+    g.game.undoLastMove(); // While the computer is thinking
+    expect(workers[0].terminated).toBe(true);
     jest.runAllTimers();
     expect(notations(g)).toEqual([]);
 
     g.play('d2d4');
-    const second = workers[0].messages[1].id;
+    expect(workers).toHaveLength(2); // Not queued behind the abandoned search
+    expect(workers[1].messages).toHaveLength(1);
+    const second = workers[1].messages[0].id;
     expect(second).not.toBe(first);
-    workers[0].reply({ id: first, move: E7E5 }); // Late answer to the first request
-    jest.runAllTimers();
-    expect(notations(g)).toEqual(['d4']);
 
     g.game.resetGame();
-    workers[0].reply({ id: second, move: E7E5 });
+    expect(workers[1].terminated).toBe(true);
     jest.runAllTimers();
     expect(notations(g)).toEqual([]);
+  });
+
+  test('a hint that is overtaken by a move does not hold up the reply', () => {
+    const workers = installWorker();
+    const g = loadGame();
+    g.game.setOpponent('easy', 'w');
+    g.game.requestHint();
+    expect(workers[0].messages).toHaveLength(1);
+
+    g.play('e2e4'); // Before the hint arrives
+    expect(workers[0].terminated).toBe(true);
+    expect(workers).toHaveLength(2);
+    expect(workers[1].messages[0].color).toBe('b');
+    workers[1].reply({ id: workers[1].messages[0].id, move: E7E5 });
+    jest.runAllTimers();
+    expect(notations(g)).toEqual(['e4', 'e5']);
+  });
+
+  test('a worker that has answered is kept for the next request', () => {
+    const workers = installWorker();
+    const g = loadGame();
+    g.game.setOpponent('easy', 'w');
+    g.play('e2e4');
+    workers[0].reply({ id: workers[0].messages[0].id, move: E7E5 });
+    g.game.undoLastMove(); // Its answer is waiting to be played: nothing left to stop
+    jest.runAllTimers();
+    expect(notations(g)).toEqual([]);
+    expect(workers[0].terminated).toBeUndefined();
+
+    g.play('d2d4');
     expect(workers).toHaveLength(1);
+    expect(workers[0].messages).toHaveLength(2);
+    workers[0].reply({ id: workers[0].messages[0].id, move: E7E5 }); // An answer with an old id
+    jest.runAllTimers();
+    expect(notations(g)).toEqual(['d4']);
   });
 
   test('a worker that fails hands over to a search on the page, for good', () => {
