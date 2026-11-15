@@ -4,12 +4,14 @@
  * a Web Worker (ai-worker.js) and in tests alike.
  */
 
-// How each level plays. depth is the number of half-moves always searched;
-// 0 means "pick any legal move". A level with timeMs keeps searching deeper,
-// up to maxDepth, for about that long when the caller allows it (the worker
-// does; a search on the page's own thread does not, so the page never hangs).
+// How each level plays. depth is the number of half-moves always searched.
+// A level with timeMs keeps searching deeper, up to maxDepth, for about that
+// long when the caller allows it (the worker does; a search on the page's own
+// thread does not, so the page never hangs). blunder is the share of moves
+// played at random instead of searched, and tolerance how far below the best
+// move, in hundredths of a pawn, a move may score and still be played.
 const AI_LEVELS = {
-    easy: { depth: 0 },
+    easy: { depth: 1, blunder: 0.3, tolerance: 150 },
     medium: { depth: 2 },
     hard: { depth: 3, timeMs: 1000, maxDepth: 8 },
 };
@@ -251,7 +253,8 @@ function chooseAIMove(position, color, level = 'easy', random = Math.random, opt
         promotion: move.promotion || QUEEN,
     });
 
-    if (settings.depth === 0) {
+    // A weak level now and then plays any legal move, as a beginner overlooks things
+    if (settings.blunder && random() < settings.blunder) {
         const legal = allLegalMoves(position, color);
         if (legal.length === 0) return null;
         return asResult(legal[Math.floor(random() * legal.length)]);
@@ -261,7 +264,7 @@ function chooseAIMove(position, color, level = 'easy', random = Math.random, opt
     if (moves.length === 0) return null;
 
     // Scores within a few hundredths of a pawn count as equal, so games are not all the same
-    const tolerance = 5;
+    const tolerance = settings.tolerance || 5;
     const seen = new Set(options.seen || []);
     // Moves that may yet be chosen need exact scores, also after the penalty for repeating
     const exactWithin = tolerance + (seen.size > 0 ? AI_REPEAT_PENALTY : 0);

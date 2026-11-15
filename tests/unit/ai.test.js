@@ -5,6 +5,7 @@ const alg = (g, move) =>
   g.utils.coordsToAlgebraic(move.from.row, move.from.col) +
     g.utils.coordsToAlgebraic(move.to.row, move.to.col);
 const first = () => 0; // A fixed "random" choice, so results do not vary between runs
+const last = () => 0.99; // Another one; for the easy level it means "no blunder this move"
 const statusText = (g) => g.window.document.getElementById('game-status').textContent;
 
 beforeEach(() => {
@@ -42,6 +43,50 @@ describe('choosing a move', () => {
     const g = loadGame();
     g.setPosition({ e1: 'wk*', c3: 'wn*', h8: 'bk*', d5: 'bq*' });
     expect(alg(g, g.ai.chooseAIMove(g.game.livePosition(), 'w', level, first))).toBe('c3d5');
+  });
+
+  describe('easy', () => {
+    test('finds mate in one and takes a hanging queen when it does not blunder', () => {
+      const mate = loadGame();
+      mate.setPosition({ g6: 'wk*', a1: 'wr*', h8: 'bk*' });
+      expect(alg(mate, mate.ai.chooseAIMove(mate.game.livePosition(), 'w', 'easy', last))).toBe(
+        'a1a8'
+      );
+
+      const queen = loadGame();
+      queen.setPosition({ e1: 'wk*', c3: 'wn*', h8: 'bk*', d5: 'bq*' });
+      expect(alg(queen, queen.ai.chooseAIMove(queen.game.livePosition(), 'w', 'easy', last))).toBe(
+        'c3d5'
+      );
+    });
+
+    test('plays any legal move when it blunders', () => {
+      const g = loadGame();
+      g.setPosition({ e1: 'wk*', c3: 'wn*', h8: 'bk*', d5: 'bq*' });
+      const position = g.game.livePosition();
+      const legal = g.game.generateAllLegalMoves('w').map((m) => alg(g, m));
+      // The first number decides on the blunder, the second picks the move
+      const picks =
+        (...numbers) =>
+        () =>
+          numbers.shift();
+      expect(alg(g, g.ai.chooseAIMove(position, 'w', 'easy', picks(0.29, 0)))).toBe(legal[0]);
+      expect(alg(g, g.ai.chooseAIMove(position, 'w', 'easy', picks(0.29, 0.99)))).toBe(
+        legal[legal.length - 1]
+      );
+      expect(legal[0]).not.toBe('c3d5');
+      expect(alg(g, g.ai.chooseAIMove(position, 'w', 'easy', picks(0.3, 0)))).toBe('c3d5');
+    });
+
+    test('blunders about three moves in ten', () => {
+      expect(loadGame().ai.AI_LEVELS.easy).toEqual({ depth: 1, blunder: 0.3, tolerance: 150 });
+    });
+  });
+
+  test('medium and hard are searched in full, without blunders', () => {
+    const levels = loadGame().ai.AI_LEVELS;
+    expect(levels.medium).toEqual({ depth: 2 });
+    expect(levels.hard).toEqual({ depth: 3, timeMs: 1000, maxDepth: 8 });
   });
 
   test.each(['medium', 'hard'])('%s does not give its queen away for a defended pawn', (level) => {

@@ -174,7 +174,7 @@ The implementation includes:
 > **✅ Fully Implemented: `js/ai.js`, `js/ai-worker.js`**
 
 1. `chooseAIMove(position, color, level)` in `ai.js` picks a move. It uses only `rules.js`, so it has no DOM access
-   - `easy` plays a random legal move
+   - `easy` looks one half-move ahead (plus the captures that follow), so it takes material left hanging and gives mate in one, but it plays any move within a pawn and a half of the best, and three moves in ten are a random legal move
    - `medium` and `hard` run a negamax search with alpha-beta pruning, 2 and 3 half-moves deep, followed by a captures-only (quiescence) search so an exchange is counted to its end
    - In the Web Worker, `hard` then keeps searching one half-move deeper at a time for about a second (`timeMs`), keeping the result of the last depth it finished. On the page's own thread (no worker) it stays at its fixed depth
    - A pawn reaching the last rank is searched as four moves, one per piece it can become
