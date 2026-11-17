@@ -49,7 +49,9 @@ function startServiceWorker(network = () => Promise.reject(new Error('offline'))
             store.set(request.url, response(true, request.file));
           }
         },
-        put: async (request, saved) => store.set(request.url, saved),
+        // As the real Cache, it takes a Request or an address
+        put: async (request, saved) =>
+          store.set(typeof request === 'string' ? request : request.url, saved),
       };
     },
     keys: async () => [...stores.keys()],
@@ -87,13 +89,18 @@ function startServiceWorker(network = () => Promise.reject(new Error('offline'))
     listeners[type]({ waitUntil: (promise) => (work = promise) });
     await work;
   };
+  const kept = []; // Every promise a fetch event asked to be kept alive for
   /** Fires a fetch event. @returns {Promise<object>|undefined} undefined if it was not answered. */
   const fetchEvent = (request) => {
     let answer;
-    listeners.fetch({ request, respondWith: (promise) => (answer = promise) });
+    listeners.fetch({
+      request,
+      respondWith: (promise) => (answer = promise),
+      waitUntil: (promise) => kept.push(promise),
+    });
     return answer;
   };
-  return { stores, log, installed, lifecycle, fetchEvent };
+  return { stores, log, installed, lifecycle, fetchEvent, kept };
 }
 
 afterEach(() => {
@@ -153,6 +160,40 @@ describe('service worker', () => {
     await settled();
     const [saved] = sw.stores.values();
     expect(saved.get(request.url)).toEqual({ ok: true, body: 'new version', copy: true });
+  });
+
+  test('the worker is kept alive until the copy is saved', async () => {
+    const sw = startServiceWorker(async () => response(true, 'new version'));
+    await sw.lifecycle('install');
+    const request = get(`${PAGE}js/game.js`);
+
+    await sw.fetchEvent(request);
+    expect(sw.kept).toHaveLength(1);
+    await sw.kept[0]; // Without settling anything else, the write is done once this is
+    const [saved] = sw.stores.values();
+    expect(saved.get(request.url).body).toBe('new version');
+  });
+
+  test('a copy is saved under the address without its query string', async () => {
+    const sw = startServiceWorker(async () => response(true, 'shared link'));
+    await sw.lifecycle('install');
+
+    await sw.fetchEvent(get(`${PAGE}index.html?utm_source=x`));
+    await Promise.all(sw.kept);
+    const [saved] = sw.stores.values();
+    expect(saved.has(`${PAGE}index.html?utm_source=x`)).toBe(false);
+    expect(saved.get(`${PAGE}index.html`).body).toBe('shared link');
+  });
+
+  test('a cache that cannot be written does not fail the page', async () => {
+    const fresh = response(true, 'new version');
+    const sw = startServiceWorker(async () => fresh);
+    await sw.lifecycle('install');
+    global.caches.open = async () => {
+      throw new Error('quota');
+    };
+    expect(await sw.fetchEvent(get(`${PAGE}js/game.js`))).toBe(fresh);
+    await expect(sw.kept[0]).resolves.toBeUndefined();
   });
 
   test("the server is asked every time, past the browser's own HTTP cache", async () => {

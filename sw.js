@@ -114,9 +114,20 @@ self.addEventListener('fetch', (event) => {
                     clearTimeout(waiting);
                     if (response.ok) {
                         // Saved also when the copy has already been used, so the
-                        // next visit gets the new version
+                        // next visit gets the new version. waitUntil keeps the
+                        // worker alive until the write is done. The copy is kept
+                        // under the address without its query string, which is
+                        // how savedCopy looks it up, so "?utm_source=..." links
+                        // do not each add a copy that is never read.
                         const copy = response.clone();
-                        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+                        const key = new URL(request.url);
+                        key.search = '';
+                        event.waitUntil(
+                            caches
+                                .open(CACHE_NAME)
+                                .then((cache) => cache.put(key.href, copy))
+                                .catch(() => {}) // A full or blocked cache must not fail the page
+                        );
                     }
                     resolve(response); // Has no effect if the saved copy was used
                 })
