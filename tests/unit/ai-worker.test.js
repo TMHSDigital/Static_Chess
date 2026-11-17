@@ -285,7 +285,7 @@ describe('the computer opponent in a Web Worker', () => {
     expect(notations(g)).toEqual(['d4']);
   });
 
-  test('a worker that fails hands over to a search on the page, for good', () => {
+  test('a worker that fails before it ever answers hands over to the page, for good', () => {
     const workers = installWorker();
     const g = loadGame();
     g.game.setOpponent('easy', 'w');
@@ -294,6 +294,7 @@ describe('the computer opponent in a Web Worker', () => {
     const event = { preventDefault: jest.fn() };
     workers[0].onerror(event);
     expect(event.preventDefault).toHaveBeenCalled();
+    expect(workers[0].terminated).toBe(true);
     jest.runAllTimers();
     expect(g.game.moveHistory).toHaveLength(2);
 
@@ -303,6 +304,57 @@ describe('the computer opponent in a Web Worker', () => {
     expect(g.game.moveHistory).toHaveLength(4);
     expect(workers).toHaveLength(1); // Not tried again
     expect(workers[0].messages).toHaveLength(1);
+  });
+
+  test('giving up on workers also shuts down those of the other channels', () => {
+    const workers = installWorker();
+    loadGame();
+    const position = { position: global.initialPosition(), color: 'w' };
+    global.askEngineForScores([position], () => {}, 'review-scores');
+    global.askEngineForScores([position], () => {}, 'other');
+    expect(workers).toHaveLength(2);
+    workers[0].onerror({});
+    expect(workers.map((worker) => worker.terminated)).toEqual([true, true]);
+  });
+
+  describe('a worker that fails after it has answered', () => {
+    /** A game against the computer whose worker has answered once and is now thinking again. */
+    const thinkingAgain = () => {
+      const workers = installWorker();
+      const g = loadGame();
+      g.game.setOpponent('easy', 'w');
+      g.play('e2e4');
+      workers[0].reply({ id: workers[0].messages[0].id, move: E7E5 });
+      jest.runAllTimers();
+      g.play('g1f3'); // The worker is asked again
+      return { workers, g };
+    };
+
+    test('is replaced, and the request goes to the new worker', () => {
+      const { workers, g } = thinkingAgain();
+      workers[0].onerror({});
+      expect(workers[0].terminated).toBe(true);
+      expect(workers).toHaveLength(2);
+      expect(workers[1].messages).toEqual([workers[0].messages[1]]);
+
+      const legal = g.game.generateAllLegalMoves('b')[0];
+      workers[1].reply({ id: workers[1].messages[0].id, move: legal });
+      jest.runAllTimers();
+      expect(g.game.moveHistory).toHaveLength(4);
+    });
+
+    test('if the new one fails too, that answer is found on the page, and workers are still used', () => {
+      const { workers, g } = thinkingAgain();
+      workers[0].onerror({});
+      workers[1].onerror({});
+      expect(workers[1].terminated).toBe(true);
+      jest.runAllTimers();
+      expect(g.game.moveHistory).toHaveLength(4); // Answered on the page
+
+      g.play('b1c3');
+      expect(workers).toHaveLength(3); // The next request goes to a worker again
+      expect(workers[2].messages).toHaveLength(1);
+    });
   });
 
   test('where a worker cannot be created the search runs on the page', () => {

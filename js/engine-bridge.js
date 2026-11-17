@@ -10,7 +10,8 @@
  */
 
 const engineChannels = {}; // By name: { id, worker, busy }
-let engineWorkersUnavailable = false; // True once a worker could not be made or has failed
+let engineWorkersUnavailable = false; // True once a worker could not be made or loaded
+let engineWorkerHasReplied = false; // True once any worker has answered: workers load here
 
 /**
  * @param {string} name - 'play' for the computer's move and hints in the live
@@ -51,6 +52,28 @@ function getAIWorker(channel) {
     return channel.worker;
 }
 
+/** Shuts a channel's worker down, whatever it is doing; the next request starts a new one. */
+function closeWorker(channel) {
+    if (channel.worker) {
+        try {
+            channel.worker.terminate();
+        } catch {
+            // A worker that failed may already be gone
+        }
+    }
+    channel.worker = null;
+    channel.busy = false;
+}
+
+/**
+ * Gives up on workers for the rest of the visit, for one that could not even
+ * be loaded, and shuts down those of the other channels.
+ */
+function giveUpOnWorkers() {
+    engineWorkersUnavailable = true;
+    for (const channel of Object.values(engineChannels)) closeWorker(channel);
+}
+
 /** Makes every answer still on its way void, and stops a search that is running for one. */
 function dropEngineRequests(channelName = 'play') {
     const channel = engineChannel(channelName);
@@ -83,25 +106,33 @@ function sendToEngine(channelName, message, answerHere, onAnswer) {
             onAnswer(answerHere());
         }, 0);
 
-    const worker = getAIWorker(channel);
-    if (!worker) {
-        thinkHere();
-        return id;
-    }
-    worker.onmessage = (event) => {
-        if (event.data.id !== id) return;
-        channel.busy = false;
-        onAnswer(event.data);
+    const send = (retried) => {
+        const worker = getAIWorker(channel);
+        if (!worker) {
+            thinkHere();
+            return;
+        }
+        worker.onmessage = (event) => {
+            engineWorkerHasReplied = true;
+            if (event.data.id !== id) return;
+            channel.busy = false;
+            onAnswer(event.data);
+        };
+        worker.onerror = (event) => {
+            if (event && event.preventDefault) event.preventDefault();
+            if (worker !== channel.worker) return; // Already replaced
+            closeWorker(channel);
+            if (!engineWorkerHasReplied) giveUpOnWorkers(); // It could not be loaded at all
+            if (id !== channel.id) return; // Nobody waits for this answer any more
+            // A worker that failed in the middle of a search is replaced once;
+            // if the new one fails too, this one answer is worked out here
+            if (!retried && !engineWorkersUnavailable) send(true);
+            else thinkHere();
+        };
+        channel.busy = true;
+        worker.postMessage({ id, ...message });
     };
-    worker.onerror = (event) => {
-        if (event && event.preventDefault) event.preventDefault();
-        engineWorkersUnavailable = true; // Do not try a worker again
-        channel.worker = null;
-        channel.busy = false;
-        thinkHere();
-    };
-    channel.busy = true;
-    worker.postMessage({ id, ...message });
+    send(false);
     return id;
 }
 
