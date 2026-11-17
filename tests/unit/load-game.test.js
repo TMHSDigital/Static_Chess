@@ -1,4 +1,6 @@
-const { loadGame } = require('../helpers/load-game');
+const fs = require('fs');
+const path = require('path');
+const { loadGame, SCRIPT_ORDER } = require('../helpers/load-game');
 
 /**
  * The timers a game starts must not outlive the test that built it: a clock
@@ -97,4 +99,24 @@ test('a computer move from the previous test is not played', () => {
   expect(g.at('e2')).not.toBeNull();
   expect(g.at('e7')).not.toBeNull();
   jest.useRealTimers();
+});
+
+describe('the test page', () => {
+  test('loads the scripts index.html loads, in its order, up to game.js', () => {
+    const index = fs.readFileSync(path.join(__dirname, '..', '..', 'index.html'), 'utf8');
+    const page = [...index.matchAll(/<script src="js\/([\w-]+)\.js"/g)].map((m) => m[1]);
+    expect(SCRIPT_ORDER).toEqual(page.filter((name) => name !== 'main'));
+    expect(SCRIPT_ORDER[SCRIPT_ORDER.length - 1]).toBe('game');
+  });
+
+  test('every state getter of game.js is read live through the global scope', () => {
+    const g = loadGame();
+    const getters = Object.entries(Object.getOwnPropertyDescriptors(g.game))
+      .filter(([, property]) => typeof property.get === 'function')
+      .map(([name]) => name);
+    expect(getters).toEqual(expect.arrayContaining(['moveHistory', 'currentPlayer', 'clock']));
+    g.play('e2e4');
+    for (const name of getters) expect(global[name]).toBe(g.game[name]);
+    expect(global.currentPlayer).toBe('b');
+  });
 });

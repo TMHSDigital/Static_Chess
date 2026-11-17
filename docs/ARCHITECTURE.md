@@ -369,7 +369,7 @@ SAN generation with disambiguation is implemented:
 
 ## Testing Approach
 
-Automated tests with Jest + jsdom, all built on `tests/helpers/load-game.js`:
+Automated tests with Jest + jsdom, all built on `tests/helpers/load-game.js`, which builds the page from `index.html`'s own markup and loads its scripts in the order `index.html` gives, so a new element, script or state getter needs no change there:
 
 - Unit: rules (castling, en passant, pins, check, mate, stalemate, promotion, notation, perft counts), the engine and its Web Worker, undo, persistence, the clock, review and results, PGN and FEN, hint, board rendering, the settings and themes, mouse and touch input, the service worker, utilities, piece setup
 - Integration: move flow updates status and history; `tests/integration/page.test.js` runs the real `index.html` with its scripts in page order

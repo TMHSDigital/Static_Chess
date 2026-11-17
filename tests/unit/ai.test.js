@@ -268,26 +268,10 @@ describe('opponent settings', () => {
   function startApp(storage = {}, options = {}) {
     const g = loadGame({ storage, ...options });
     const doc = g.window.document;
-    const select = (id, values) => {
-      const wrapper = doc.createElement('div');
-      wrapper.id = id.replace('-select', '-setting');
-      const element = doc.createElement('select');
-      element.id = id;
-      for (const value of values) {
-        const option = doc.createElement('option');
-        option.value = value;
-        element.appendChild(option);
-      }
-      wrapper.appendChild(element);
-      doc.body.appendChild(wrapper);
-      return element;
-    };
-    const opponent = select('opponent-select', ['human', 'easy', 'medium', 'hard']);
-    const side = select('side-select', ['w', 'b', 'random']);
-    const flip = doc.createElement('input');
-    flip.type = 'checkbox';
-    flip.id = 'flip-toggle';
-    doc.body.appendChild(flip);
+    // The test page is index.html's own markup, with its settings controls
+    const opponent = doc.getElementById('opponent-select');
+    const side = doc.getElementById('side-select');
+    const flip = doc.getElementById('flip-toggle');
     Object.assign(global, {
       initializeGame: g.game.initializeGame,
       setBoardFlipped: g.board.setBoardFlipped,

@@ -1,6 +1,42 @@
+const fs = require('fs');
+const path = require('path');
+
 const { JSDOM } = globalThis; // Provided by tests/helpers/jsdom-environment.js
 
-const HTML = `<!DOCTYPE html><body><div id="chess-board"></div><ul id="move-history"></ul><div id="step-buttons"><button data-step="first"></button><button data-step="previous"></button><button id="autoplay-button"></button><button data-step="next"></button><button data-step="last"></button></div><div id="captured-by-black"></div><div id="captured-by-white"></div><span id="clock-black" hidden></span><span id="clock-white" hidden></span><div id="game-status"></div><p id="review-score" hidden></p><div id="review-actions" hidden><button id="live-button" hidden>Back to game</button><button id="play-here-button">Play from here</button></div><button id="hint-button">Hint</button><button id="draw-button">Offer draw</button><button id="resign-button">Resign</button><button id="undo-button">Undo</button><button id="redo-button">Redo</button><button id="pgn-button">Copy PGN</button><button id="download-button">Save PGN</button><button id="fen-button">Copy FEN</button><button id="link-button">Copy link</button><button id="import-button">Load PGN</button><button id="reset-button">New Game</button><div id="import-dialog" hidden><textarea id="import-text"></textarea><p id="import-error"></p><button id="import-file-button">Open file</button><input id="import-file" type="file" hidden /><button id="import-cancel">Cancel</button><button id="import-load">Load game</button><div id="archive-section" hidden><ul id="archive-list"></ul><button id="archive-clear">Clear all</button></div></div></body>`;
+const INDEX = fs.readFileSync(path.join(__dirname, '..', '..', 'index.html'), 'utf8');
+
+/**
+ * The page's scripts as index.html loads them, without main.js, which the
+ * tests that need it start themselves: ['config', 'utils', ..., 'game'].
+ */
+const SCRIPT_ORDER = [...INDEX.matchAll(/<script src="js\/([\w-]+)\.js"/g)]
+  .map((match) => match[1])
+  .filter((name) => name !== 'main');
+
+/**
+ * Gives a module's exports the reach they have in the browser, where the
+ * scripts share one global scope. A getter stays a getter, so state such as
+ * game.js's moveHistory is read live.
+ */
+function share(exports) {
+  for (const [name, property] of Object.entries(Object.getOwnPropertyDescriptors(exports))) {
+    if (typeof property.get === 'function') {
+      Object.defineProperty(global, name, { get: () => exports[name], configurable: true });
+    } else {
+      Object.defineProperty(global, name, {
+        value: property.value,
+        writable: true,
+        configurable: true,
+        enumerable: true,
+      });
+    }
+  }
+}
+
+// The page's own markup, without its scripts: the tests load those themselves
+const HTML = `<!DOCTYPE html><body>${/<body[^>]*>([\s\S]*)<\/body>/
+  .exec(INDEX)[1]
+  .replace(/<script[\s\S]*?<\/script>/g, '')}</body>`;
 
 let previous = null; // The game and window of the last loadGame() call, until cleaned up
 
@@ -48,74 +84,17 @@ function loadGame(options = {}) {
     ? { getItem: blocked, setItem: blocked, removeItem: blocked }
     : window.localStorage;
 
-  const config = require('../../js/config').CONFIG;
-  if (options.configure) options.configure(config);
-  Object.assign(global, { CONFIG: config });
-
-  const utils = require('../../js/utils');
-  const pieces = require('../../js/pieces');
-  Object.assign(global, utils, pieces);
-  const rules = require('../../js/rules');
-  Object.assign(global, rules);
-  const ai = require('../../js/ai');
-  Object.assign(global, ai);
-
-  const board = require('../../js/board');
-  Object.assign(global, {
-    boardElement: board.boardElement,
-    createBoard: board.createBoard,
-    renderPieces: board.renderPieces,
-    getSquareElement: board.getSquareElement,
-    updateBoardVisuals: board.updateBoardVisuals,
-    setSelectedSquare: board.setSelectedSquare,
-    clearSelectedSquare: board.clearSelectedSquare,
-    setPossibleMoves: board.setPossibleMoves,
-    clearPossibleMoves: board.clearPossibleMoves,
-    getSelectedSquare: board.getSelectedSquare,
-    getPossibleMoves: board.getPossibleMoves,
-    setBoardFlipped: board.setBoardFlipped,
-  });
-
-  const promotion = require('../../js/promotion');
-  Object.assign(global, promotion);
-
-  // The files game.js builds on, in the order index.html loads them
-  for (const name of [
-    'notation',
-    'saved-game',
-    'game-store',
-    'clock',
-    'review',
-    'engine-bridge',
-    'game-ui',
-  ]) {
-    Object.assign(global, require(`../../js/${name}`));
+  // Every script of the page, in the order index.html loads it
+  const modules = {};
+  for (const name of SCRIPT_ORDER) {
+    modules[name] = require(`../../js/${name}`);
+    if (name === 'config' && options.configure) options.configure(modules.config.CONFIG);
+    share(modules[name]);
   }
-
-  const game = require('../../js/game');
-  for (const name of [
-    'moveHistory',
-    'boardState',
-    'currentPlayer',
-    'isGameOver',
-    'kingPositions',
-    'currentStatus',
-    'enPassantTarget',
-    'positionHistory',
-    'halfmoveClock',
-  ]) {
-    Object.defineProperty(global, name, { get: () => game[name], configurable: true });
-  }
-  // The scripts share one global scope in the browser; give the functions the
-  // other files call the same reach here
-  for (const [name, property] of Object.entries(Object.getOwnPropertyDescriptors(game))) {
-    if (typeof property.value === 'function') global[name] = property.value;
-  }
+  const { utils, pieces, rules, ai, board, drag, promotion, game } = modules;
 
   if (!options.deferStart) game.initializeGame();
 
-  const drag = require('../../js/drag');
-  Object.assign(global, drag);
   if (options.drag) {
     drag.initDragAndDrop();
   }
@@ -196,4 +175,4 @@ function loadGame(options = {}) {
   };
 }
 
-module.exports = { loadGame };
+module.exports = { loadGame, SCRIPT_ORDER };

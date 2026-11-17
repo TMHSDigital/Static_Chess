@@ -1,19 +1,12 @@
 const { loadGame } = require('../helpers/load-game');
 
-/** Starts the app with the two theme selectors on the page, as index.html has them. */
+/** Starts the app as main.js does, on the page with its two theme selectors. */
 function startApp(options = {}) {
   const g = loadGame(options);
   const doc = g.window.document;
-  const boardSelect = doc.createElement('select');
-  boardSelect.id = 'board-theme-select';
-  const pageSelect = doc.createElement('select');
-  pageSelect.id = 'page-theme-select';
-  for (const value of ['dark', 'light', 'auto']) {
-    const option = doc.createElement('option');
-    option.value = value;
-    pageSelect.appendChild(option);
-  }
-  doc.body.append(boardSelect, pageSelect);
+  // The test page is index.html's own markup, selectors included
+  const boardSelect = doc.getElementById('board-theme-select');
+  const pageSelect = doc.getElementById('page-theme-select');
   Object.assign(global, {
     initializeGame: g.game.initializeGame,
     setBoardFlipped: g.board.setBoardFlipped,
