@@ -1390,11 +1390,13 @@ function controlsView() {
  *   move in the live game, and whether the computer is thinking for it.
  */
 function playersView() {
-    const computer = computerColor();
+    // The names are those of the game on the board, so a finished or loaded
+    // game keeps its own players when the settings change
+    const named = gamePlayers.computer;
     const side = (color, plain) => ({
-        name: !computer ? plain : color === computer ? `Computer (${opponentLevel})` : 'You',
+        name: !named ? plain : color === named ? recordedName(color, plain) : 'You',
         toMove: !isGameOver && viewPly === null && currentPlayer === color,
-        thinking: aiThinking && color === computer,
+        thinking: aiThinking && color === computerColor(),
     });
     return { [WHITE]: side(WHITE, 'White'), [BLACK]: side(BLACK, 'Black') };
 }
@@ -1500,11 +1502,32 @@ function importPGN(text, validateOnly = false) {
         endedWithoutMove = true;
         currentStatus = ending.status;
     }
+    // A finished game was played by whoever its tags name, not by the opponent chosen now
+    if (isGameOver) gamePlayers = playersFromPGN(text);
     redraw();
     saveGameState();
     announce(`Game loaded, ${moves.length} moves. ${currentStatus}`);
     requestAIMove();
     return { ok: true, moves: moves.length };
+}
+
+/**
+ * @param {string} text - A game as PGN.
+ * @returns {{level: string|null, computer: string|null}} Who played it: the
+ *   computer if a White or Black tag names it as this app writes it, else two players.
+ */
+function playersFromPGN(text) {
+    const game = firstPGNGame(text);
+    for (const [color, tag] of [
+        [WHITE, 'White'],
+        [BLACK, 'Black'],
+    ]) {
+        const named = /^Computer \((\w+)\)$/.exec(pgnTag(game, tag) || '');
+        if (named && Object.prototype.hasOwnProperty.call(AI_LEVELS, named[1])) {
+            return { level: named[1], computer: color };
+        }
+    }
+    return { level: null, computer: null };
 }
 
 /**

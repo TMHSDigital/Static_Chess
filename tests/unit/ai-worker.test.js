@@ -106,7 +106,9 @@ describe('the computer opponent in a Web Worker', () => {
     g.game.resign();
     expect(g.game.playersView().w.toMove).toBe(false); // Nor in a finished game
 
-    g.game.setOpponent('hard', 'b'); // The person plays Black
+    g.game.setOpponent('hard', 'b'); // The person plays Black from the next game on
+    expect(g.game.playersView().b.name).toBe('Computer (medium)'); // The finished game keeps its players
+    g.game.resetGame();
     expect(g.game.playersView().w.name).toBe('Computer (hard)');
     expect(g.game.playersView().b.name).toBe('You');
     g.game.stopAllTimers();

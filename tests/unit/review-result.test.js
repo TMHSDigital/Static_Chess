@@ -696,6 +696,57 @@ describe('Resigning', () => {
   });
 });
 
+describe('Players of a finished or loaded game', () => {
+  const names = (g) => {
+    const view = g.game.playersView();
+    return [view.w.name, view.b.name];
+  };
+  const tags = (pgn) => [/\[White "([^"]*)"\]/.exec(pgn)[1], /\[Black "([^"]*)"\]/.exec(pgn)[1]];
+
+  test('a finished two-player game loaded with the computer selected keeps two players', () => {
+    const g = loadGame();
+    g.game.setOpponent('hard', 'w');
+    g.game.importPGN('[White "Alice"]\n[Black "Bob"]\n[Result "0-1"]\n\n1. f3 e5 2. g4 Qh4# 0-1');
+    expect(g.game.isGameOver).toBe(true);
+    expect(tags(g.game.buildPGN())).toEqual(['White', 'Black']);
+    expect(names(g)).toEqual(['White', 'Black']);
+  });
+
+  test('a finished game against the computer loaded again names the computer', () => {
+    const first = loadGame();
+    first.game.setOpponent('medium', 'b'); // The computer plays White
+    first.game.setOpponent(null); // The moves are played by hand
+    first.play('f2f3', 'e7e5', 'g2g4', 'd8h4');
+    const pgn = first.game.buildPGN().replace('[White "White"]', '[White "Computer (medium)"]');
+
+    const g = loadGame();
+    g.game.setOpponent('easy', 'w');
+    g.game.importPGN(pgn);
+    expect(tags(g.game.buildPGN())).toEqual(['Computer (medium)', 'Black']);
+    expect(names(g)).toEqual(['Computer (medium)', 'You']);
+  });
+
+  test('changing the opponent after a game ends does not rename its players', () => {
+    const g = loadGame();
+    g.play('e2e4', 'e7e5');
+    g.game.setOpponent('easy', 'w'); // The computer plays Black; White is to move
+    g.game.resign();
+    expect(g.game.isGameOver).toBe(true);
+    expect(names(g)).toEqual(['You', 'Computer (easy)']);
+    g.game.setOpponent(null);
+    expect(names(g)).toEqual(['You', 'Computer (easy)']);
+    expect(tags(g.game.buildPGN())).toEqual(['White', 'Computer (easy)']);
+  });
+
+  test('a live game against the computer shows You and the computer', () => {
+    const g = loadGame();
+    g.game.setOpponent('hard', 'w');
+    expect(names(g)).toEqual(['You', 'Computer (hard)']);
+    g.game.setOpponent(null);
+    expect(names(g)).toEqual(['White', 'Black']);
+  });
+});
+
 describe('Results of games ended by a move', () => {
   test('checkmate sets the result and undo clears it', () => {
     const g = loadGame();
