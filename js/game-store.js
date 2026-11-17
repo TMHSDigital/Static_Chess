@@ -74,13 +74,22 @@ function readArchive() {
  * CONFIG.ARCHIVE_LIMIT games are kept, as PGN text of about a kilobyte each,
  * so the storage quota is not at risk.
  * @param {{pgn: string, result: string, opponent: string, date: string, moves: number}} game
+ * @param {string|null} [openedFrom] - The date of the entry the game was opened
+ *   from, if it was. That entry is replaced instead of the game appearing twice:
+ *   kept as it was if the game is unchanged, else updated under its own date.
+ *   Other games with the same moves are separate games and are kept.
  */
-function addToArchive(game) {
-    const same = (entry) => pgnMovetext(entry.pgn) === pgnMovetext(game.pgn);
+function addToArchive(game, openedFrom = null) {
     const archive = readArchive();
-    // A game opened from the list and put back keeps its entry instead of appearing twice
-    const entry = archive.find(same) || game;
-    const updated = [entry, ...archive.filter((past) => !same(past))];
+    const own = openedFrom === null ? -1 : archive.findIndex((past) => past.date === openedFrom);
+    let entry = game;
+    if (own !== -1) {
+        const original = archive[own];
+        const unchanged = pgnMovetext(original.pgn) === pgnMovetext(game.pgn);
+        entry = unchanged ? original : { ...game, date: original.date };
+        archive.splice(own, 1);
+    }
+    const updated = [entry, ...archive];
     if (!writeStored(ARCHIVE_KEY, JSON.stringify(updated.slice(0, CONFIG.ARCHIVE_LIMIT)))) {
         console.error('The past games could not be saved: storage is blocked or full.');
     }

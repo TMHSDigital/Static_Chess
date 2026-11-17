@@ -252,20 +252,34 @@ describe('game-store.js', () => {
     expect(values.has(key)).toBe(false);
   });
 
-  test('past games are kept newest first, once each, up to the limit', () => {
+  test('past games are kept newest first, a reopened one once, up to the limit', () => {
     fakeStorage();
     loadWithoutPage();
     expect(global.readArchive()).toEqual([]);
 
     global.addToArchive(entry('1. e4 e5 *'));
-    global.addToArchive(entry('1. d4 d5 *'));
+    global.addToArchive(entry('1. d4 d5 *', { date: '2026-01-06T10:00:00.000Z' }));
     expect(global.readArchive().map((game) => game.pgn)).toEqual(['1. d4 d5 *', '1. e4 e5 *']);
 
-    // The same moves again: the entry moves to the top and keeps its first date
-    global.addToArchive(entry('1. e4 e5 *', { date: '2026-02-01T10:00:00.000Z' }));
-    const archive = global.readArchive();
+    // The e4 game opened again and put back unchanged: its entry moves to the top as it was
+    const first = '2026-01-05T10:00:00.000Z';
+    global.addToArchive(entry('1. e4 e5 *', { date: '2026-02-01T10:00:00.000Z' }), first);
+    let archive = global.readArchive();
     expect(archive.map((game) => game.pgn)).toEqual(['1. e4 e5 *', '1. d4 d5 *']);
-    expect(archive[0].date).toBe('2026-01-05T10:00:00.000Z');
+    expect(archive[0].date).toBe(first);
+
+    // Played on and put back: the entry takes the new game under its own date
+    global.addToArchive(entry('1. e4 e5 2. Nf3 *', { date: '2026-02-02T10:00:00.000Z' }), first);
+    archive = global.readArchive();
+    expect(archive.map((game) => game.pgn)).toEqual(['1. e4 e5 2. Nf3 *', '1. d4 d5 *']);
+    expect(archive[0].date).toBe(first);
+
+    // The same moves in a game that was not opened from the list: a game of its own
+    global.addToArchive(entry('1. d4 d5 *', { date: '2026-02-03T10:00:00.000Z' }));
+    expect(global.readArchive()).toHaveLength(3);
+    // An entry that is gone no longer matches anything
+    global.addToArchive(entry('1. c4 *', { date: '2026-02-04T10:00:00.000Z' }), '2020-01-01');
+    expect(global.readArchive()).toHaveLength(4);
 
     for (let n = 0; n < global.CONFIG.ARCHIVE_LIMIT + 3; n++) {
       global.addToArchive(entry(`1. a3 a6 2. h${3 + (n % 2)} ${'Kf8 Ke8 '.repeat(n)}*`));
@@ -479,6 +493,14 @@ describe('saved-game.js', () => {
       ['a level that is not a word', { computer: 'w', level: 'HARD!' }],
     ])('drops the players for %s', (_, players) => {
       expect(global.validateSavedGame(saveWith({ players })).players).toBeNull();
+    });
+
+    test('keeps the past game a game was opened from only when it names a date', () => {
+      const date = '2026-11-01T10:00:00.000Z';
+      expect(global.validateSavedGame(saveWith({ archivedFrom: date })).archivedFrom).toBe(date);
+      for (const bad of [undefined, 'yesterday', 5, null]) {
+        expect(global.validateSavedGame(saveWith({ archivedFrom: bad })).archivedFrom).toBeNull();
+      }
     });
 
     test('keeps players that are two people or a computer at a level', () => {

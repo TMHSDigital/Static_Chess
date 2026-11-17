@@ -170,9 +170,14 @@ function validateSavedGame(saved) {
         }
     }
 
+    // Which past game this one was opened from is optional; it is the date that names the entry
+    const from = saved.archivedFrom;
+    const archivedFrom = typeof from === 'string' && !Number.isNaN(Date.parse(from)) ? from : null;
+
     return {
         ...position,
         gameStart: start,
+        archivedFrom,
         clock: savedClock,
         gameResult: result,
         endedWithoutMove: over && saved.endedWithoutMove === true,

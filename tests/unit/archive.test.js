@@ -120,6 +120,65 @@ describe('past games', () => {
     expect(g.game.readArchive()).toEqual([original]);
   });
 
+  test('separate games with the same moves are kept as separate entries', () => {
+    jest.setSystemTime(new Date('2026-11-01T10:00:00Z'));
+    const g = loadGame();
+    g.play('e2e4');
+    g.game.resetGame();
+    jest.setSystemTime(new Date('2026-11-02T10:00:00Z'));
+    g.game.setOpponent('easy', 'b'); // The computer plays White: 1. e4 is its move
+    g.game.setOpponent(null);
+    g.game.setOpponent('easy', 'b');
+    g.play('e2e4');
+    g.game.resetGame();
+
+    const archive = g.game.readArchive();
+    expect(archive).toHaveLength(2);
+    expect(archive.map((entry) => entry.opponent)).toEqual(['Computer (easy)', 'Two players']);
+    expect(archive.map((entry) => entry.date.slice(0, 10))).toEqual(['2026-11-02', '2026-11-01']);
+  });
+
+  test('an unfinished game opened from the list and finished replaces its own entry', () => {
+    jest.setSystemTime(new Date('2026-11-01T10:00:00Z'));
+    const g = loadGame();
+    g.play('f2f3', 'e7e5');
+    g.game.resetGame();
+    jest.setSystemTime(new Date('2026-11-02T10:00:00Z'));
+    g.play('d2d4'); // Another game, in between
+    g.game.resetGame();
+    const unfinished = g.game.readArchive()[1];
+    expect(unfinished.result).toBe('*');
+
+    jest.setSystemTime(new Date('2026-11-03T10:00:00Z'));
+    g.game.openImportDialog();
+    entries(g)[1].click();
+    g.play('g2g4', 'd8h4'); // Now it ends in mate
+    g.game.resetGame();
+
+    const archive = g.game.readArchive();
+    expect(archive).toHaveLength(2);
+    expect(archive[0]).toMatchObject({ result: '0-1', moves: 4, date: unfinished.date });
+    expect(archive[1].pgn).toContain('1. d4');
+  });
+
+  test('a game opened from the list still replaces its own entry after a reload', () => {
+    const first = loadGame();
+    first.play('e2e4', 'e7e5');
+    first.game.resetGame();
+    first.game.openImportDialog();
+    entries(first)[0].click();
+    const storage = {
+      chessGameState: first.window.localStorage.getItem('chessGameState'),
+      [KEY]: first.window.localStorage.getItem(KEY),
+    };
+
+    const g = loadGame({ storage });
+    g.play('g1f3');
+    g.game.resetGame();
+    expect(g.game.readArchive()).toHaveLength(1);
+    expect(g.game.readArchive()[0].moves).toBe(3);
+  });
+
   test('only the newest games are kept, newest first', () => {
     const g = loadGame();
     const limit = global.CONFIG.ARCHIVE_LIMIT;

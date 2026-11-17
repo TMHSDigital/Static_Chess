@@ -43,6 +43,9 @@ let aiThinking = false;
 // players. Follows the settings while the game goes on and is kept once it is over, so
 // changing them afterwards does not rename the players of a finished game.
 let gamePlayers = { level: null, computer: null };
+// The date of the past game the live game was opened from, or null: put back,
+// the game replaces that entry instead of being listed twice
+let archivedFrom = null;
 
 /**
  * The live position as one record. These two functions are the only places
@@ -1258,6 +1261,7 @@ function saveGameState() {
         gameResult: gameResult,
         endedWithoutMove: endedWithoutMove,
         players: gamePlayers,
+        archivedFrom,
         // Times as of now. After a reload the side to move gets back on the clock.
         clock: clock && {
             control: clock.control,
@@ -1284,22 +1288,45 @@ function loadGameState() {
     gameResult = state.gameResult;
     endedWithoutMove = state.endedWithoutMove;
     if (state.players) gamePlayers = state.players; // Saves from older versions follow the settings
+    archivedFrom = state.archivedFrom;
     clock = state.clock;
     return true;
 }
 
 // --- Past games ---
 
-/** Puts the current game at the top of the past games, if it has any moves. */
+/**
+ * Puts the current game at the top of the past games, if it has any moves.
+ * Whatever is on the board afterwards is a game of its own.
+ */
 function archiveCurrentGame() {
+    const from = archivedFrom;
+    archivedFrom = null;
     if (moveHistory.length === 0) return;
-    addToArchive({
-        pgn: buildPGN(),
-        result: (isGameOver && gameResult) || '*',
-        opponent: gamePlayers.computer ? recordedName(gamePlayers.computer) : 'Two players',
-        date: new Date().toISOString(),
-        moves: moveHistory.length,
-    });
+    addToArchive(
+        {
+            pgn: buildPGN(),
+            result: (isGameOver && gameResult) || '*',
+            opponent: gamePlayers.computer ? recordedName(gamePlayers.computer) : 'Two players',
+            date: new Date().toISOString(),
+            moves: moveHistory.length,
+        },
+        from
+    );
+}
+
+/**
+ * Opens a past game. Put back later, it replaces its own entry in the list.
+ * @param {{pgn: string, date: string}} entry - As readArchive gives it.
+ * @returns {{ok: boolean, error?: string}} As importPGN.
+ */
+function openArchivedGame(entry) {
+    const result = importPGN(entry.pgn);
+    if (result.ok) {
+        archivedFrom = entry.date;
+        saveGameState();
+    }
+    return result;
 }
 
 // --- What the page shows (drawn by game-ui.js) ---
@@ -1626,6 +1653,7 @@ if (typeof module !== 'undefined' && module.exports) {
         isGameInProgress,
         buildFEN,
         buildShareLink,
+        openArchivedGame,
         copyLink,
         setTimeControl,
         clockRemaining,

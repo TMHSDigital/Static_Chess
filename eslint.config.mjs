@@ -150,6 +150,7 @@ const appGlobals = {
   // game.js
   ...shared([
     'importPGN',
+    'openArchivedGame',
     'importFEN',
     'isGameInProgress',
     'initializeGame',

@@ -619,7 +619,7 @@ function handleArchiveClick(event) {
     const button = event.target.closest ? event.target.closest('button[data-index]') : null;
     if (!button) return;
     const entry = readArchive()[Number(button.dataset.index)];
-    const result = entry ? importPGN(entry.pgn) : { ok: false, error: 'That game is gone.' };
+    const result = entry ? openArchivedGame(entry) : { ok: false, error: 'That game is gone.' };
     if (!result.ok) {
         importError.textContent = `${result.error} The current game was not changed.`;
         return;
