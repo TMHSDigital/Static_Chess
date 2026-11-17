@@ -22,8 +22,12 @@ const settled = () => new Promise((resolve) => setTimeout(resolve, 0)); // Lets 
  * Loads sw.js with the service worker globals stubbed: Cache Storage is a Map
  * of Maps, and the network is the function passed in.
  * @param {(request: object) => Promise<object>} [network]
+ * @param {() => Promise<void>|void} [beforePut]
  */
-function startServiceWorker(network = () => Promise.reject(new Error('offline'))) {
+function startServiceWorker(
+  network = () => Promise.reject(new Error('offline')),
+  beforePut = () => {}
+) {
   const listeners = {};
   const stores = new Map(); // Cache name -> Map of URL -> response
   const log = []; // What the worker did, in order
@@ -49,7 +53,10 @@ function startServiceWorker(network = () => Promise.reject(new Error('offline'))
             store.set(request.url, response(true, request.file));
           }
         },
-        put: async (request, saved) => store.set(request.url, saved),
+        put: async (request, saved) => {
+          await beforePut();
+          store.set(request.url, saved);
+        },
       };
     },
     keys: async () => [...stores.keys()],
@@ -88,9 +95,9 @@ function startServiceWorker(network = () => Promise.reject(new Error('offline'))
     await work;
   };
   /** Fires a fetch event. @returns {Promise<object>|undefined} undefined if it was not answered. */
-  const fetchEvent = (request) => {
+  const fetchEvent = (request, waitUntil = () => {}) => {
     let answer;
-    listeners.fetch({ request, respondWith: (promise) => (answer = promise) });
+    listeners.fetch({ request, waitUntil, respondWith: (promise) => (answer = promise) });
     return answer;
   };
   return { stores, log, installed, lifecycle, fetchEvent };
@@ -153,6 +160,65 @@ describe('service worker', () => {
     await settled();
     const [saved] = sw.stores.values();
     expect(saved.get(request.url)).toEqual({ ok: true, body: 'new version', copy: true });
+  });
+
+  test('the fetch event stays alive for a cache write without delaying the response', async () => {
+    const { promise: writing, resolve: finishWrite } = Promise.withResolvers();
+    const beforePut = jest.fn(() => writing);
+    const fresh = response(true, 'new version');
+    const sw = startServiceWorker(async () => fresh, beforePut);
+    await sw.lifecycle('install');
+
+    const waitUntil = jest.fn();
+    const answer = sw.fetchEvent(get(`${PAGE}index.html`), waitUntil);
+    expect(waitUntil).toHaveBeenCalledTimes(1);
+    const finished = jest.fn();
+    const lifetime = waitUntil.mock.calls[0][0].then(finished);
+
+    expect(await answer).toBe(fresh);
+    await settled();
+    expect(beforePut).toHaveBeenCalledTimes(1);
+    expect(finished).not.toHaveBeenCalled();
+
+    finishWrite();
+    await lifetime;
+    const [saved] = sw.stores.values();
+    expect(saved.get(`${PAGE}index.html`).body).toBe('new version');
+  });
+
+  test('a query string refreshes the bare URL without adding another copy', async () => {
+    const fresh = response(true, 'new page');
+    const network = jest.fn().mockResolvedValueOnce(fresh).mockRejectedValue(new Error('offline'));
+    const sw = startServiceWorker(network);
+    await sw.lifecycle('install');
+
+    const canonical = `${PAGE}index.html`;
+    const request = get(`${canonical}?utm_source=x`);
+    expect(await sw.fetchEvent(request)).toBe(fresh);
+    await settled();
+    const [saved] = sw.stores.values();
+    expect(saved.has(request.url)).toBe(false);
+    expect(saved.get(canonical).body).toBe('new page');
+    expect(network).toHaveBeenCalledWith(request, { cache: 'no-cache' });
+    expect((await sw.fetchEvent(get(`${canonical}?utm_source=y`))).body).toBe('new page');
+  });
+
+  test('a cache write failure leaves the network response usable', async () => {
+    const fresh = response(true, 'new page');
+    const sw = startServiceWorker(
+      async () => fresh,
+      async () => {
+        throw new Error('quota exceeded');
+      }
+    );
+    await sw.lifecycle('install');
+
+    const waitUntil = jest.fn();
+    const request = get(`${PAGE}index.html`);
+    expect(await sw.fetchEvent(request, waitUntil)).toBe(fresh);
+    await expect(waitUntil.mock.calls[0][0]).resolves.toBeUndefined();
+    const [saved] = sw.stores.values();
+    expect(saved.get(request.url).body).toBe('index.html');
   });
 
   test("the server is asked every time, past the browser's own HTTP cache", async () => {
@@ -227,12 +293,15 @@ describe('service worker', () => {
       const sw = startServiceWorker(network);
       await sw.lifecycle('install');
       const request = get(`${PAGE}js/game.js`);
-      const answer = sw.fetchEvent(request);
+      const waitUntil = jest.fn();
+      const answer = sw.fetchEvent(request, waitUntil);
+      expect(waitUntil).toHaveBeenCalledTimes(1);
       await jest.advanceTimersByTimeAsync(3000);
       expect((await answer).body).toBe('js/game.js'); // The copy from the install
+      expect(await stateOf(waitUntil.mock.calls[0][0])).toBe('waiting');
 
       pending[0].resolve(response(true, 'new version'));
-      await jest.advanceTimersByTimeAsync(0);
+      await waitUntil.mock.calls[0][0];
       const [saved] = sw.stores.values();
       expect(saved.get(request.url).body).toBe('new version');
     });

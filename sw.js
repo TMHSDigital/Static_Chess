@@ -90,9 +90,32 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
     const request = event.request;
-    if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
+    const url = new URL(request.url);
+    if (request.method !== 'GET' || url.origin !== self.location.origin) return;
 
     const savedCopy = () => caches.match(request, { ignoreSearch: true });
+
+    // Revalidate even if the browser's HTTP cache holds a fresh copy.
+    const network = fetch(request, { cache: 'no-cache' });
+    event.waitUntil(
+        network
+            .then(async (response) => {
+                if (!response.ok) return;
+                // Clone before returning the network response. Keep refreshing the
+                // cache even if the visitor has already been served the saved copy.
+                const copy = response.clone();
+                url.search = '';
+                const key =
+                    url.href === request.url
+                        ? request
+                        : new Request(url.href, { headers: request.headers });
+                const cache = await caches.open(CACHE_NAME);
+                await cache.put(key, copy);
+            })
+            .catch(() => {
+                // A network or cache write failure is handled separately from the response.
+            })
+    );
 
     event.respondWith(
         new Promise((resolve) => {
@@ -104,20 +127,9 @@ self.addEventListener('fetch', (event) => {
                 });
             }, NETWORK_WAIT_MS);
 
-            // 'no-cache' asks the server every time, also while the browser's
-            // own HTTP cache still holds a copy it considers fresh. Without it
-            // "the network" can be that copy, each file with its own age, and
-            // a page can run new scripts next to old ones after a release. An
-            // unchanged file costs a 304 with no body.
-            fetch(request, { cache: 'no-cache' })
+            network
                 .then((response) => {
                     clearTimeout(waiting);
-                    if (response.ok) {
-                        // Saved also when the copy has already been used, so the
-                        // next visit gets the new version
-                        const copy = response.clone();
-                        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-                    }
                     resolve(response); // Has no effect if the saved copy was used
                 })
                 .catch(() => {
