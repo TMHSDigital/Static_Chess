@@ -362,6 +362,161 @@ describe('saved-game.js', () => {
     );
     expect(global.validateSavedGame({ boardState: noKing, currentPlayer: 'w' })).toBeNull();
   });
+
+  describe('validateSavedGame', () => {
+    const E2E4 = { from: { row: 6, col: 4 }, to: { row: 4, col: 4 }, notation: 'e4' };
+    /** A sound save with one field changed (or removed, when the value is undefined). */
+    const saveWith = (changes) => {
+      const { rules } = loadWithoutPage();
+      const save = {
+        boardState: rules.initialPosition().board,
+        currentPlayer: 'w',
+        moveHistory: [],
+        ...changes,
+      };
+      for (const key of Object.keys(changes)) if (changes[key] === undefined) delete save[key];
+      return save;
+    };
+    const board = () => saveWith({}).boardState;
+
+    test.each([
+      ['a move history that is not a list', { moveHistory: 'x' }],
+      ['a move that is null', { moveHistory: [null] }],
+      ['a move with nothing in it', { moveHistory: [{}] }],
+      ['a move to a square off the board', { moveHistory: [{ ...E2E4, to: { row: 8, col: 4 } }] }],
+      ['a move whose notation is not text', { moveHistory: [{ ...E2E4, notation: 5 }] }],
+      [
+        'a board row of seven squares',
+        { boardState: board().map((row, r) => (r === 3 ? row.slice(1) : row)) },
+      ],
+      [
+        'a piece of an unknown type',
+        {
+          boardState: board().map((row, r) =>
+            r === 3 ? [{ type: 'x', color: 'w' }, ...row.slice(1)] : row
+          ),
+        },
+      ],
+      [
+        'a cell that is not a piece',
+        { boardState: board().map((row, r) => (r === 3 ? ['p', ...row.slice(1)] : row)) },
+      ],
+      ['an en passant square off the board', { enPassantTarget: { row: 9, col: 0 } }],
+    ])('refuses %s', (_, changes) => {
+      expect(global.validateSavedGame(saveWith(changes))).toBeNull();
+    });
+
+    test('a save without a move history loads with none', () => {
+      expect(global.validateSavedGame(saveWith({ moveHistory: undefined })).moveHistory).toEqual(
+        []
+      );
+    });
+
+    test('a damaged undo stack is dropped and the game still loads', () => {
+      const clean = global.validateSavedGame(
+        saveWith({ moveHistory: [E2E4], positionHistory: [null] })
+      );
+      expect(clean.moveHistory).toEqual([E2E4]);
+      expect(clean.positionHistory).toEqual([]);
+    });
+
+    test('a sound undo stack is kept', () => {
+      const entry = { boardState: board(), currentPlayer: 'w', enPassantTarget: null };
+      const clean = global.validateSavedGame(
+        saveWith({ moveHistory: [E2E4], positionHistory: [entry] })
+      );
+      expect(clean.positionHistory).toHaveLength(1);
+      expect(clean.positionHistory[0].currentStatus).toBe('');
+    });
+
+    test('cleanSnapshot refuses what is not a record', () => {
+      loadWithoutPage();
+      expect(global.cleanSnapshot(null, '')).toBeNull();
+      expect(global.cleanSnapshot(5, '')).toBeNull();
+    });
+
+    test('a finished game saved without a result gets one from its last move', () => {
+      const drawn = global.validateSavedGame(saveWith({ isGameOver: true, moveHistory: [E2E4] }));
+      expect(drawn.gameResult).toBe('1/2-1/2');
+      const mated = global.validateSavedGame(
+        saveWith({
+          isGameOver: true,
+          currentPlayer: 'b',
+          moveHistory: [{ ...E2E4, isCheckmate: true }],
+        })
+      );
+      expect(mated.gameResult).toBe('1-0');
+    });
+
+    test('a clock is stopped in a finished game, and a control that is not text is dropped', () => {
+      const clock = {
+        base: 300000,
+        increment: 0,
+        remaining: { w: 1000, b: 2000 },
+        running: true,
+        control: 5,
+      };
+      const clean = global.validateSavedGame(
+        saveWith({ isGameOver: true, gameResult: '1-0', clock })
+      );
+      expect(clean.clock.turnStartedAt).toBeNull();
+      expect(clean.clock.control).toBe('');
+      expect(clean.clock.remaining).toEqual({ w: 1000, b: 2000 });
+    });
+
+    test.each([
+      ['a computer that plays no side', { computer: 'x', level: 'hard' }],
+      ['a level that is not a word', { computer: 'w', level: 'HARD!' }],
+    ])('drops the players for %s', (_, players) => {
+      expect(global.validateSavedGame(saveWith({ players })).players).toBeNull();
+    });
+
+    test('keeps players that are two people or a computer at a level', () => {
+      const two = { level: null, computer: null };
+      expect(global.validateSavedGame(saveWith({ players: two })).players).toEqual(two);
+      const computer = { level: 'hard', computer: 'b' };
+      expect(global.validateSavedGame(saveWith({ players: computer })).players).toEqual(computer);
+    });
+
+    test.each([
+      ['no remaining times', { base: 300000, increment: 0 }],
+      ['a negative time', { base: 300000, increment: 0, remaining: { w: -1, b: 2000 } }],
+      ['a time that is not a number', { base: '5', increment: 0, remaining: { w: 1, b: 2 } }],
+    ])('drops a clock with %s', (_, clock) => {
+      expect(global.validateSavedGame(saveWith({ clock })).clock).toBeNull();
+    });
+
+    test('a running clock in a game going on is restarted from now', () => {
+      const clock = {
+        base: 1,
+        increment: 0,
+        remaining: { w: 1, b: 1 },
+        running: true,
+        control: '1+0',
+      };
+      const clean = global.validateSavedGame(saveWith({ clock }));
+      expect(typeof clean.clock.turnStartedAt).toBe('number');
+      expect(clean.clock.control).toBe('1+0');
+    });
+
+    test('keeps a sound start and falls back to the usual one otherwise', () => {
+      const fen = '8/8/8/8/8/8/8/K6k b - - 3 12';
+      const begun = { player: 'b', fullmove: 12, halfmoveClock: 3, fen };
+      expect(global.validateSavedGame(saveWith({ gameStart: begun })).gameStart).toEqual(begun);
+      const noFen = { player: 'w', fullmove: 2, halfmoveClock: -1, fen: 7 };
+      expect(global.validateSavedGame(saveWith({ gameStart: noFen })).gameStart).toEqual({
+        player: 'w',
+        fullmove: 2,
+        halfmoveClock: 0,
+        fen: null,
+      });
+      for (const bad of [{ player: 'x', fullmove: 1 }, { player: 'w', fullmove: 0 }, 'start']) {
+        expect(global.validateSavedGame(saveWith({ gameStart: bad })).gameStart).toEqual(
+          global.STANDARD_START
+        );
+      }
+    });
+  });
 });
 
 describe('clock.js', () => {
