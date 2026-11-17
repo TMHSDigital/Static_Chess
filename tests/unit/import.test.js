@@ -719,3 +719,46 @@ describe('move numbers', () => {
     expect(movetext(g)).toBe('1. e4 *');
   });
 });
+
+describe('SAN edge cases', () => {
+  test('a move two rivals can match needs both file and rank: Qa1b2', () => {
+    const first = loadGame();
+    first.game.importFEN('4k3/8/8/8/8/Q7/8/Q1Q1K3 w - - 0 1');
+    first.play('a1b2');
+    expect(notations(first)).toEqual(['Qa1b2']);
+
+    const g = loadGame();
+    expect(g.game.importPGN(first.game.buildPGN())).toEqual({ ok: true, moves: 1 });
+    expect(g.snapshot()).toEqual(first.snapshot());
+  });
+
+  test('a rank tells two rooks on one file apart', () => {
+    const fen = '4k3/8/8/R7/8/8/8/R3K3 w - - 0 1';
+    const low = loadGame();
+    low.game.importFEN(fen);
+    low.play('a1a3');
+    expect(notations(low)).toEqual(['R1a3']);
+
+    const high = loadGame();
+    high.game.importFEN(fen);
+    high.play('a5a3');
+    expect(notations(high)).toEqual(['R5a3']);
+
+    for (const [san, from] of [
+      ['R1a3', 'a1'],
+      ['R5a3', 'a5'],
+    ]) {
+      const g = loadGame();
+      expect(g.game.importPGN(`[SetUp "1"]\n[FEN "${fen}"]\n\n1. ${san} *`).ok).toBe(true);
+      expect(g.at(from)).toBeNull();
+      expect(g.at('a3').type).toBe('r');
+    }
+  });
+
+  test('a promotion on a square that is not the last rank is refused', () => {
+    const g = loadGame();
+    const before = g.snapshot();
+    expect(g.game.importPGN('1. e4=Q')).toMatchObject({ ok: false });
+    expect(g.snapshot()).toEqual(before);
+  });
+});

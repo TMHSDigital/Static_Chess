@@ -812,3 +812,37 @@ describe('Draw by agreement', () => {
     expect(el(g, 'game-status').textContent).toContain('declines the draw');
   });
 });
+
+describe('handlePageKey', () => {
+  test('steps back and forward within the game and says whether it used the key', () => {
+    const g = loadGame();
+    expect(g.game.handlePageKey('ArrowLeft')).toBe(false); // No move yet
+    expect(g.game.handlePageKey('ArrowRight')).toBe(false);
+
+    g.play('e2e4', 'e7e5');
+    expect(g.game.handlePageKey('ArrowRight')).toBe(false); // Already at the end
+    expect(g.game.handlePageKey('Escape')).toBe(false); // Not reviewing
+
+    expect(g.game.handlePageKey('ArrowLeft')).toBe(true);
+    expect(g.game.viewPly).toBe(1);
+    expect(g.game.handlePageKey('ArrowLeft')).toBe(true);
+    expect(g.game.viewPly).toBe(0);
+    expect(g.game.handlePageKey('ArrowLeft')).toBe(false); // At ply 0
+
+    expect(g.game.handlePageKey('ArrowRight')).toBe(true);
+    expect(g.game.viewPly).toBe(1);
+    expect(g.game.handlePageKey('Escape')).toBe(true);
+    expect(g.game.viewPly).toBeNull();
+    expect(g.game.handlePageKey('Enter')).toBe(false);
+  });
+
+  test('does nothing for a game whose undo stack was not kept', () => {
+    const first = loadGame();
+    first.play('e2e4', 'e7e5');
+    const saved = JSON.parse(first.window.localStorage.getItem('chessGameState'));
+    delete saved.positionHistory; // As saves from older versions
+    const g = loadGame({ storage: { chessGameState: JSON.stringify(saved) } });
+    expect(g.game.handlePageKey('ArrowLeft')).toBe(false);
+    expect(g.game.viewPly).toBeNull();
+  });
+});

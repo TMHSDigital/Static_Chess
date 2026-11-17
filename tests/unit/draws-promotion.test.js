@@ -309,3 +309,56 @@ describe('promotion choice', () => {
     expect(dialog(ctx)).toBeNull();
   });
 });
+
+describe('the promotion chooser on its own', () => {
+  /** Opens the chooser with spies, and gives back what the tests need. */
+  const open = (onCancel) => {
+    const ctx = loadGame();
+    const onChoose = jest.fn();
+    ctx.promotion.showPromotionChooser('w', onChoose, onCancel);
+    const doc = ctx.window.document;
+    const buttons = Array.from(doc.querySelectorAll('.promotion-choice'));
+    const press = (key, options = {}) => {
+      const event = new ctx.window.KeyboardEvent('keydown', {
+        key,
+        bubbles: true,
+        cancelable: true,
+        ...options,
+      });
+      doc.activeElement.dispatchEvent(event);
+      return event;
+    };
+    return { ctx, doc, buttons, press, onChoose };
+  };
+
+  test('Tab from the last choice goes to the first, Shift+Tab from the first to the last', () => {
+    const { doc, buttons, press } = open();
+    buttons[buttons.length - 1].focus();
+    expect(press('Tab').defaultPrevented).toBe(true);
+    expect(doc.activeElement).toBe(buttons[0]);
+    expect(press('Tab', { shiftKey: true }).defaultPrevented).toBe(true);
+    expect(doc.activeElement).toBe(buttons[buttons.length - 1]);
+  });
+
+  test('another key leaves the focus where it is and is not prevented', () => {
+    const { doc, buttons, press } = open();
+    expect(doc.activeElement).toBe(buttons[0]);
+    expect(press('a').defaultPrevented).toBe(false);
+    expect(doc.activeElement).toBe(buttons[0]);
+  });
+
+  test('closing twice reports the choice once', () => {
+    const { ctx, onChoose } = open();
+    ctx.promotion.closePromotionChooser('q');
+    ctx.promotion.closePromotionChooser('q');
+    expect(onChoose).toHaveBeenCalledTimes(1);
+    expect(onChoose).toHaveBeenCalledWith('q');
+  });
+
+  test('Escape closes it, also when nobody asked to hear of a cancel', () => {
+    const { ctx, press, onChoose } = open(undefined);
+    expect(() => press('Escape')).not.toThrow();
+    expect(ctx.promotion.isPromotionChooserOpen()).toBe(false);
+    expect(onChoose).not.toHaveBeenCalled();
+  });
+});

@@ -431,6 +431,28 @@ describe('ai-worker.js', () => {
     expect(posted[0].scores[1].score).toBeGreaterThan(700);
   });
 
+  test('runs under require too, so the coverage report counts it', () => {
+    jest.useRealTimers();
+    const g = loadGame(); // Puts the engine's functions on the global object, as importScripts would
+    const posted = [];
+    const imported = [];
+    global.self = { postMessage: (message) => posted.push(message) };
+    global.importScripts = (...files) => imported.push(...files);
+    try {
+      jest.isolateModules(() => require('../../js/ai-worker'));
+      expect(imported).toEqual(['config.js', 'utils.js', 'pieces.js', 'rules.js', 'ai.js']);
+      const position = g.rules.initialPosition();
+      global.self.onmessage({ data: { id: 3, position, color: 'w', level: 'easy', seen: [] } });
+      global.self.onmessage({ data: { id: 4, assess: [{ position, color: 'b' }] } });
+      expect(posted.map((message) => message.id)).toEqual([3, 4]);
+      expect(posted[0].move).toEqual(expect.objectContaining({ from: expect.any(Object) }));
+      expect(posted[1].scores).toHaveLength(1);
+    } finally {
+      delete global.self;
+      delete global.importScripts;
+    }
+  });
+
   test('loads the scripts the page loads ahead of the board, in the same order', () => {
     const scripts = [
       ...fs
