@@ -1369,7 +1369,7 @@ function saveGameState() {
             remaining: { [WHITE]: clockRemaining(WHITE), [BLACK]: clockRemaining(BLACK) },
             running: clock.turnStartedAt !== null,
         },
-        positionHistory: positionHistory, // Undo stack, so Undo still works after a reload
+        // The undo stack is not saved: loadGameState plays the moves again to rebuild it
     });
 }
 
@@ -1383,13 +1383,56 @@ function loadGameState() {
     restoreSnapshot(state);
     gameStart = state.gameStart;
     moveHistory = state.moveHistory;
-    positionHistory = state.positionHistory;
+    // Saves from older versions also carry the undo stack itself
+    positionHistory = replayUndoStack(gameStart, moveHistory, state) || state.positionHistory;
     gameResult = state.gameResult;
     endedWithoutMove = state.endedWithoutMove;
     if (state.players) gamePlayers = state.players; // Saves from older versions follow the settings
     archivedFrom = state.archivedFrom;
     clock = state.clock;
     return true;
+}
+
+/**
+ * Works the undo stack out again by playing the moves from where the game
+ * began. The stack is not saved: one board per move made every save larger
+ * and slower as a game went on.
+ * @param {{player: string, halfmoveClock: number, fen: string|null}} start - How the game began.
+ * @param {object[]} moves - The moves played, as moveHistory holds them.
+ * @param {object} saved - The saved position, which the moves must lead to.
+ * @returns {object[]|null} One snapshot per move, taken before it, or null if
+ *   the moves cannot be played or lead elsewhere.
+ */
+function replayUndoStack(start, moves, saved) {
+    const begun = start.fen ? positionFromFEN(start.fen) : { position: initialPosition() };
+    if (begun.error) return null;
+    let position = begun.position;
+    let player = start.player;
+    let count = start.halfmoveClock;
+    const stack = [];
+    for (const move of moves) {
+        const piece = position.board[move.from.row][move.from.col];
+        const legal = legalMovesFrom(position, move.from.row, move.from.col).some(
+            (to) => to.row === move.to.row && to.col === move.to.col
+        );
+        if (!piece || piece.color !== player || !legal) return null;
+        stack.push({
+            boardState: position.board,
+            currentPlayer: player,
+            isGameOver: false,
+            kingPositions: position.kingPositions,
+            currentStatus: `${sideName(player)}'s turn`,
+            enPassantTarget: position.enPassantTarget,
+            halfmoveClock: count,
+        });
+        const played = applyMove(position, move.from, move.to, move.promotion || QUEEN);
+        count = piece.type === PAWN || played.move.captured ? 0 : count + 1;
+        position = played.position;
+        player = opponentOf(player);
+    }
+    const reached = positionKey(position.board, player, position.enPassantTarget);
+    const savedKey = positionKey(saved.boardState, saved.currentPlayer, saved.enPassantTarget);
+    return reached === savedKey ? stack : null;
 }
 
 // --- Past games ---

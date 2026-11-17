@@ -115,7 +115,7 @@ Static_Chess/
 
 Everything is kept in `localStorage` under the keys in `CONFIG.STORAGE_KEYS`:
 
-- `chessGameState`: the game. It holds a `version` field, the position (`boardState`, `currentPlayer`, `isGameOver`, `kingPositions`, `currentStatus`, `enPassantTarget`, `halfmoveClock`), the move list (`moveHistory`), the undo stack (`positionHistory`), the result (`gameResult`, and `endedWithoutMove` for a resignation, an agreed draw or a loss on time), how the game began (`gameStart`), who played it (`players`), the date of the past game it was opened from (`archivedFrom`, so it replaces that entry when put back) and the `clock` object when the game is timed
+- `chessGameState`: the game. It holds a `version` field, the position (`boardState`, `currentPlayer`, `isGameOver`, `kingPositions`, `currentStatus`, `enPassantTarget`, `halfmoveClock`), the move list (`moveHistory`), the result (`gameResult`, and `endedWithoutMove` for a resignation, an agreed draw or a loss on time), how the game began (`gameStart`), who played it (`players`), the date of the past game it was opened from (`archivedFrom`, so it replaces that entry when put back) and the `clock` object when the game is timed. The undo stack is not saved, so a save stays small however long the game: `loadGameState()` rebuilds it by playing the moves again from `gameStart` (`replayUndoStack()`), and falls back to the `positionHistory` a save from an older version carries only if the moves do not lead to the saved position
 - `chessGameArchive`: the past games, newest first, at most `CONFIG.ARCHIVE_LIMIT`. Each entry is `{ pgn, result, opponent, date, moves }`; `readArchive()` in `game-store.js` ignores a damaged value and drops incomplete entries
 - One key per setting: `showCoords`, `showPossibleMoves`, `showLastMove`, `enableSounds`, `flipBoard`, `opponent`, `playerSide`, `timeControl`, `boardTheme`, `pageTheme`
 
@@ -298,7 +298,7 @@ SAN generation with disambiguation is implemented:
 5. Once a game is over, `scoreFinishedGame()` sends every position of it to the engine on the `review-scores` channel (`askEngineForScores()`), once per game. `moveCost()` compares the score before and after each move from the mover's side; a move that lost at least `CONFIG.REVIEW_MISTAKE_DROP`, or allowed or missed a forced mate, gets the class `lost-ground` in the move list (a "?" from the stylesheet), a tooltip and an accessible name that say why, and a second sentence in the line under the list when it is looked at. The scores are dropped when the game goes on again (Undo, Play from here) or another game starts. Without a worker the scoring runs on the page: about 0.4 s for 120 positions
 6. "Play from here" (`playFromHere()`, after a confirming second click) makes the position on screen the live one: it archives the game as it was, restores the undo-stack snapshot for that ply, cuts the move list and the undo stack to it, and clears the result and the clock
 7. `isBoardLocked()` is true while looking back, except that a hint can still be asked. A move, such as the computer's reply, returns to the live game
-8. A save from an older version without an undo stack has no positions to show, so its move buttons and the step buttons are disabled
+8. A save whose moves cannot be played again (and that carries no undo stack of its own) has no positions to show, so its move buttons and the step buttons are disabled
 
 ### 11. Resign, Draw by Agreement and the Result
 

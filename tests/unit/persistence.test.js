@@ -59,15 +59,71 @@ describe('saving and restoring', () => {
     expect(second.window.document.getElementById('undo-button').disabled).toBe(true);
   });
 
-  test('a save without an undo stack still loads, with Undo disabled', () => {
+  test('the undo stack is not saved, but played again from the moves', () => {
+    const first = loadGame();
+    first.play('e2e4', 'e7e5', 'g1f3');
+    const saved = JSON.parse(first.window.localStorage.getItem(KEY));
+    expect(saved).not.toHaveProperty('positionHistory');
+    const second = loadGame({ storage: { [KEY]: JSON.stringify(saved) } });
+    expect(second.game.positionHistory).toHaveLength(3);
+    expect(second.game.positionHistory[1].currentStatus).toBe("Black's turn");
+  });
+
+  test('a game begun from FEN gets its undo stack back too', () => {
+    const first = loadGame();
+    first.game.importFEN('4k3/8/8/8/8/8/4P3/4K2R w K - 7 30');
+    first.play('e1g1', 'e8d7', 'e2e4');
+    const before = first.snapshot();
+    const second = loadGame({ storage: { [KEY]: first.window.localStorage.getItem(KEY) } });
+    expect(second.snapshot()).toEqual(before);
+    second.game.undoLastMove();
+    second.game.undoLastMove();
+    second.game.undoLastMove();
+    expect(second.game.buildFEN()).toBe('4k3/8/8/8/8/8/4P3/4K2R w K - 7 30');
+  });
+
+  test('moves that do not lead to the saved position give no undo stack', () => {
     const first = loadGame();
     first.play('e2e4');
     const saved = JSON.parse(first.window.localStorage.getItem(KEY));
-    delete saved.positionHistory;
     delete saved.version;
+    saved.moveHistory[0].to = { row: 5, col: 4 }; // Says e3, but the pawn is on e4
     const second = loadGame({ storage: { [KEY]: JSON.stringify(saved) } });
     expect(second.at('e4').type).toBe('p');
     expect(second.window.document.getElementById('undo-button').disabled).toBe(true);
+  });
+
+  test('an older save that carries its own undo stack still uses it when the moves cannot be played', () => {
+    const first = loadGame();
+    first.play('e2e4');
+    const saved = JSON.parse(first.window.localStorage.getItem(KEY));
+    saved.positionHistory = [
+      {
+        boardState: first.rules.initialPosition().board,
+        currentPlayer: 'w',
+        enPassantTarget: null,
+        currentStatus: "White's turn",
+      },
+    ];
+    saved.moveHistory[0].from = { row: 6, col: 3 }; // A damaged move: d2 to e4
+    const second = loadGame({ storage: { [KEY]: JSON.stringify(saved) } });
+    second.game.undoLastMove();
+    expect(second.at('e2').type).toBe('p');
+    expect(second.game.moveHistory).toHaveLength(0);
+  });
+
+  test('a 200-ply game saves in well under 100 KB, and its undo stack comes back', () => {
+    const g = loadGame();
+    const moves = Array.from(
+      { length: 50 },
+      (_, n) => `${2 * n + 1}. Nf3 Nf6 ${2 * n + 2}. Ng1 Ng8`
+    );
+    expect(g.game.importPGN(moves.join(' ')).moves).toBe(200);
+    const saved = g.window.localStorage.getItem(KEY);
+    expect(saved.length).toBeLessThan(100 * 1024);
+
+    const again = loadGame({ storage: { [KEY]: saved } });
+    expect(again.game.positionHistory).toHaveLength(200);
   });
 
   test('New Game removes the saved game', () => {

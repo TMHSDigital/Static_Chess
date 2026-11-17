@@ -179,7 +179,7 @@ describe('Looking back through the move list', () => {
       expect(el(g, 'review-actions').hidden).toBe(true);
       expect(g.window.document.querySelectorAll('#move-history button')).toHaveLength(2);
       expect(saved(g).moveHistory).toHaveLength(2);
-      expect(saved(g).positionHistory).toHaveLength(2);
+      expect(saved(g)).not.toHaveProperty('positionHistory'); // Rebuilt from the moves on load
 
       g.play('d2d4'); // The game goes on along another line
       expect(g.game.moveHistory.map((m) => m.notation)).toEqual(['e4', 'e5', 'd4']);
@@ -570,11 +570,11 @@ describe('Looking back through the move list', () => {
     expect(pieceOn(g, 'e7')).toBe('bp');
   });
 
-  test('a saved game without an undo stack cannot be viewed', () => {
+  test('a saved game whose undo stack cannot be rebuilt cannot be viewed', () => {
     const first = loadGame();
     first.play('e2e4', 'e7e5');
     const saved = JSON.parse(first.window.localStorage.getItem('chessGameState'));
-    delete saved.positionHistory;
+    saved.moveHistory[0].to = { row: 5, col: 4 }; // Says e3: the moves no longer lead to the board
     const g = loadGame({ storage: { chessGameState: JSON.stringify(saved) } });
     expect(moveButton(g, 1).disabled).toBe(true);
     g.game.viewMove(1);
@@ -840,7 +840,7 @@ describe('handlePageKey', () => {
     const first = loadGame();
     first.play('e2e4', 'e7e5');
     const saved = JSON.parse(first.window.localStorage.getItem('chessGameState'));
-    delete saved.positionHistory; // As saves from older versions
+    saved.moveHistory[0].to = { row: 5, col: 4 }; // Moves that do not lead to the board
     const g = loadGame({ storage: { chessGameState: JSON.stringify(saved) } });
     expect(g.game.handlePageKey('ArrowLeft')).toBe(false);
     expect(g.game.viewPly).toBeNull();
