@@ -100,7 +100,7 @@ This is a rough guideline for feature implementation:
 
 These are areas that need improvement in the current codebase:
 
-1. **Splitting game.js** - Done as far as plain scripts allow. Notation with PGN and FEN, saved-game validation, storage, clock rules, review wording, the engine bridge and the page updates are in files of their own. `game.js`, at about 1,550 lines, keeps the state of the game and everything that changes it. Splitting that further means sharing the state between files, which is a design change of its own
+1. **Splitting game.js** - Done as far as plain scripts allow. Notation with PGN and FEN, saved-game validation, storage, clock rules, review wording, the engine bridge and the page updates are in files of their own. `game.js` keeps the state of the game and everything that changes it. Splitting that further means sharing the state between files, which is a design change of its own
 2. **Browser-level tests** - Jest suites cover the rules, undo, persistence, input, rendering, settings and accessibility in jsdom; there is no automated check in a real browser yet
 3. **Performance optimization** - Improve rendering and move calculation performance
 4. **Accessibility testing** - The board is keyboard-operable and moves are announced; it has not been tested with a range of screen readers

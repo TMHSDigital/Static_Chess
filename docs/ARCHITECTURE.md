@@ -305,7 +305,7 @@ SAN generation with disambiguation is implemented:
 1. `endGameWithoutMove(result, status)` ends a game that no move ended: resignation, an agreed draw or a loss on time. It sets `gameResult` and `endedWithoutMove`
 2. Resign needs a confirming second click (`confirmSecondClick()`, which New Game, Load and "Play from here" use as well; the question is withdrawn after `CONFIG.CONFIRM_MS` or when the game moves on). Against the computer it is the person who resigns
 3. With two players "Offer draw" becomes "Accept draw?" for the other side, and playing a move declines. The computer accepts unless it is at least `CONFIG.AI_DRAW_MARGIN` ahead
-4. Undo reopens a game ended this way without taking a move back
+4. Undo reopens a game ended this way without taking a move back, except in a timed game, where Undo is off, so a loss on time is final
 5. `gameResult` is `'1-0'`, `'0-1'` or `'1/2-1/2'` once the game is over. It is saved with the game and written to the PGN
 
 ### 12. Hint

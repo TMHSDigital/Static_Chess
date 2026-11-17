@@ -20,7 +20,7 @@ All notable changes to this project will be documented in this file.
 - **Link previews**: A link to the game shared in chat or on social media now shows a preview with an image of the board
 - **404 page**: An address that does not exist on the site now shows a page in the game's style with a link back to the game
 - **Step buttons**: Four buttons under the move list go to the starting position, the previous move, the next move and the latest move, so a game can be stepped through without a keyboard
-- **Resign and draw by agreement**: Resign needs a second click; with two players a draw is offered and then accepted, and the computer accepts unless it is ahead. Undo reopens a game ended this way
+- **Resign and draw by agreement**: Resign needs a second click; with two players a draw is offered and then accepted, and the computer accepts unless it is ahead. Undo reopens a game ended this way (not in a timed game, where Undo is off)
 - **Hint**: Marks the move the engine would play for the side to move, without playing it
 - **Chess clock**: An optional clock with five time controls, chosen under "Clock" for the next new game. Running out of time loses (or draws if the opponent cannot checkmate); Undo is off in timed games; the times survive a reload and the PGN names the time control
 - **Offline and installable**: After one visit the game opens and plays without a connection, and browsers offer to install it as an app. The page has a real icon
