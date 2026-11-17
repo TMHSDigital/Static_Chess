@@ -90,9 +90,35 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
     const request = event.request;
-    if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
+    const url = new URL(request.url);
+    if (request.method !== 'GET' || url.origin !== self.location.origin) return;
 
     const savedCopy = () => caches.match(request, { ignoreSearch: true });
+
+    // 'no-cache' asks the server every time, also while the browser's own HTTP
+    // cache still holds a copy it considers fresh. Without it "the network" can
+    // be that copy, each file with its own age, and a page can run new scripts
+    // next to old ones after a release. An unchanged file costs a 304 with no body.
+    const network = fetch(request, { cache: 'no-cache' });
+
+    // A good answer is saved also when the saved copy has already been used, so
+    // the next visit gets the new version. waitUntil is called now, while the
+    // event is being handled: called later, after the saved copy has answered,
+    // the browser would refuse it and could stop the worker before the write.
+    // The copy is kept under the address without its query string, which is how
+    // savedCopy looks it up, so "?utm_source=..." links do not each add a copy
+    // that is never read.
+    event.waitUntil(
+        network
+            .then(async (response) => {
+                if (!response.ok) return;
+                const copy = response.clone(); // Before the page reads the body
+                url.search = '';
+                const cache = await caches.open(CACHE_NAME);
+                await cache.put(url.href, copy);
+            })
+            .catch(() => {}) // No connection, or a full or blocked cache: the page is answered below
+    );
 
     event.respondWith(
         new Promise((resolve) => {
@@ -104,31 +130,9 @@ self.addEventListener('fetch', (event) => {
                 });
             }, NETWORK_WAIT_MS);
 
-            // 'no-cache' asks the server every time, also while the browser's
-            // own HTTP cache still holds a copy it considers fresh. Without it
-            // "the network" can be that copy, each file with its own age, and
-            // a page can run new scripts next to old ones after a release. An
-            // unchanged file costs a 304 with no body.
-            fetch(request, { cache: 'no-cache' })
+            network
                 .then((response) => {
                     clearTimeout(waiting);
-                    if (response.ok) {
-                        // Saved also when the copy has already been used, so the
-                        // next visit gets the new version. waitUntil keeps the
-                        // worker alive until the write is done. The copy is kept
-                        // under the address without its query string, which is
-                        // how savedCopy looks it up, so "?utm_source=..." links
-                        // do not each add a copy that is never read.
-                        const copy = response.clone();
-                        const key = new URL(request.url);
-                        key.search = '';
-                        event.waitUntil(
-                            caches
-                                .open(CACHE_NAME)
-                                .then((cache) => cache.put(key.href, copy))
-                                .catch(() => {}) // A full or blocked cache must not fail the page
-                        );
-                    }
                     resolve(response); // Has no effect if the saved copy was used
                 })
                 .catch(() => {

@@ -22,8 +22,12 @@ const settled = () => new Promise((resolve) => setTimeout(resolve, 0)); // Lets 
  * Loads sw.js with the service worker globals stubbed: Cache Storage is a Map
  * of Maps, and the network is the function passed in.
  * @param {(request: object) => Promise<object>} [network]
+ * @param {() => Promise<void>|void} [beforePut]
  */
-function startServiceWorker(network = () => Promise.reject(new Error('offline'))) {
+function startServiceWorker(
+  network = () => Promise.reject(new Error('offline')),
+  beforePut = () => {}
+) {
   const listeners = {};
   const stores = new Map(); // Cache name -> Map of URL -> response
   const log = []; // What the worker did, in order
@@ -50,8 +54,10 @@ function startServiceWorker(network = () => Promise.reject(new Error('offline'))
           }
         },
         // As the real Cache, it takes a Request or an address
-        put: async (request, saved) =>
-          store.set(typeof request === 'string' ? request : request.url, saved),
+        put: async (request, saved) => {
+          await beforePut();
+          store.set(typeof request === 'string' ? request : request.url, saved);
+        },
       };
     },
     keys: async () => [...stores.keys()],
@@ -93,11 +99,18 @@ function startServiceWorker(network = () => Promise.reject(new Error('offline'))
   /** Fires a fetch event. @returns {Promise<object>|undefined} undefined if it was not answered. */
   const fetchEvent = (request) => {
     let answer;
+    let dispatching = true;
     listeners.fetch({
       request,
       respondWith: (promise) => (answer = promise),
-      waitUntil: (promise) => kept.push(promise),
+      // As in a browser, waitUntil is refused once the event has been handled
+      // and its answer may already be settled, so it must be called at once
+      waitUntil: (promise) => {
+        if (!dispatching) throw new Error('InvalidStateError: the event is finished');
+        kept.push(promise);
+      },
     });
+    dispatching = false;
     return answer;
   };
   return { stores, log, installed, lifecycle, fetchEvent, kept };
@@ -174,8 +187,34 @@ describe('service worker', () => {
     expect(saved.get(request.url).body).toBe('new version');
   });
 
+  test('the page is answered without waiting for the copy to be saved', async () => {
+    const { promise: writing, resolve: finishWrite } = Promise.withResolvers();
+    const fresh = response(true, 'new version');
+    const sw = startServiceWorker(
+      async () => fresh,
+      () => writing
+    );
+    await sw.lifecycle('install');
+
+    const finished = jest.fn();
+    const answer = sw.fetchEvent(get(`${PAGE}index.html`));
+    const lifetime = sw.kept[0].then(finished);
+    expect(await answer).toBe(fresh);
+    await settled();
+    expect(finished).not.toHaveBeenCalled(); // Still writing, still kept alive
+
+    finishWrite();
+    await lifetime;
+    const [saved] = sw.stores.values();
+    expect(saved.get(`${PAGE}index.html`).body).toBe('new version');
+  });
+
   test('a copy is saved under the address without its query string', async () => {
-    const sw = startServiceWorker(async () => response(true, 'shared link'));
+    const network = jest
+      .fn()
+      .mockResolvedValueOnce(response(true, 'shared link'))
+      .mockRejectedValue(new Error('offline'));
+    const sw = startServiceWorker(network);
     await sw.lifecycle('install');
 
     await sw.fetchEvent(get(`${PAGE}index.html?utm_source=x`));
@@ -183,17 +222,24 @@ describe('service worker', () => {
     const [saved] = sw.stores.values();
     expect(saved.has(`${PAGE}index.html?utm_source=x`)).toBe(false);
     expect(saved.get(`${PAGE}index.html`).body).toBe('shared link');
+    // Offline, another tagged link gets the refreshed copy
+    expect((await sw.fetchEvent(get(`${PAGE}index.html?utm_source=y`))).body).toBe('shared link');
   });
 
   test('a cache that cannot be written does not fail the page', async () => {
     const fresh = response(true, 'new version');
-    const sw = startServiceWorker(async () => fresh);
+    const sw = startServiceWorker(
+      async () => fresh,
+      async () => {
+        throw new Error('quota');
+      }
+    );
     await sw.lifecycle('install');
-    global.caches.open = async () => {
-      throw new Error('quota');
-    };
-    expect(await sw.fetchEvent(get(`${PAGE}js/game.js`))).toBe(fresh);
+    const request = get(`${PAGE}js/game.js`);
+    expect(await sw.fetchEvent(request)).toBe(fresh);
     await expect(sw.kept[0]).resolves.toBeUndefined();
+    const [saved] = sw.stores.values();
+    expect(saved.get(request.url).body).toBe('js/game.js'); // The old copy stays
   });
 
   test("the server is asked every time, past the browser's own HTTP cache", async () => {
@@ -269,11 +315,13 @@ describe('service worker', () => {
       await sw.lifecycle('install');
       const request = get(`${PAGE}js/game.js`);
       const answer = sw.fetchEvent(request);
+      expect(sw.kept).toHaveLength(1); // Asked for while the event was handled, not later
       await jest.advanceTimersByTimeAsync(3000);
       expect((await answer).body).toBe('js/game.js'); // The copy from the install
+      expect(await stateOf(sw.kept[0])).toBe('waiting'); // The worker is still kept alive
 
       pending[0].resolve(response(true, 'new version'));
-      await jest.advanceTimersByTimeAsync(0);
+      await sw.kept[0];
       const [saved] = sw.stores.values();
       expect(saved.get(request.url).body).toBe('new version');
     });
