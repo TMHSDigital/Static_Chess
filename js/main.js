@@ -211,9 +211,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // in progress is replaced. The fragment is then removed, so a reload does
     // not load it again.
     const openSharedLink = () => {
-        const text = sharedTextFromHash(location.hash);
+        const text = sharedTextFromHash(window.location.hash);
         if (text === null) return;
-        history.replaceState(null, '', location.pathname + location.search);
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
         openSharedText(text);
     };
     openSharedLink();
