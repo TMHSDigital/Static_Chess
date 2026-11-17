@@ -107,6 +107,7 @@ function initializeGame() {
         copyPGN,
         downloadPGN,
         copyFEN,
+        copyLink,
         undo: undoLastMove,
         undoOffered: CONFIG.FEATURES.UNDO_MOVE,
     });
@@ -1462,6 +1463,25 @@ function copyFEN() {
     copyOrDownload(buildFEN(), fenButton, 'Copy FEN', 'static-chess-position.fen');
 }
 
+/**
+ * @returns {string} An address of this page that opens the game: the whole
+ *   game while the live position is shown and the link is not too long, else
+ *   the position on screen.
+ */
+function buildShareLink() {
+    const base = location.href.split('#')[0];
+    if (viewPly === null && moveHistory.length > 0) {
+        const link = `${base}#pgn=${encodeURIComponent(buildPGN())}`;
+        if (link.length <= CONFIG.SHARE_LINK_MAX_LENGTH) return link;
+    }
+    return `${base}#fen=${encodeURIComponent(buildFEN())}`;
+}
+
+/** Copies a link to the game, or to the position on screen, to the clipboard. */
+function copyLink() {
+    copyOrDownload(buildShareLink(), linkButton, 'Copy link', 'static-chess-link.txt');
+}
+
 /** @returns {string} The position on screen in Forsyth-Edwards Notation. */
 function buildFEN() {
     const shown = shownPosition();
@@ -1616,6 +1636,8 @@ if (typeof module !== 'undefined' && module.exports) {
         importSizeError,
         isGameInProgress,
         buildFEN,
+        buildShareLink,
+        copyLink,
         setTimeControl,
         clockRemaining,
         formatClock,

@@ -25,6 +25,7 @@ const undoButton = document.getElementById('undo-button');
 const pgnButton = document.getElementById('pgn-button');
 const downloadButton = document.getElementById('download-button');
 const fenButton = document.getElementById('fen-button');
+const linkButton = document.getElementById('link-button');
 const capturedRows = {
     [WHITE]: document.getElementById('captured-by-white'),
     [BLACK]: document.getElementById('captured-by-black'),
@@ -132,6 +133,7 @@ function bindControls(handlers) {
     listen(pgnButton, 'click', handlers.copyPGN);
     listen(downloadButton, 'click', handlers.downloadPGN);
     listen(fenButton, 'click', handlers.copyFEN);
+    listen(linkButton, 'click', handlers.copyLink);
     if (undoButton) {
         undoButton.removeEventListener('click', handlers.undo);
         if (handlers.undoOffered) {
@@ -672,6 +674,19 @@ function handleImportLoad() {
     closeImportDialog();
 }
 
+/**
+ * Loads a game or position that came in a shared link, through the Load
+ * dialog: the text is checked like pasted text, an error is shown there, and
+ * a game in progress is replaced only after Load is pressed again.
+ * @param {string} text
+ */
+function openSharedText(text) {
+    if (!importDialog) return;
+    openImportDialog();
+    importText.value = text;
+    handleImportLoad();
+}
+
 /** "Open file" opens the browser's file chooser. */
 function chooseImportFile() {
     importFile.click();
@@ -779,6 +794,7 @@ if (typeof module !== 'undefined' && module.exports) {
         downloadText,
         openImportDialog,
         closeImportDialog,
+        openSharedText,
         // The buttons game.js asks twice on, or puts a notice on
         playHereButton,
         resignButton,
@@ -786,5 +802,6 @@ if (typeof module !== 'undefined' && module.exports) {
         pgnButton,
         downloadButton,
         fenButton,
+        linkButton,
     };
 }

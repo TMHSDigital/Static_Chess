@@ -96,6 +96,16 @@ describe('notation.js', () => {
     const twoRooks = rules.positionFromFEN('4k3/8/8/8/8/8/4K3/R6R w - - 0 1').position;
     expect(play(twoRooks, square('a1'), square('d1')).san).toBe('Rad1');
   });
+
+  test('reads the game or position a shared link carries', () => {
+    const { notation } = loadWithoutPage();
+    expect(notation.sharedTextFromHash(`#fen=${encodeURIComponent(START_FEN)}`)).toBe(START_FEN);
+    expect(notation.sharedTextFromHash('#pgn=1.%20e4%0A*')).toBe('1. e4\n*');
+    expect(notation.sharedTextFromHash('#fen=%E0%A4%A')).toBe('%E0%A4%A'); // Cannot be decoded
+    for (const other of ['', '#', '#settings', '#FEN=x', 'fen=x', null, undefined]) {
+      expect(notation.sharedTextFromHash(other)).toBeNull();
+    }
+  });
 });
 
 describe('notation.js, whole games', () => {

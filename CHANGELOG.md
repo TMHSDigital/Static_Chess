@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Share as a link**: "Copy link" copies an address with the game (or, for a long game or an earlier move being viewed, the position) after the "#". Opening it loads the game through the Load dialog, which asks before a game in progress is replaced (#144)
 - Links in the side panel to the GitHub source repository and issue tracker (#78)
 - **Captured pieces**: The pieces each side has taken are shown with the material lead
 - **Game review**: Click a move in the list, or use the arrow keys, Home and End there, to see the position after it; "Back to game" returns to the live position and nothing in the game is changed

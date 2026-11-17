@@ -86,6 +86,7 @@ const appGlobals = {
     'pgnTag',
     'pgnMoveTokens',
     'looksLikeFEN',
+    'sharedTextFromHash',
     'pgnMovetext',
   ]),
   ...shared([
@@ -135,12 +136,14 @@ const appGlobals = {
     'downloadText',
     'openImportDialog',
     'closeImportDialog',
+    'openSharedText',
     'playHereButton',
     'resignButton',
     'resetButton',
     'pgnButton',
     'downloadButton',
     'fenButton',
+    'linkButton',
   ]),
   // game.js
   ...shared([

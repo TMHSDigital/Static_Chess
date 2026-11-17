@@ -199,6 +199,22 @@ function looksLikeFEN(text) {
     return /^\s*[pnbrqk1-8]+(\/[pnbrqk1-8]+){7}(\s|$)/i.test(String(text));
 }
 
+/**
+ * Reads the game or position a shared link carries after "#fen=" or "#pgn=".
+ * Text that cannot be decoded is given back as it is, so Load names what is wrong with it.
+ * @param {string} hash - The address's fragment, with its "#".
+ * @returns {string|null} The text to load, or null for an address that shares nothing.
+ */
+function sharedTextFromHash(hash) {
+    const shared = /^#(?:fen|pgn)=([\s\S]*)$/.exec(String(hash || ''));
+    if (!shared) return null;
+    try {
+        return decodeURIComponent(shared[1]);
+    } catch {
+        return shared[1];
+    }
+}
+
 /** @returns {string} What makes a PGN the game it is: where it began, its moves and its result. */
 function pgnMovetext(pgn) {
     const start = /^\[FEN "([^"]*)"\]/m.exec(pgn);
@@ -345,6 +361,7 @@ if (typeof module !== 'undefined' && module.exports) {
         stripVariations,
         pgnMoveTokens,
         looksLikeFEN,
+        sharedTextFromHash,
         pgnMovetext,
     };
 }

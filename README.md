@@ -185,6 +185,7 @@ That's it! No build process or dependencies are required.
     - "Resign" ends the game after a second click. "Offer draw" is accepted by the other side with a second click, or answered at once by the computer. Undo reopens a game ended this way
     - "Load" replaces the game with a PGN game you paste, keeping its result (a resigned, drawn or timed-out game stays finished; Undo reopens it), or starts a new game from a FEN position you paste. "Open file" in that dialog reads a `.pgn` or `.fen` file instead, and a file can also be dropped on the dialog. It also lists your last 20 games under "Past games" (a game goes there when you start or load another); click one to open it again
     - "Copy FEN" copies the position on the board
+    - "Copy link" copies an address that opens the game for whoever follows it (or, for a game too long for a link and while you look back at an earlier move, the position on the board). Opening such a link goes through "Load", so a game in progress is replaced only after you confirm
     - "Hint" marks the move the built-in engine would play for the side to move; nothing is played. While you look back it works on the position on screen
     - When a game is over, moves marked "?" in the Move History are ones the engine thinks lost ground; hover over one, or look at it, to read why. The engine only looks a few moves ahead, so take it as an opinion
     - The pieces each side has captured, and the material lead, are shown in that player's bar beside the board

@@ -206,6 +206,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Initialize Feature Modules ---
     initializeFeatureModules();
 
+    // --- A shared link: "#fen=..." or "#pgn=..." ---
+    // It goes through the Load dialog, which checks it and asks before a game
+    // in progress is replaced. The fragment is then removed, so a reload does
+    // not load it again.
+    const openSharedLink = () => {
+        const text = sharedTextFromHash(location.hash);
+        if (text === null) return;
+        history.replaceState(null, '', location.pathname + location.search);
+        openSharedText(text);
+    };
+    openSharedLink();
+    window.addEventListener('hashchange', openSharedLink);
+
     // --- Offline support ---
     // Service workers need http(s); a page opened straight from a file plays without one
     if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {

@@ -15,12 +15,14 @@ const openPages = [];
  * Opens the real index.html and runs its scripts in the order of its script
  * tags, in one shared global scope as a browser does, then fires
  * DOMContentLoaded.
- * @param {{storage?: Object<string, string>, configure?: string}} [options]
+ * @param {{storage?: Object<string, string>, configure?: string, url?: string}} [options]
  *   storage: values to put in localStorage first. configure: code to run right
- *   after config.js, for example to switch a feature off.
+ *   after config.js, for example to switch a feature off. url: the page's
+ *   address, for example with a shared game after the "#".
  */
 function openPage(options = {}) {
-  const dom = new JSDOM(INDEX, { url: 'http://localhost/', runScripts: 'outside-only' });
+  const url = options.url || 'http://localhost/';
+  const dom = new JSDOM(INDEX, { url, runScripts: 'outside-only' });
   openPages.push(dom);
   const { window } = dom;
   for (const [key, value] of Object.entries(options.storage || {})) {
@@ -272,3 +274,96 @@ describe('the real page', () => {
     expect(byId('announcer').textContent).not.toBe('');
   });
 });
+
+describe('a shared link', () => {
+  const FEN = '4k3/8/8/8/8/8/4P3/4K3 w - - 0 1';
+  const link = (kind, text) => `http://localhost/#${kind}=${encodeURIComponent(text)}`;
+  const saved = (window) => window.localStorage.getItem('chessGameState');
+
+  test('a #fen= link loads that position and the fragment is removed', () => {
+    const { window, run, byId } = openPage({ url: link('fen', FEN) });
+    expect(run('buildFEN()')).toBe(FEN);
+    expect(byId('import-dialog').hidden).toBe(true);
+    expect(window.location.hash).toBe('');
+  });
+
+  test('a #pgn= link loads the game with its result', () => {
+    const pgn = '1. f3 e5 2. g4 Qh4# 0-1';
+    const { run } = openPage({ url: link('pgn', pgn) });
+    expect(run('moveHistory.map((move) => move.notation).join(" ")')).toBe('f3 e5 g4 Qh4#');
+    expect(run('gameResult')).toBe('0-1');
+  });
+
+  test('a game in progress is replaced only after Load is pressed again', () => {
+    const first = openPage();
+    first.run('makeMove(6, 4, 4, 4)'); // 1. e4
+    const game = saved(first.window);
+
+    const { window, run, byId } = openPage({
+      url: link('fen', FEN),
+      storage: { chessGameState: game },
+    });
+    expect(byId('import-dialog').hidden).toBe(false);
+    expect(byId('import-text').value).toBe(FEN);
+    expect(byId('import-load').textContent).toBe('Discard current game?');
+    expect(run('moveHistory.length')).toBe(1);
+
+    byId('import-load').click();
+    expect(run('buildFEN()')).toBe(FEN);
+    expect(window.location.hash).toBe('');
+  });
+
+  test('a damaged link shows the usual error and leaves the saved game alone', () => {
+    const first = openPage();
+    first.run('makeMove(6, 4, 4, 4)');
+    const game = saved(first.window);
+
+    const { window, run, byId } = openPage({
+      url: 'http://localhost/#fen=not%20a%20position%ZZ',
+      storage: { chessGameState: game },
+    });
+    expect(byId('import-dialog').hidden).toBe(false);
+    expect(byId('import-error').textContent).toMatch(/The current game was not changed\.$/);
+    expect(run('moveHistory.length')).toBe(1);
+    expect(saved(window)).toBe(game);
+  });
+
+  test('a link opened in a tab that is already open is loaded too', () => {
+    const { window, run } = openPage();
+    window.location.hash = `fen=${encodeURIComponent(FEN)}`;
+    window.dispatchEvent(new window.HashChangeEvent('hashchange'));
+    expect(run('buildFEN()')).toBe(FEN);
+  });
+
+  test('an address with another fragment is left alone', () => {
+    const { window, byId } = openPage({ url: 'http://localhost/#settings' });
+    expect(byId('import-dialog').hidden).toBe(true);
+    expect(window.location.hash).toBe('#settings');
+  });
+
+  test('Copy link carries the whole game, or the position when the game is too long', () => {
+    const { run } = openPage();
+    run('makeMove(6, 4, 4, 4)');
+    const gameLink = run('buildShareLink()');
+    expect(gameLink).toMatch(/^http:\/\/localhost\/#pgn=/);
+    expect(sharedText(gameLink)).toContain('1. e4 *');
+
+    run('CONFIG.SHARE_LINK_MAX_LENGTH = 100');
+    expect(run('buildShareLink()')).toBe(
+      link('fen', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1')
+    );
+  });
+
+  test('Copy link shares the position on screen while an earlier move is viewed', () => {
+    const { run } = openPage();
+    run('makeMove(6, 4, 4, 4); makeMove(1, 4, 3, 4); viewMove(0)');
+    expect(sharedText(run('buildShareLink()'))).toBe(
+      'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+    );
+  });
+});
+
+/** @returns {string} The game or position a link carries. */
+function sharedText(link) {
+  return decodeURIComponent(link.split(/#(?:fen|pgn)=/)[1]);
+}
