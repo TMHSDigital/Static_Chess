@@ -115,7 +115,7 @@ Static_Chess/
 
 Everything is kept in `localStorage` under the keys in `CONFIG.STORAGE_KEYS`:
 
-- `chessGameState`: the game. It holds a `version` field, the position (`boardState`, `currentPlayer`, `isGameOver`, `kingPositions`, `currentStatus`, `enPassantTarget`, `halfmoveClock`), the move list (`moveHistory`), the undo stack (`positionHistory`), the result (`gameResult`, and `endedWithoutMove` for a resignation, an agreed draw or a loss on time), how the game began (`gameStart`) and the `clock` object when the game is timed
+- `chessGameState`: the game. It holds a `version` field, the position (`boardState`, `currentPlayer`, `isGameOver`, `kingPositions`, `currentStatus`, `enPassantTarget`, `halfmoveClock`), the move list (`moveHistory`), the undo stack (`positionHistory`), the result (`gameResult`, and `endedWithoutMove` for a resignation, an agreed draw or a loss on time), how the game began (`gameStart`), who played it (`players`), the date of the past game it was opened from (`archivedFrom`, so it replaces that entry when put back) and the `clock` object when the game is timed
 - `chessGameArchive`: the past games, newest first, at most `CONFIG.ARCHIVE_LIMIT`. Each entry is `{ pgn, result, opponent, date, moves }`; `readArchive()` in `game-store.js` ignores a damaged value and drops incomplete entries
 - One key per setting: `showCoords`, `showPossibleMoves`, `showLastMove`, `enableSounds`, `flipBoard`, `opponent`, `playerSide`, `timeControl`, `boardTheme`, `pageTheme`
 
