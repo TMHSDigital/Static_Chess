@@ -46,6 +46,10 @@ let gamePlayers = { level: null, computer: null };
 // The date of the past game the live game was opened from, or null: put back,
 // the game replaces that entry instead of being listed twice
 let archivedFrom = null;
+// False until initializeGame has put the real game in place. The settings read
+// before then are only noted: there is no board yet, and the game on it is
+// about to be replaced by the saved one.
+let gameReady = false;
 
 /**
  * The live position as one record. These two functions are the only places
@@ -80,10 +84,8 @@ function restoreSnapshot(snapshot) {
  * Initializes the game state, either from scratch or localStorage.
  */
 function initializeGame() {
-    if (loadGameState()) {
-        // A computer move asked for before the saved game was loaded belongs to another position
-        cancelAIMove();
-    }
+    gameReady = true; // From here on the settings act on this game
+    loadGameState();
     if (moveHistory.length === 0 && !gameStart.fen) {
         // No saved game, or one without a move: start afresh. A position that
         // was loaded from FEN is kept even before its first move.
@@ -892,6 +894,7 @@ function isBoardLocked() {
 function setOpponent(level, color = WHITE) {
     opponentLevel = Object.prototype.hasOwnProperty.call(AI_LEVELS, level) ? level : null;
     humanColor = color === BLACK ? BLACK : WHITE;
+    if (!gameReady) return; // initializeGame applies it
     drawOffered = false;
     cancelConfirms();
     cancelAIMove();
@@ -997,7 +1000,8 @@ function setTimeControl(key) {
     const known = Object.prototype.hasOwnProperty.call(CONFIG.TIME_CONTROLS, key);
     chosenTimeControl =
         CONFIG.FEATURES.GAME_TIMER && known && CONFIG.TIME_CONTROLS[key].minutes ? key : null;
-    if (moveHistory.length === 0 && !isGameOver) {
+    // Before the game is in place, the new game initializeGame starts takes it up
+    if (gameReady && moveHistory.length === 0 && !isGameOver) {
         clock = newClock();
         updateStatusDisplay();
     }

@@ -393,6 +393,42 @@ describe('opponent settings', () => {
     expect(statusText(app)).toBe("Black's turn");
   });
 
+  test('reopening as Black starts no search on the game that is about to be replaced', () => {
+    const posted = [];
+    global.Worker = class {
+      postMessage(message) {
+        posted.push(message);
+      }
+      terminate() {}
+    };
+    try {
+      // The settings are read before the saved game: White to move in the
+      // starting position would be the computer's turn, but it is not this game
+      const app = reopen(['e2e4', 'e7e5', 'g1f3']);
+      expect(posted).toEqual([]);
+      expect(app.game.currentPlayer).toBe('b');
+      expect(app.game.computerColor()).toBe('w');
+    } finally {
+      delete global.Worker;
+    }
+  });
+
+  test('a time control read before the saved game does not touch it', () => {
+    const earlier = loadGame();
+    earlier.play('e2e4');
+    const key = global.CONFIG.STORAGE_KEYS.GAME_STATE;
+    const g = loadGame({
+      storage: { [key]: earlier.window.localStorage.getItem(key) },
+      deferStart: true,
+    });
+    g.game.setTimeControl(
+      Object.keys(global.CONFIG.TIME_CONTROLS).find((k) => global.CONFIG.TIME_CONTROLS[k].minutes)
+    );
+    g.game.initializeGame();
+    expect(g.game.moveHistory).toHaveLength(1);
+    expect(g.game.clock).toBeNull(); // The saved game had none
+  });
+
   test('reopening a finished game adds no move', () => {
     const app = reopen(['f2f3', 'e7e5', 'g2g4', 'd8h4']);
     jest.runAllTimers();
