@@ -49,6 +49,7 @@ const importFileButton = document.getElementById('import-file-button');
 const importFile = document.getElementById('import-file');
 const archiveSection = document.getElementById('archive-section');
 const archiveList = document.getElementById('archive-list');
+const archiveClearButton = document.getElementById('archive-clear');
 const moreSettings = document.getElementById('more-settings');
 
 // --- Connecting the controls ---
@@ -142,6 +143,7 @@ function bindControls(handlers) {
 
     // The Load dialog and the past games in it
     listen(archiveList, 'click', handleArchiveClick);
+    listen(archiveClearButton, 'click', handleArchiveClear);
     if (importButton && importDialog) {
         listen(importButton, 'click', openImportDialog);
         listen(importLoadButton, 'click', handleImportLoad);
@@ -564,16 +566,57 @@ function showArchive() {
         const item = document.createElement('li');
         const button = document.createElement('button');
         button.type = 'button';
-        button.classList.add('btn');
+        button.classList.add('btn', 'archive-open');
         button.dataset.index = index;
         button.textContent = describeArchivedGame(entry);
-        item.appendChild(button);
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.classList.add('btn', 'archive-delete');
+        remove.dataset.delete = index;
+        remove.textContent = 'Delete';
+        remove.setAttribute('aria-label', `Delete ${button.textContent}`);
+        item.append(button, remove);
         archiveList.appendChild(item);
     });
 }
 
+/**
+ * Deletes a past game on a confirming second click. The focus stays in the
+ * list, on the entry that took its place, or leaves for the text box when the
+ * list is empty.
+ * @param {HTMLElement} button - The entry's Delete button.
+ */
+function deleteArchivedGame(button) {
+    if (!confirmSecondClick(button, 'Delete?')) return;
+    const index = Number(button.dataset.delete);
+    if (!removeFromArchive(index)) {
+        importError.textContent = 'That game could not be deleted.';
+        return;
+    }
+    showArchive();
+    const rows = archiveList.querySelectorAll('.archive-delete');
+    const next = rows[Math.min(index, rows.length - 1)];
+    if (next) next.focus();
+    else importText.focus();
+    announce('Game deleted.');
+}
+
+/** Clears the past games on a confirming second click. */
+function handleArchiveClear() {
+    if (!confirmSecondClick(archiveClearButton, 'Clear all?')) return;
+    clearArchive();
+    showArchive();
+    importText.focus();
+    announce('Past games cleared.');
+}
+
 /** A click on a past game loads it. The game it replaces goes into the list itself. */
 function handleArchiveClick(event) {
+    const remove = event.target.closest ? event.target.closest('button[data-delete]') : null;
+    if (remove) {
+        deleteArchivedGame(remove);
+        return;
+    }
     const button = event.target.closest ? event.target.closest('button[data-index]') : null;
     if (!button) return;
     const entry = readArchive()[Number(button.dataset.index)];

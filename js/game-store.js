@@ -86,6 +86,23 @@ function addToArchive(game) {
     }
 }
 
+/**
+ * Removes one past game.
+ * @param {number} index - Its place in the list readArchive gives, newest first.
+ * @returns {boolean} False if there was no such game or storage could not be written.
+ */
+function removeFromArchive(index) {
+    const archive = readArchive();
+    if (!Number.isInteger(index) || index < 0 || index >= archive.length) return false;
+    archive.splice(index, 1);
+    return writeStored(ARCHIVE_KEY, JSON.stringify(archive));
+}
+
+/** Removes every past game. Storage may be unavailable, which must not stop the game. */
+function clearArchive() {
+    removeStored(ARCHIVE_KEY);
+}
+
 // Export for Node/Jest tests (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -94,5 +111,7 @@ if (typeof module !== 'undefined' && module.exports) {
         readStoredGame,
         readArchive,
         addToArchive,
+        removeFromArchive,
+        clearArchive,
     };
 }

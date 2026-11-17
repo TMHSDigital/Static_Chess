@@ -3,7 +3,8 @@ const { loadGame } = require('../helpers/load-game');
 const KEY = 'chessGameArchive';
 const el = (g, id) => g.window.document.getElementById(id);
 const notations = (g) => g.game.moveHistory.map((move) => move.notation);
-const entries = (g) => Array.from(el(g, 'archive-list').querySelectorAll('button'));
+const entries = (g) => Array.from(el(g, 'archive-list').querySelectorAll('button[data-index]'));
+const deletes = (g) => Array.from(el(g, 'archive-list').querySelectorAll('button[data-delete]'));
 const stored = (g) => JSON.parse(g.window.localStorage.getItem(KEY));
 
 /** Plays the shortest checkmate: Black wins in two moves. */
@@ -173,6 +174,92 @@ describe('past games', () => {
     ]);
     const g = loadGame({ storage: { [KEY]: value } });
     expect(g.game.readArchive()).toHaveLength(1);
+  });
+
+  describe('deleting', () => {
+    /** Three past games, newest first: 1. c4, 1. d4, 1. e4. */
+    const threeGames = () => {
+      const g = loadGame();
+      for (const move of ['e2e4', 'd2d4', 'c2c4']) {
+        g.play(move);
+        g.game.resetGame();
+      }
+      g.game.openImportDialog();
+      return g;
+    };
+    const firstMoves = (g) => g.game.readArchive().map((entry) => /1\. (\w+)/.exec(entry.pgn)[1]);
+    const announced = (g) => el(g, 'announcer').textContent;
+
+    test('a game is deleted on the second click, and the focus stays in the list', () => {
+      const g = threeGames();
+      expect(deletes(g)[1].getAttribute('aria-label')).toMatch(/^Delete .*Two players/);
+
+      deletes(g)[1].click();
+      expect(deletes(g)[1].textContent).toBe('Delete?');
+      expect(firstMoves(g)).toEqual(['c4', 'd4', 'e4']); // Not yet
+
+      deletes(g)[1].click();
+      expect(firstMoves(g)).toEqual(['c4', 'e4']);
+      expect(entries(g)).toHaveLength(2);
+      expect(g.window.document.activeElement).toBe(deletes(g)[1]); // The entry that moved up
+      expect(announced(g)).toBe('Game deleted.');
+      expect(el(g, 'import-dialog').hidden).toBe(false);
+      expect(g.game.moveHistory).toHaveLength(0); // The game on the board is untouched
+    });
+
+    test('deleting the last entry moves the focus to the one above, then out of the list', () => {
+      const g = threeGames();
+      deletes(g)[2].click();
+      deletes(g)[2].click();
+      expect(g.window.document.activeElement).toBe(deletes(g)[1]);
+
+      for (let n = 0; n < 2; n++) {
+        deletes(g)[0].click();
+        deletes(g)[0].click();
+      }
+      expect(g.game.readArchive()).toEqual([]);
+      expect(el(g, 'archive-section').hidden).toBe(true);
+      expect(g.window.document.activeElement).toBe(el(g, 'import-text'));
+    });
+
+    test('the question is withdrawn after a while', () => {
+      const g = threeGames();
+      deletes(g)[0].click();
+      jest.advanceTimersByTime(global.CONFIG.CONFIRM_MS);
+      expect(deletes(g)[0].textContent).toBe('Delete');
+      deletes(g)[0].click(); // Asks again
+      expect(g.game.readArchive()).toHaveLength(3);
+    });
+
+    test('Clear all empties the list on the second click', () => {
+      const g = threeGames();
+      el(g, 'archive-clear').click();
+      expect(el(g, 'archive-clear').textContent).toBe('Clear all?');
+      expect(g.game.readArchive()).toHaveLength(3);
+      el(g, 'archive-clear').click();
+      expect(g.game.readArchive()).toEqual([]);
+      expect(g.window.localStorage.getItem(KEY)).toBeNull();
+      expect(el(g, 'archive-section').hidden).toBe(true);
+      expect(announced(g)).toBe('Past games cleared.');
+      expect(g.window.document.activeElement).toBe(el(g, 'import-text'));
+    });
+
+    test('removeFromArchive refuses a place that is not in the list', () => {
+      const g = threeGames();
+      for (const index of [-1, 3, 1.5, '1']) expect(global.removeFromArchive(index)).toBe(false);
+      expect(g.game.readArchive()).toHaveLength(3);
+    });
+
+    test('a game that cannot be deleted says so', () => {
+      const g = threeGames();
+      const setItem = jest.spyOn(g.window.Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('full');
+      });
+      deletes(g)[0].click();
+      deletes(g)[0].click();
+      expect(el(g, 'import-error').textContent).toBe('That game could not be deleted.');
+      setItem.mockRestore();
+    });
   });
 
   test('the game goes on when storage is blocked', () => {

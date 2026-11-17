@@ -99,7 +99,15 @@ const appGlobals = {
   // saved-game.js
   ...shared(['SAVED_GAME_VERSION', 'STANDARD_START', 'validateSavedGame']),
   // game-store.js
-  ...shared(['storeGame', 'clearStoredGame', 'readStoredGame', 'readArchive', 'addToArchive']),
+  ...shared([
+    'storeGame',
+    'clearStoredGame',
+    'readStoredGame',
+    'readArchive',
+    'addToArchive',
+    'removeFromArchive',
+    'clearArchive',
+  ]),
   // clock.js
   ...shared(['makeClock', 'timeLeft', 'formatClock', 'lowTimeLevel', 'timeoutResult']),
   // review.js
