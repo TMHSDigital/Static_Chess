@@ -557,8 +557,9 @@ function handleStepClick(event) {
 /**
  * The Play button under the move list: steps through the game a move at a
  * time, from the start when the latest move is on screen, and stops at the
- * end. Pressed again it pauses. The board has no animation to slow down, so
- * a reduced-motion setting changes nothing here.
+ * end. Pressed again it pauses. Each step redraws the board through
+ * viewMove, without the move animation a played move gets, so it already
+ * steps without motion; style.css cuts animations for reduced motion anyway.
  */
 function toggleAutoplay() {
     if (autoplayTimer !== null) {
