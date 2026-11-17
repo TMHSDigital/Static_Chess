@@ -1241,18 +1241,6 @@ function isKingInCheck(playerColor, board = boardState, kPos = kingPositions) {
     return isInCheck({ board, kingPositions: kPos }, playerColor);
 }
 
-/** @returns {boolean} True if the player is in check and has no legal move. */
-function isCheckmate(playerColor) {
-    const position = livePosition();
-    return isInCheck(position, playerColor) && allLegalMoves(position, playerColor).length === 0;
-}
-
-/** @returns {boolean} True if the player is not in check and has no legal move. */
-function isStalemate(playerColor) {
-    const position = livePosition();
-    return !isInCheck(position, playerColor) && allLegalMoves(position, playerColor).length === 0;
-}
-
 // --- Persistence ---
 
 /** Saves the game, with its undo stack and clock, so it is there after a reload. */
@@ -1636,8 +1624,6 @@ if (typeof module !== 'undefined' && module.exports) {
         undoLastMove,
         findKingInCheck,
         isKingInCheck,
-        isCheckmate,
-        isStalemate,
         handleResetClick,
         buildPGN,
         hasInsufficientMaterial,
