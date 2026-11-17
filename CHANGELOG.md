@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 - Links in the side panel to the GitHub source repository and issue tracker (#78)
 - **Captured pieces**: The pieces each side has taken are shown with the material lead
 - **Game review**: Click a move in the list, or use the arrow keys, Home and End there, to see the position after it; "Back to game" returns to the live position and nothing in the game is changed
-- **Past games**: A game that is replaced by a new or a loaded one is kept. The last 20 are listed in the Load dialog with their date, opponent and result, and a click opens one again
+- **Past games**: A game that is replaced by a new or a loaded one is kept. The last 20 are listed in the Load dialog with their date, opponent and result, and a click opens one again. Each can be deleted, or all cleared, after a confirming second click (#143)
 - **Low time warning**: A player on the clock is warned at 20 and at 10 seconds, with an announcement for screen readers and, with sound effects on, a short double beep
 - **Open and save files**: "Open file" in the Load dialog reads a PGN or FEN file (a file can also be dropped on the dialog), and "Save PGN" saves the game as a file
 - **Play from here**: While an earlier position is on the board, "Play from here" drops the later moves and continues the game from that position, also in a finished game and in one played on the clock. The game as it was goes into the past games
