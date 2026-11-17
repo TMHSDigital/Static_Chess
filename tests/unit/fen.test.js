@@ -282,7 +282,7 @@ describe('PGN of a game that began from a position', () => {
     g.game.importFEN('4k3/8/8/8/8/8/4P3/4K3 w - - 0 1');
     g.play('e2e4', 'e8d7');
     g.game.resetGame();
-    g.game.openImportDialog();
+    g.ui.openImportDialog();
     el(g, 'archive-list').querySelector('button').click();
     expect(notations(g)).toEqual(['e4', 'Kd7']);
     expect(g.game.buildFEN()).toBe('8/3k4/8/8/4P3/8/8/4K3 w - - 1 2');
@@ -292,7 +292,7 @@ describe('PGN of a game that began from a position', () => {
 describe('the Load dialog with a position', () => {
   test('a pasted FEN starts a game from it', () => {
     const g = loadGame();
-    g.game.openImportDialog();
+    g.ui.openImportDialog();
     el(g, 'import-text').value = '  4k3/8/8/8/8/8/4P3/4K3 w - - 0 1\n';
     el(g, 'import-load').click();
     expect(el(g, 'import-dialog').hidden).toBe(true);
@@ -302,7 +302,7 @@ describe('the Load dialog with a position', () => {
   test('a FEN that cannot be used shows why and keeps the game', () => {
     const g = loadGame();
     g.play('e2e4');
-    g.game.openImportDialog();
+    g.ui.openImportDialog();
     el(g, 'import-text').value = '4k3/8/8/8/8/8/8/4K2K w - - 0 1';
     el(g, 'import-load').click();
     expect(el(g, 'import-error').textContent).toBe(
@@ -315,7 +315,7 @@ describe('the Load dialog with a position', () => {
   test('a game in progress needs a second click before a position replaces it', () => {
     const g = loadGame();
     g.play('e2e4');
-    g.game.openImportDialog();
+    g.ui.openImportDialog();
     el(g, 'import-text').value = '4k3/8/8/8/8/8/4P3/4K3 w - - 0 1';
     el(g, 'import-load').click();
     expect(notations(g)).toEqual(['e4']);

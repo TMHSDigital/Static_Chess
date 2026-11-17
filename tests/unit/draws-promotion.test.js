@@ -31,13 +31,13 @@ describe('insufficient material', () => {
       return b;
     };
     const kings = { e1: 'wk', e8: 'bk' };
-    expect(ctx.game.hasInsufficientMaterial(board({ ...kings, c1: 'wb' }))).toBe(true);
-    expect(ctx.game.hasInsufficientMaterial(board({ ...kings, b8: 'bn' }))).toBe(true);
-    expect(ctx.game.hasInsufficientMaterial(board({ ...kings, c1: 'wb', f8: 'bb' }))).toBe(true); // both on dark squares
-    expect(ctx.game.hasInsufficientMaterial(board({ ...kings, c1: 'wb', c8: 'bb' }))).toBe(false); // opposite colours
-    expect(ctx.game.hasInsufficientMaterial(board({ ...kings, b1: 'wn', g1: 'wn' }))).toBe(false);
-    expect(ctx.game.hasInsufficientMaterial(board({ ...kings, a2: 'wp' }))).toBe(false);
-    expect(ctx.game.hasInsufficientMaterial(board({ ...kings, a1: 'wr' }))).toBe(false);
+    expect(ctx.rules.hasInsufficientMaterial(board({ ...kings, c1: 'wb' }))).toBe(true);
+    expect(ctx.rules.hasInsufficientMaterial(board({ ...kings, b8: 'bn' }))).toBe(true);
+    expect(ctx.rules.hasInsufficientMaterial(board({ ...kings, c1: 'wb', f8: 'bb' }))).toBe(true); // both on dark squares
+    expect(ctx.rules.hasInsufficientMaterial(board({ ...kings, c1: 'wb', c8: 'bb' }))).toBe(false); // opposite colours
+    expect(ctx.rules.hasInsufficientMaterial(board({ ...kings, b1: 'wn', g1: 'wn' }))).toBe(false);
+    expect(ctx.rules.hasInsufficientMaterial(board({ ...kings, a2: 'wp' }))).toBe(false);
+    expect(ctx.rules.hasInsufficientMaterial(board({ ...kings, a1: 'wr' }))).toBe(false);
   });
 });
 

@@ -24,6 +24,11 @@ const HTML = `<!DOCTYPE html><body>
   <button id="resign-button">Resign</button><button id="undo-button">Undo</button>
   <button id="pgn-button">Copy PGN</button><button id="download-button">Save PGN</button>
   <button id="reset-button">New Game</button>
+  <button id="import-button">Load</button>
+  <div id="import-dialog" hidden>
+    <textarea id="import-text"></textarea><p id="import-error"></p>
+    <button id="import-cancel">Cancel</button><button id="import-load">Load game</button>
+  </div>
   <details id="more-settings"><summary>Settings</summary></details>
 </body>`;
 
@@ -313,6 +318,68 @@ describe('game-ui.js without a game', () => {
     ui.confirmSecondClick(button, 'Resign?');
     jest.advanceTimersByTime(global.CONFIG.CONFIRM_MS);
     expect(button.textContent).toBe('Resign'); // The question lapses
+    jest.useRealTimers();
+  });
+
+  test('the Load dialog asks the game it is given, and needs no game.js', () => {
+    jest.useFakeTimers();
+    const asked = [];
+    let inProgress = true;
+    let answer = { ok: true };
+    ui.bindControls({
+      importGame: (text, validateOnly = false) => {
+        asked.push([text, validateOnly]);
+        return answer;
+      },
+      isGameInProgress: () => inProgress,
+      openArchivedGame: () => ({ ok: true }),
+    });
+    el('import-dialog').hidden = false;
+    el('import-text').value = '1. e4';
+
+    el('import-load').click(); // Checked, then a question: a game is in progress
+    expect(asked).toEqual([['1. e4', true]]);
+    expect(el('import-load').textContent).toBe('Discard current game?');
+    el('import-load').click();
+    expect(asked).toEqual([
+      ['1. e4', true],
+      ['1. e4', true],
+      ['1. e4', false],
+    ]);
+    expect(el('import-dialog').hidden).toBe(true);
+
+    inProgress = false;
+    answer = { ok: false, error: 'Move 1. e9 cannot be played.' };
+    el('import-dialog').hidden = false;
+    el('import-text').value = '1. e9';
+    el('import-load').click();
+    expect(el('import-error').textContent).toBe(
+      'Move 1. e9 cannot be played. The current game was not changed.'
+    );
+    expect(el('import-dialog').hidden).toBe(false);
+    jest.useRealTimers();
+  });
+
+  test('asks and notifies on buttons by what they do, with their own labels', () => {
+    jest.useFakeTimers();
+    expect(ui.askToConfirm('resign', 'Resign?')).toBe(false);
+    expect(el('resign-button').textContent).toBe('Resign?');
+    ui.withdrawQuestion('resign');
+    expect(el('resign-button').textContent).toBe('Resign');
+    expect(ui.askToConfirm('reset', 'Discard game?')).toBe(false);
+    expect(ui.askToConfirm('reset', 'Discard game?')).toBe(true);
+    expect(el('reset-button').textContent).toBe('New Game');
+
+    ui.notifyOnButton('download', 'Saved');
+    expect(el('download-button').textContent).toBe('Saved');
+    jest.advanceTimersByTime(global.CONFIG.NOTICE_MS);
+    expect(el('download-button').textContent).toBe('Save PGN');
+
+    // A button the page does not have: nothing to ask, nothing to show
+    expect(ui.askToConfirm('playHere', 'Drop later moves?')).toBe(true);
+    expect(() => ui.withdrawQuestion('playHere')).not.toThrow();
+    expect(() => ui.notifyOnButton('fen', 'Copied!')).not.toThrow();
+    expect(() => ui.copyFromButton('link', 'text', 'file.txt')).not.toThrow();
     jest.useRealTimers();
   });
 

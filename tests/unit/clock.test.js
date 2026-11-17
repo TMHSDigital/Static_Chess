@@ -196,11 +196,11 @@ describe('Chess clock', () => {
 
   test('formats times, with tenths in the last ten seconds', () => {
     const g = loadGame();
-    expect(g.game.formatClock(600000)).toBe('10:00');
-    expect(g.game.formatClock(59001)).toBe('1:00');
-    expect(g.game.formatClock(10000)).toBe('0:10');
-    expect(g.game.formatClock(9400)).toBe('0:09.4');
-    expect(g.game.formatClock(0)).toBe('0:00.0');
+    expect(g.clockRules.formatClock(600000)).toBe('10:00');
+    expect(g.clockRules.formatClock(59001)).toBe('1:00');
+    expect(g.clockRules.formatClock(10000)).toBe('0:10');
+    expect(g.clockRules.formatClock(9400)).toBe('0:09.4');
+    expect(g.clockRules.formatClock(0)).toBe('0:00.0');
   });
 
   test('running out of time loses the game', () => {

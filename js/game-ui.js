@@ -59,6 +59,12 @@ const moreSettings = document.getElementById('more-settings');
 
 let pageKeyHandler = null; // What the game does with a key pressed outside the board and the form fields
 let redoHandler = null; // What Ctrl+Y and Ctrl+Shift+Z do, when Undo is offered
+// What the Load dialog asks of the game, given by bindControls
+let gameHandlers = {
+    importGame: () => ({ ok: false, error: 'The game is not ready.' }),
+    isGameInProgress: () => false,
+    openArchivedGame: () => ({ ok: false, error: 'The game is not ready.' }),
+};
 let stopAutoplayHandler = null; // Stops the Play button stepping through the game
 
 /**
@@ -140,11 +146,19 @@ function listen(element, type, handler) {
  * @param {object} handlers - What the game does on a click in the move list
  *   (moveListClick) or a key there (moveListKeydown), and on the buttons: live,
  *   playHere, step, resign, draw, hint, reset, review, copyPGN, downloadPGN,
- *   copyFEN, undo and redo. undoOffered: false hides Undo and Redo. pageKey: given
- *   a key pressed elsewhere on the page, returns true if it used it.
+ *   copyFEN, copyLink, undo, redo and autoplay. undoOffered: false hides Undo
+ *   and Redo. pageKey: given a key pressed elsewhere on the page, returns true
+ *   if it used it. stopAutoplay: stops the Play button. For the Load dialog:
+ *   importGame(text, validateOnly), isGameInProgress() and
+ *   openArchivedGame(entry), so nothing here calls into game.js.
  */
 function bindControls(handlers) {
     pageKeyHandler = handlers.pageKey || null;
+    gameHandlers = {
+        importGame: handlers.importGame,
+        isGameInProgress: handlers.isGameInProgress,
+        openArchivedGame: handlers.openArchivedGame,
+    };
     listen(document, 'keydown', handlePageKeydown);
     listen(document, 'pointerup', releaseBoardFocus);
     listen(moreSettings, 'toggle', showOpenedSettings);
@@ -507,6 +521,59 @@ function announce(message) {
 
 // --- Buttons that ask twice, and short notices on buttons ---
 
+// The buttons the game asks twice on, or puts a notice on, by what they do.
+// Their own labels are kept from the page, so a notice always goes back to
+// what index.html says and game.js holds neither elements nor labels.
+const actionButtons = {
+    playHere: playHereButton,
+    resign: resignButton,
+    reset: resetButton,
+    pgn: pgnButton,
+    download: downloadButton,
+    fen: fenButton,
+    link: linkButton,
+};
+const actionLabels = new Map(
+    Object.values(actionButtons)
+        .filter(Boolean)
+        .map((button) => [button, button.textContent.trim()])
+);
+
+/**
+ * Asks for a confirming second click on the button for an action.
+ * @param {string} action - 'playHere', 'resign' or 'reset'.
+ * @param {string} question - Label shown while waiting.
+ * @returns {boolean} True on the confirming click, or if the page has no such button.
+ */
+function askToConfirm(action, question) {
+    const button = actionButtons[action];
+    return button ? confirmSecondClick(button, question) : true;
+}
+
+/** Withdraws a question asked on the button for an action, if one is showing. */
+function withdrawQuestion(action) {
+    if (actionButtons[action]) cancelConfirm(actionButtons[action]);
+}
+
+/**
+ * Copies text with the button for an action, which then says whether it was
+ * copied or downloaded and goes back to its own label.
+ * @param {string} action - 'pgn', 'fen' or 'link'.
+ * @param {string} text
+ * @param {string} filename - Name of the file if it has to be downloaded.
+ */
+function copyFromButton(action, text, filename) {
+    const button = actionButtons[action];
+    if (!button) return;
+    copyOrDownload(text, button, actionLabels.get(button), filename);
+}
+
+/** Shows a short notice on the button for an action, then its own label again. */
+function notifyOnButton(action, notice) {
+    const button = actionButtons[action];
+    if (button) flashButton(button, notice, actionLabels.get(button));
+}
+
 /**
  * Asks for a confirming second click on a button, so a mis-tap cannot end the
  * game. The first click changes the label for a few seconds.
@@ -671,7 +738,9 @@ function handleArchiveClick(event) {
     const button = event.target.closest ? event.target.closest('button[data-index]') : null;
     if (!button) return;
     const entry = readArchive()[Number(button.dataset.index)];
-    const result = entry ? openArchivedGame(entry) : { ok: false, error: 'That game is gone.' };
+    const result = entry
+        ? gameHandlers.openArchivedGame(entry)
+        : { ok: false, error: 'That game is gone.' };
     if (!result.ok) {
         importError.textContent = `${result.error} The current game was not changed.`;
         return;
@@ -701,7 +770,7 @@ function closeImportDialog() {
  * second click first.
  */
 function handleImportLoad() {
-    const load = looksLikeFEN(importText.value) ? importFEN : importPGN;
+    const load = gameHandlers.importGame;
     const validation = load(importText.value, true);
     if (!validation.ok) {
         cancelConfirm(importLoadButton);
@@ -711,7 +780,10 @@ function handleImportLoad() {
         return;
     }
     importError.textContent = '';
-    if (isGameInProgress() && !confirmSecondClick(importLoadButton, 'Discard current game?')) {
+    if (
+        gameHandlers.isGameInProgress() &&
+        !confirmSecondClick(importLoadButton, 'Discard current game?')
+    ) {
         return;
     }
     const result = load(importText.value);
@@ -844,13 +916,9 @@ if (typeof module !== 'undefined' && module.exports) {
         openImportDialog,
         closeImportDialog,
         openSharedText,
-        // The buttons game.js asks twice on, or puts a notice on
-        playHereButton,
-        resignButton,
-        resetButton,
-        pgnButton,
-        downloadButton,
-        fenButton,
-        linkButton,
+        askToConfirm,
+        withdrawQuestion,
+        copyFromButton,
+        notifyOnButton,
     };
 }

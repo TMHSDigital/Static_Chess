@@ -121,6 +121,9 @@ function initializeGame() {
         downloadPGN,
         copyFEN,
         copyLink,
+        importGame,
+        isGameInProgress,
+        openArchivedGame,
         undo: undoLastMove,
         redo: redoMove,
         autoplay: toggleAutoplay,
@@ -314,7 +317,7 @@ function viewMove(ply) {
     if (positionHistory.length !== moveHistory.length) return;
     const wanted = Math.max(0, Math.min(moveHistory.length, ply));
     viewPly = wanted === moveHistory.length ? null : wanted;
-    if (playHereButton) cancelConfirm(playHereButton); // The question was about another position
+    withdrawQuestion('playHere'); // The question was about another position
     cancelPendingPromotion();
     clearSelectedSquare();
     clearPossibleMoves();
@@ -425,7 +428,7 @@ function moveCostText(index) {
 /** Handles "Play from here", which needs a confirming second click because it drops the later moves. */
 function handlePlayHereClick() {
     if (viewPly === null) return;
-    if (confirmSecondClick(playHereButton, 'Drop later moves?')) playFromHere();
+    if (askToConfirm('playHere', 'Drop later moves?')) playFromHere();
 }
 
 /**
@@ -898,7 +901,7 @@ function resign() {
 /** Handles the Resign button, which needs a confirming second click. */
 function handleResignClick() {
     if (!isGameInProgress()) return;
-    if (confirmSecondClick(resignButton, 'Resign?')) resign();
+    if (askToConfirm('resign', 'Resign?')) resign();
 }
 
 /**
@@ -1339,16 +1342,6 @@ function findKingInCheck(playerColor) {
     return isInCheck(livePosition(), playerColor) ? kingPositions[playerColor] : null;
 }
 
-/**
- * @param {string} playerColor
- * @param {Array<Array<Piece|null>>} [board] - Defaults to the live board.
- * @param {object} [kPos] - King positions that go with the board.
- * @returns {boolean} True if that colour's king is in check.
- */
-function isKingInCheck(playerColor, board = boardState, kPos = kingPositions) {
-    return isInCheck({ board, kingPositions: kPos }, playerColor);
-}
-
 // --- Persistence ---
 
 /** Saves the game, with its undo stack and clock, so it is there after a reload. */
@@ -1597,7 +1590,7 @@ function updateStatusDisplay() {
  * Like the other confirmations, the question is withdrawn when the game moves on.
  */
 function handleResetClick() {
-    if (isGameInProgress() && !confirmSecondClick(resetButton, 'Discard game?')) return;
+    if (isGameInProgress() && !askToConfirm('reset', 'Discard game?')) return;
     resetGame(); // Also puts the button back to normal
     announce(`New game. ${currentStatus}`);
 }
@@ -1622,14 +1615,14 @@ function buildPGN() {
  * (older browser, or a page opened from a file), downloads it as a file instead.
  */
 function copyPGN() {
-    copyOrDownload(buildPGN(), pgnButton, 'Copy PGN', 'static-chess-game.pgn');
+    copyFromButton('pgn', buildPGN(), 'static-chess-game.pgn');
 }
 
 /** Saves the game as a PGN file, whether or not the clipboard is available. */
 function downloadPGN() {
     if (moveHistory.length === 0) return;
     downloadText(buildPGN(), 'static-chess-game.pgn');
-    flashButton(downloadButton, 'Saved', 'Save PGN');
+    notifyOnButton('download', 'Saved');
 }
 
 /**
@@ -1637,7 +1630,7 @@ function downloadPGN() {
  * board. While an earlier move is being viewed, it is that position.
  */
 function copyFEN() {
-    copyOrDownload(buildFEN(), fenButton, 'Copy FEN', 'static-chess-position.fen');
+    copyFromButton('fen', buildFEN(), 'static-chess-position.fen');
 }
 
 /**
@@ -1656,7 +1649,7 @@ function buildShareLink() {
 
 /** Copies a link to the game, or to the position on screen, to the clipboard. */
 function copyLink() {
-    copyOrDownload(buildShareLink(), linkButton, 'Copy link', 'static-chess-link.txt');
+    copyFromButton('link', buildShareLink(), 'static-chess-link.txt');
 }
 
 /** @returns {string} The position on screen in Forsyth-Edwards Notation. */
@@ -1706,6 +1699,17 @@ function importPGN(text, validateOnly = false) {
     announce(`Game loaded, ${moves.length} moves. ${currentStatus}`);
     requestAIMove();
     return { ok: true, moves: moves.length };
+}
+
+/**
+ * Loads what the Load dialog was given: a position if the text looks like
+ * FEN, else a game as PGN.
+ * @param {string} text
+ * @param {boolean} validateOnly - Check it without replacing the game.
+ * @returns {object} As importFEN or importPGN.
+ */
+function importGame(text, validateOnly = false) {
+    return looksLikeFEN(text) ? importFEN(text, validateOnly) : importPGN(text, validateOnly);
 }
 
 /**
@@ -1776,10 +1780,8 @@ if (typeof module !== 'undefined' && module.exports) {
         generateAllLegalMoves,
         undoLastMove,
         findKingInCheck,
-        isKingInCheck,
         handleResetClick,
         buildPGN,
-        hasInsufficientMaterial,
         viewMove,
         returnToLiveGame,
         reviewFromStart,
@@ -1788,12 +1790,8 @@ if (typeof module !== 'undefined' && module.exports) {
         importPGN,
         importFEN,
         downloadPGN,
-        pgnMoveTokens,
-        pgnResult,
-        readArchive,
-        openImportDialog,
-        importSizeError,
         isGameInProgress,
+        importGame,
         buildFEN,
         buildShareLink,
         openArchivedGame,
@@ -1804,7 +1802,6 @@ if (typeof module !== 'undefined' && module.exports) {
         toggleAutoplay,
         stopAutoplay,
         clockRemaining,
-        formatClock,
         stopAllTimers,
         saveGameState,
         get clock() {

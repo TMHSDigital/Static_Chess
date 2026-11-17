@@ -18,24 +18,24 @@ describe('past games', () => {
   test('nothing is kept for a game without moves', () => {
     const g = loadGame();
     g.game.resetGame();
-    expect(g.game.readArchive()).toEqual([]);
-    g.game.openImportDialog();
+    expect(g.store.readArchive()).toEqual([]);
+    g.ui.openImportDialog();
     expect(el(g, 'archive-section').hidden).toBe(true);
   });
 
   test('a finished game is in the list after New Game', () => {
     const g = loadGame();
     playFoolsMate(g);
-    expect(g.game.readArchive()).toEqual([]); // Still the live game
+    expect(g.store.readArchive()).toEqual([]); // Still the live game
     g.game.resetGame();
 
-    const archive = g.game.readArchive();
+    const archive = g.store.readArchive();
     expect(archive).toHaveLength(1);
     expect(archive[0]).toMatchObject({ result: '0-1', opponent: 'Two players', moves: 4 });
     expect(archive[0].pgn).toContain('1. f3 e5 2. g4 Qh4# 0-1');
     expect(Number.isNaN(Date.parse(archive[0].date))).toBe(false);
 
-    g.game.openImportDialog();
+    g.ui.openImportDialog();
     expect(el(g, 'archive-section').hidden).toBe(false);
     expect(entries(g)).toHaveLength(1);
     expect(entries(g)[0].textContent).toMatch(/Two players · Black won · 2 moves$/);
@@ -47,12 +47,12 @@ describe('past games', () => {
     g.game.makeMove(6, 4, 4, 4); // The computer's 1. e4, played by hand
     g.game.importPGN('1. d4 d5');
 
-    expect(g.game.readArchive()[0]).toMatchObject({
+    expect(g.store.readArchive()[0]).toMatchObject({
       result: '*',
       opponent: 'Computer (medium)',
       moves: 1,
     });
-    g.game.openImportDialog();
+    g.ui.openImportDialog();
     expect(entries(g)[0].textContent).toMatch(/Computer \(medium\) · Not finished · 1 move$/);
   });
 
@@ -74,7 +74,7 @@ describe('past games', () => {
     expect(again.game.buildPGN()).toContain('[Black "Computer (easy)"]');
 
     again.game.resetGame();
-    expect(again.game.readArchive()[0].opponent).toBe('Computer (easy)');
+    expect(again.store.readArchive()[0].opponent).toBe('Computer (easy)');
   });
 
   test('Undo of a finished game lets the players follow the settings again', () => {
@@ -95,7 +95,7 @@ describe('past games', () => {
     g.game.resetGame();
     g.play('d2d4');
 
-    g.game.openImportDialog();
+    g.ui.openImportDialog();
     entries(g)[0].click();
     expect(el(g, 'import-dialog').hidden).toBe(true);
     expect(notations(g)).toEqual(['e4', 'e5']);
@@ -104,20 +104,20 @@ describe('past games', () => {
     expect(el(g, 'game-status').textContent).toBe('White resigned. Black wins.');
 
     // The game that was on the board went into the list instead of being lost
-    expect(g.game.readArchive().map((entry) => entry.moves)).toEqual([1, 2]);
+    expect(g.store.readArchive().map((entry) => entry.moves)).toEqual([1, 2]);
   });
 
   test('a game opened from the list and replaced again is listed once', () => {
     const g = loadGame();
     playFoolsMate(g);
     g.game.resetGame();
-    const original = g.game.readArchive()[0];
+    const original = g.store.readArchive()[0];
 
-    g.game.openImportDialog();
+    g.ui.openImportDialog();
     entries(g)[0].click();
     g.game.setOpponent('easy', 'w'); // Would label a new entry differently
     g.game.resetGame();
-    expect(g.game.readArchive()).toEqual([original]);
+    expect(g.store.readArchive()).toEqual([original]);
   });
 
   test('separate games with the same moves are kept as separate entries', () => {
@@ -132,7 +132,7 @@ describe('past games', () => {
     g.play('e2e4');
     g.game.resetGame();
 
-    const archive = g.game.readArchive();
+    const archive = g.store.readArchive();
     expect(archive).toHaveLength(2);
     expect(archive.map((entry) => entry.opponent)).toEqual(['Computer (easy)', 'Two players']);
     expect(archive.map((entry) => entry.date.slice(0, 10))).toEqual(['2026-11-02', '2026-11-01']);
@@ -146,16 +146,16 @@ describe('past games', () => {
     jest.setSystemTime(new Date('2026-11-02T10:00:00Z'));
     g.play('d2d4'); // Another game, in between
     g.game.resetGame();
-    const unfinished = g.game.readArchive()[1];
+    const unfinished = g.store.readArchive()[1];
     expect(unfinished.result).toBe('*');
 
     jest.setSystemTime(new Date('2026-11-03T10:00:00Z'));
-    g.game.openImportDialog();
+    g.ui.openImportDialog();
     entries(g)[1].click();
     g.play('g2g4', 'd8h4'); // Now it ends in mate
     g.game.resetGame();
 
-    const archive = g.game.readArchive();
+    const archive = g.store.readArchive();
     expect(archive).toHaveLength(2);
     expect(archive[0]).toMatchObject({ result: '0-1', moves: 4, date: unfinished.date });
     expect(archive[1].pgn).toContain('1. d4');
@@ -165,7 +165,7 @@ describe('past games', () => {
     const first = loadGame();
     first.play('e2e4', 'e7e5');
     first.game.resetGame();
-    first.game.openImportDialog();
+    first.ui.openImportDialog();
     entries(first)[0].click();
     const storage = {
       chessGameState: first.window.localStorage.getItem('chessGameState'),
@@ -175,8 +175,8 @@ describe('past games', () => {
     const g = loadGame({ storage });
     g.play('g1f3');
     g.game.resetGame();
-    expect(g.game.readArchive()).toHaveLength(1);
-    expect(g.game.readArchive()[0].moves).toBe(3);
+    expect(g.store.readArchive()).toHaveLength(1);
+    expect(g.store.readArchive()[0].moves).toBe(3);
   });
 
   test('only the newest games are kept, newest first', () => {
@@ -190,7 +190,7 @@ describe('past games', () => {
       g.game.resetGame();
     }
 
-    const archive = g.game.readArchive();
+    const archive = g.store.readArchive();
     expect(archive).toHaveLength(limit);
     expect(stored(g)).toHaveLength(limit);
     expect(archive[0].pgn).toContain('1. h3 c6'); // The 24th game
@@ -204,8 +204,8 @@ describe('past games', () => {
     const saved = first.window.localStorage.getItem(KEY);
 
     const second = loadGame({ storage: { [KEY]: saved } });
-    expect(second.game.readArchive()).toEqual(first.game.readArchive());
-    second.game.openImportDialog();
+    expect(second.store.readArchive()).toEqual(first.store.readArchive());
+    second.ui.openImportDialog();
     expect(entries(second)).toHaveLength(1);
   });
 
@@ -215,13 +215,13 @@ describe('past games', () => {
     ['a list of the wrong things', '[null, 3, "1. e4", {"pgn": 5}]'],
   ])('%s in storage is ignored', (_name, value) => {
     const g = loadGame({ storage: { [KEY]: value } });
-    expect(g.game.readArchive()).toEqual([]);
-    expect(() => g.game.openImportDialog()).not.toThrow();
+    expect(g.store.readArchive()).toEqual([]);
+    expect(() => g.ui.openImportDialog()).not.toThrow();
     expect(el(g, 'archive-section').hidden).toBe(true);
 
     g.play('e2e4');
     g.game.resetGame(); // A new entry replaces the damaged value
-    expect(g.game.readArchive()).toHaveLength(1);
+    expect(g.store.readArchive()).toHaveLength(1);
   });
 
   test('incomplete entries are dropped and the good ones kept', () => {
@@ -232,7 +232,7 @@ describe('past games', () => {
       { ...good, date: '2026-11-13T10:00:00.000Z', moves: 'two' },
     ]);
     const g = loadGame({ storage: { [KEY]: value } });
-    expect(g.game.readArchive()).toHaveLength(1);
+    expect(g.store.readArchive()).toHaveLength(1);
   });
 
   describe('deleting', () => {
@@ -243,10 +243,10 @@ describe('past games', () => {
         g.play(move);
         g.game.resetGame();
       }
-      g.game.openImportDialog();
+      g.ui.openImportDialog();
       return g;
     };
-    const firstMoves = (g) => g.game.readArchive().map((entry) => /1\. (\w+)/.exec(entry.pgn)[1]);
+    const firstMoves = (g) => g.store.readArchive().map((entry) => /1\. (\w+)/.exec(entry.pgn)[1]);
     const announced = (g) => el(g, 'announcer').textContent;
 
     test('a game is deleted on the second click, and the focus stays in the list', () => {
@@ -276,7 +276,7 @@ describe('past games', () => {
         deletes(g)[0].click();
         deletes(g)[0].click();
       }
-      expect(g.game.readArchive()).toEqual([]);
+      expect(g.store.readArchive()).toEqual([]);
       expect(el(g, 'archive-section').hidden).toBe(true);
       expect(g.window.document.activeElement).toBe(el(g, 'import-text'));
     });
@@ -287,16 +287,16 @@ describe('past games', () => {
       jest.advanceTimersByTime(global.CONFIG.CONFIRM_MS);
       expect(deletes(g)[0].textContent).toBe('Delete');
       deletes(g)[0].click(); // Asks again
-      expect(g.game.readArchive()).toHaveLength(3);
+      expect(g.store.readArchive()).toHaveLength(3);
     });
 
     test('Clear all empties the list on the second click', () => {
       const g = threeGames();
       el(g, 'archive-clear').click();
       expect(el(g, 'archive-clear').textContent).toBe('Clear all?');
-      expect(g.game.readArchive()).toHaveLength(3);
+      expect(g.store.readArchive()).toHaveLength(3);
       el(g, 'archive-clear').click();
-      expect(g.game.readArchive()).toEqual([]);
+      expect(g.store.readArchive()).toEqual([]);
       expect(g.window.localStorage.getItem(KEY)).toBeNull();
       expect(el(g, 'archive-section').hidden).toBe(true);
       expect(announced(g)).toBe('Past games cleared.');
@@ -306,7 +306,7 @@ describe('past games', () => {
     test('removeFromArchive refuses a place that is not in the list', () => {
       const g = threeGames();
       for (const index of [-1, 3, 1.5, '1']) expect(global.removeFromArchive(index)).toBe(false);
-      expect(g.game.readArchive()).toHaveLength(3);
+      expect(g.store.readArchive()).toHaveLength(3);
     });
 
     test('a game that cannot be deleted says so', () => {
@@ -326,7 +326,7 @@ describe('past games', () => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
     g.play('e2e4');
     expect(() => g.game.resetGame()).not.toThrow();
-    expect(g.game.readArchive()).toEqual([]);
+    expect(g.store.readArchive()).toEqual([]);
     expect(g.game.moveHistory).toHaveLength(0);
     console.error.mockRestore();
   });

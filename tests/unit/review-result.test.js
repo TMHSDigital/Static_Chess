@@ -193,7 +193,7 @@ describe('Looking back through the move list', () => {
       g.play('e2e4', 'e7e5', 'g1f3', 'b8c6');
       g.game.viewMove(1);
       g.game.playFromHere();
-      const archive = g.game.readArchive();
+      const archive = g.store.readArchive();
       expect(archive).toHaveLength(1);
       expect(archive[0].pgn).toContain('1. e4 e5 2. Nf3 Nc6');
     });

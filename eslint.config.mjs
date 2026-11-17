@@ -139,13 +139,10 @@ const appGlobals = {
     'openImportDialog',
     'closeImportDialog',
     'openSharedText',
-    'playHereButton',
-    'resignButton',
-    'resetButton',
-    'pgnButton',
-    'downloadButton',
-    'fenButton',
-    'linkButton',
+    'askToConfirm',
+    'withdrawQuestion',
+    'copyFromButton',
+    'notifyOnButton',
   ]),
   // game.js
   ...shared([

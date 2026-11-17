@@ -91,7 +91,10 @@ function loadGame(options = {}) {
     if (name === 'config' && options.configure) options.configure(modules.config.CONFIG);
     share(modules[name]);
   }
-  const { utils, pieces, rules, ai, board, drag, promotion, game } = modules;
+  const { utils, pieces, rules, ai, board, drag, promotion, notation, game } = modules;
+  const store = modules['game-store'];
+  const ui = modules['game-ui'];
+  const clockRules = modules.clock;
 
   if (!options.deferStart) game.initializeGame();
 
@@ -167,6 +170,10 @@ function loadGame(options = {}) {
     rules,
     ai,
     promotion,
+    notation,
+    store,
+    ui,
+    clockRules,
     play,
     setPosition,
     at,

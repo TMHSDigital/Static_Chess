@@ -12,7 +12,7 @@ describe('reading PGN', () => {
 
 1. e4 {best by test} e5 2. Nf3 $1 (2. f4 exf4 (2... d5)) 2... Nc6 ; a comment to the end of the line
 3.Bb5 a6 1/2-1/2`;
-    expect(g.game.pgnMoveTokens(pgn)).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6']);
+    expect(g.notation.pgnMoveTokens(pgn)).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6']);
   });
 
   test('an exported game loads back to the same moves and position', () => {
@@ -229,7 +229,7 @@ describe('reading PGN', () => {
         expect(status(g)).toBe("White's turn");
       }
       // The movetext wins over a tag that disagrees
-      expect(loadGame().game.pgnResult('[Result "1-0"]\n\n1. e4 e5 *')).toBeNull();
+      expect(loadGame().notation.pgnResult('[Result "1-0"]\n\n1. e4 e5 *')).toBeNull();
     });
 
     test('a result the moves already show is left alone', () => {
@@ -365,21 +365,21 @@ describe('damaged or oversized text', () => {
     ['a long run of tag-like lines', `${'[\n'.repeat(N / 2)}1. e4 e5`],
   ])('%s are read without a long wait', (_name, text) => {
     const g = loadGame();
-    quickly(() => g.game.pgnMoveTokens(text));
-    quickly(() => g.game.pgnResult(text));
+    quickly(() => g.notation.pgnMoveTokens(text));
+    quickly(() => g.notation.pgnResult(text));
     quickly(() => g.game.importPGN(text, true));
   });
 
   test('the same text gives the same moves as before', () => {
-    const { game } = loadGame();
+    const { game, notation } = loadGame();
     // Nested variations go, with the comments inside them
-    expect(game.pgnMoveTokens('1. e4 (1. d4 d5 (1... Nf6 {Indian}) 2. c4) e5 2. Nf3')).toEqual([
+    expect(notation.pgnMoveTokens('1. e4 (1. d4 d5 (1... Nf6 {Indian}) 2. c4) e5 2. Nf3')).toEqual([
       'e4',
       'e5',
       'Nf3',
     ]);
     // A parenthesis inside a comment does not open a variation
-    expect(game.pgnMoveTokens('1. e4 {best (by test} e5 ) 2. Nf3')).toEqual([
+    expect(notation.pgnMoveTokens('1. e4 {best (by test} e5 ) 2. Nf3')).toEqual([
       'e4',
       'e5',
       ')',
@@ -390,17 +390,17 @@ describe('damaged or oversized text', () => {
       'Move 1... {a cannot be played.'
     );
     expect(game.importPGN('1. e4 (1. d4 e5', true).error).toBe('Move 1... ( cannot be played.');
-    expect(game.pgnMoveTokens(`${'\n'.repeat(1000)}1. e4 e5`)).toEqual(['e4', 'e5']);
+    expect(notation.pgnMoveTokens(`${'\n'.repeat(1000)}1. e4 e5`)).toEqual(['e4', 'e5']);
   });
 
   test('the result is still found at the end of long text', () => {
-    const { game } = loadGame();
+    const { notation } = loadGame();
     const padding = '\n'.repeat(N);
-    expect(game.pgnResult(`1. e4 e5 {White resigned. Black wins.} 0-1${padding}`)).toEqual({
+    expect(notation.pgnResult(`1. e4 e5 {White resigned. Black wins.} 0-1${padding}`)).toEqual({
       result: '0-1',
       status: 'White resigned. Black wins.',
     });
-    expect(game.pgnResult(`${padding}[Result "1/2-1/2"]\n\n1. e4 e5`).result).toBe('1/2-1/2');
+    expect(notation.pgnResult(`${padding}[Result "1/2-1/2"]\n\n1. e4 e5`).result).toBe('1/2-1/2');
   });
 
   test('text over the size limit is refused with a message', () => {
