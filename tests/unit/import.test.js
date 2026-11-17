@@ -45,6 +45,38 @@ describe('reading PGN', () => {
     expect(g.snapshot()).toEqual(first.snapshot());
   });
 
+  test('tag values may hold escaped quotes and brackets', () => {
+    const g = loadGame();
+    const pgn =
+      '[Event "Blitz [rated]"]\n[White "Dan \\"The Man\\" Smith"]\n[Black "Ann"]\n[Result "*"]\n\n1. e4 e5 2. Nf3 *\n';
+    expect(g.game.importPGN(pgn)).toEqual({ ok: true, moves: 3 });
+    expect(global.pgnTag(pgn, 'White')).toBe('Dan "The Man" Smith');
+    expect(global.pgnTag(pgn, 'Event')).toBe('Blitz [rated]');
+    expect(global.pgnTag('[Path "C:\\\\games"]', 'Path')).toBe('C:\\games');
+  });
+
+  test('"e.p." after an en passant capture is read past', () => {
+    const g = loadGame();
+    expect(g.game.importPGN('1. e4 a6 2. e5 d5 3. exd6 e.p. *', true)).toEqual({
+      ok: true,
+      moves: 5,
+    });
+    g.game.importPGN('1. e4 a6 2. e5 d5 3. exd6 e.p. *');
+    expect(notations(g)).toEqual(['e4', 'a6', 'e5', 'd5', 'exd6 e.p.']);
+  });
+
+  test('a game copied from the move list, with "e.p.", loads back', () => {
+    const first = loadGame();
+    first.play('e2e4', 'a7a6', 'e4e5', 'd7d5', 'e5d6');
+    const listed = notations(first)
+      .map((san, i) => (i % 2 === 0 ? `${i / 2 + 1}. ${san}` : san))
+      .join(' ');
+    expect(listed).toContain('exd6 e.p.');
+    const g = loadGame();
+    expect(g.game.importPGN(listed)).toEqual({ ok: true, moves: 5 });
+    expect(g.snapshot()).toEqual(first.snapshot());
+  });
+
   test('en passant, promotion and mate survive the round trip', () => {
     const first = loadGame();
     first.play('e2e4', 'a7a6', 'e4e5', 'd7d5', 'e5d6', 'a6a5', 'd6c7', 'a5a4');
@@ -162,6 +194,30 @@ describe('reading PGN', () => {
       tagged.game.importPGN('[Result "1/2-1/2"]\n\n1. e4 e5');
       expect(tagged.game.gameResult).toBe('1/2-1/2');
       expect(status(tagged)).toBe('Draw (result from the loaded game).');
+    });
+
+    test('a closing comment that contradicts the result is not taken as the status', () => {
+      for (const [pgn, expected] of [
+        ['1. e4 e5 {White resigned. Black wins.} 1-0', 'White won (result from the loaded game).'],
+        ['1. e4 e5 {Draw by agreement.} 0-1', 'Black won (result from the loaded game).'],
+        [
+          '1. e4 e5 {White ran out of time, whatever.} 1-0',
+          'White won (result from the loaded game).',
+        ],
+        [
+          '1. e4 e5 {White ran out of time. Black wins.} 1-0',
+          'White won (result from the loaded game).',
+        ],
+        [
+          '1. e4 e5 {Black ran out of time, but White cannot checkmate. Draw.} 1/2-1/2',
+          'Black ran out of time, but White cannot checkmate. Draw.',
+        ],
+        ['1. e4 e5 {Black resigned. White wins.} 1-0', 'Black resigned. White wins.'],
+      ]) {
+        const g = loadGame();
+        g.game.importPGN(pgn);
+        expect(status(g)).toBe(expected);
+      }
     });
 
     test('a game marked * or without a result is still in progress', () => {

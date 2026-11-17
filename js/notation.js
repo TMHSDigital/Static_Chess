@@ -69,6 +69,10 @@ function writeSAN(move, positionBefore, positionAfter) {
     return notation;
 }
 
+// A PGN tag pair on a line of its own. The value may hold "]" and, escaped
+// with a backslash, quotes and backslashes: [White "Dan \"The Man\" Smith"]
+const PGN_TAG_LINE = /^\s*\[(\w+)\s+"((?:[^"\\\n]|\\.)*)"\]\s*$/;
+
 /**
  * @param {string} text - PGN that may hold several games.
  * @returns {string} The first game: everything up to the tags of a second one.
@@ -77,7 +81,7 @@ function firstPGNGame(text) {
     const lines = String(text).split('\n');
     let inMoves = false;
     const end = lines.findIndex((line) => {
-        const isTag = /^\s*\[\w+\s+"[^"\n]*"\]\s*$/.test(line);
+        const isTag = PGN_TAG_LINE.test(line);
         if (!isTag && line.trim()) inMoves = true;
         return isTag && inMoves;
     });
@@ -105,25 +109,34 @@ function pgnResult(text) {
         const open = before.endsWith('}') ? before.lastIndexOf('{') : -1;
         if (open !== -1) comment = before.slice(open + 1, -1).trim();
     }
-    const ownWording =
-        /^(?:(?:White|Black) resigned\. (?:White|Black) wins\.|Draw by agreement\.|(?:White|Black) ran out of time[.,] .+)$/;
+    // The comment is taken only in the words this app writes for that very
+    // result, so a hand-edited game cannot show a status that contradicts it
+    const ownWording = {
+        '1-0': ['Black resigned. White wins.', 'Black ran out of time. White wins.'],
+        '0-1': ['White resigned. Black wins.', 'White ran out of time. Black wins.'],
+        '1/2-1/2': [
+            'Draw by agreement.',
+            'White ran out of time, but Black cannot checkmate. Draw.',
+            'Black ran out of time, but White cannot checkmate. Draw.',
+        ],
+    };
     const fallback = {
         '1-0': 'White won (result from the loaded game).',
         '0-1': 'Black won (result from the loaded game).',
         '1/2-1/2': 'Draw (result from the loaded game).',
     };
-    return { result, status: ownWording.test(comment) ? comment : fallback[result] };
+    return { result, status: ownWording[result].includes(comment) ? comment : fallback[result] };
 }
 
 /**
  * @param {string} game - One game as PGN.
  * @param {string} name - A tag name, such as "Result" or "FEN".
- * @returns {string|null} The value of that tag, or null if the game has none.
+ * @returns {string|null} The value of that tag, with escapes undone, or null if the game has none.
  */
 function pgnTag(game, name) {
     for (const line of game.split('\n')) {
-        const tag = /^\s*\[(\w+)\s+"([^"]*)"\]/.exec(line);
-        if (tag && tag[1] === name) return tag[2];
+        const tag = PGN_TAG_LINE.exec(line);
+        if (tag && tag[1] === name) return tag[2].replace(/\\(.)/g, '$1');
     }
     return null;
 }
@@ -184,16 +197,19 @@ function stripVariations(text) {
 function pgnMoveTokens(text) {
     const withoutTags = firstPGNGame(text)
         .split('\n')
-        .filter((line) => !/^\s*\[[^\]]*\]\s*$/.test(line)) // Tag pairs
+        .filter((line) => !PGN_TAG_LINE.test(line)) // Tag pairs
         .join('\n');
     const body = stripVariations(
         stripBraceComments(withoutTags).replace(/;[^\n]*/g, ' ') // Comments to the end of the line
     );
-    return body
-        .replace(/\$\d+/g, ' ') // Annotation codes
-        .replace(/\d+\.+/g, ' ') // Move numbers, also when attached: "1.e4"
-        .split(/\s+/)
-        .filter((token) => token && !['1-0', '0-1', '1/2-1/2', '*'].includes(token));
+    return (
+        body
+            .replace(/\$\d+/g, ' ') // Annotation codes
+            .replace(/\d+\.+/g, ' ') // Move numbers, also when attached: "1.e4"
+            .split(/\s+/)
+            // "e.p." after an en passant capture, as the move list writes it, is no move
+            .filter((token) => token && !['1-0', '0-1', '1/2-1/2', '*', 'e.p.'].includes(token))
+    );
 }
 
 /** @returns {boolean} True for text that begins like a FEN position: eight ranks of pieces and numbers. */
