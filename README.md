@@ -83,7 +83,7 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
   - Highlights the last move made
 - **Move History:** Displays moves in standard algebraic notation (SAN), with a file or rank added only where two pieces could make the move
 - **Drag and Drop:** Move pieces by dragging them to valid squares (works alongside click-based movement)
-- **Undo Move:** Revert the last move with one click
+- **Undo and Redo:** Revert the last move with one click, and play it again with Redo (or Ctrl+Y) until another move is made
 - **Chess Clock:** Five time controls, with a warning at 20 and 10 seconds; the computer budgets its time against it
 - **Game Review:** Step back through the game from the move list or with the step buttons, see what the engine makes of each position, and go on playing from any of them with "Play from here"
 - **Resign and Draw Offer:** End a game by resignation or by agreement; the result is saved and exported
@@ -179,7 +179,7 @@ That's it! No build process or dependencies are required.
 6. If a move results in check, the opponent's king will be highlighted in red
 7. A pawn that reaches the last rank is promoted; choose a queen, rook, bishop or knight
 8. Game ends with checkmate, stalemate or a draw (insufficient material, threefold repetition, fifty-move rule)
-9. Click "Undo" to take back the last move, or "New Game" to reset the board (a game in progress asks for a second click)
+9. Click "Undo" to take back the last move ("Redo" or Ctrl+Y plays it again), or "New Game" to reset the board (a game in progress asks for a second click)
 10. Click "Copy PGN" to copy the game for an analysis board or to share it, or "Save PGN" to save it as a file
     - Click a move in the Move History (or use the arrow keys, Home and End there) to look at the position after it. Left and Right also step through the moves from anywhere else on the page, and Esc returns to the game. When a game is over, "Review" beside the result starts from the first position. "Play from here" (asked twice) drops the later moves and lets you go on from the position you are looking at; the game as it was is kept under "Past games". While you look back, a line under the list says what the engine makes of the position ("Engine thinks White is ahead by 1.3"). The four buttons under the list step to the starting position, the previous move, the next move and the latest move; "Back to game" returns to the live position
     - "Resign" ends the game after a second click. "Offer draw" is accepted by the other side with a second click, or answered at once by the computer. Undo reopens a game ended this way (not in a timed game, where Undo is off)
@@ -191,7 +191,7 @@ That's it! No build process or dependencies are required.
     - The pieces each side has captured, and the material lead, are shown in that player's bar beside the board
 11. Keyboard: Tab to the board, move between squares with the arrow keys, and press Enter or Space to select a piece or move it
 12. With a clock, a player who has 20 and then 10 seconds left is warned by an announcement for screen readers and, with sound effects on, a double beep
-13. To play against the computer, pick a level under "Opponent" and a side under "Play as"; the board turns to the side you pick ("Random" draws a side at each New Game, and a game in progress keeps its side after a reload), and "Flip board" turns it back. Undo then takes back your move and the computer's reply
+13. To play against the computer, pick a level under "Opponent" and a side under "Play as"; the board turns to the side you pick ("Random" draws a side at each New Game, and a game in progress keeps its side after a reload), and "Flip board" turns it back. Undo then takes back your move and the computer's reply, and Redo brings both back
 14. Open "Settings" to choose a board theme and a dark or light page, and to toggle:
     - Show coordinates
     - Show possible moves

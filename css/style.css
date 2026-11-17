@@ -419,6 +419,22 @@ body {
     padding: 0 var(--space-2);
 }
 
+/* Five buttons do not fit one row of the panel: Undo, Redo and Hint above,
+   Offer draw and Resign below, each row in even widths */
+.game-actions {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+}
+
+.game-actions .btn {
+    grid-column: span 2;
+}
+
+.game-actions #draw-button,
+.game-actions #resign-button {
+    grid-column: span 3;
+}
+
 /* Related actions in even columns */
 .button-grid {
     display: grid;

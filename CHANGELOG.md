@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Redo**: A move taken back with Undo can be played again with Redo or Ctrl+Y (Ctrl+Shift+Z), until another move is made; against the computer both moves come back (#158)
+- **Random side**: "Play as" can draw White or Black at random for each new game against the computer (#163)
 - **Share as a link**: "Copy link" copies an address with the game (or, for a long game or an earlier move being viewed, the position) after the "#". Opening it loads the game through the Load dialog, which asks before a game in progress is replaced (#144)
 - Links in the side panel to the GitHub source repository and issue tracker (#78)
 - **Captured pieces**: The pieces each side has taken are shown with the material lead

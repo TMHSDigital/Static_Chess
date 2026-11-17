@@ -22,6 +22,7 @@ const drawButton = document.getElementById('draw-button');
 const hintButton = document.getElementById('hint-button');
 const resetButton = document.getElementById('reset-button');
 const undoButton = document.getElementById('undo-button');
+const redoButton = document.getElementById('redo-button');
 const pgnButton = document.getElementById('pgn-button');
 const downloadButton = document.getElementById('download-button');
 const fenButton = document.getElementById('fen-button');
@@ -56,6 +57,14 @@ const moreSettings = document.getElementById('more-settings');
 // --- Connecting the controls ---
 
 let pageKeyHandler = null; // What the game does with a key pressed outside the board and the form fields
+let redoHandler = null; // What Ctrl+Y and Ctrl+Shift+Z do, when Undo is offered
+
+/** @returns {boolean} True for Ctrl+Y or Ctrl+Shift+Z (Cmd on a Mac). */
+function isRedoKey(event) {
+    if (!(event.ctrlKey || event.metaKey) || event.altKey) return false;
+    const key = String(event.key).toLowerCase();
+    return (key === 'y' && !event.shiftKey) || (key === 'z' && event.shiftKey);
+}
 
 /**
  * Keys that work anywhere on the page. The board, form fields and dialogs
@@ -68,11 +77,20 @@ function handlePageKeydown(event) {
         handleOpenDialogKey(event); // Nothing behind an open dialog reacts to keys
         return;
     }
+    const target = event.target;
+    const inField = (selector) => target && target.closest && target.closest(selector);
+    // Text fields keep their own redo; the board has no use for it
+    if (redoHandler && isRedoKey(event)) {
+        if (inField('input, select, textarea, [role="dialog"], .promotion-backdrop')) return;
+        event.preventDefault();
+        redoHandler();
+        return;
+    }
     if (!pageKeyHandler) return;
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-    const target = event.target;
-    const own = '#chess-board, input, select, textarea, [role="dialog"], .promotion-backdrop';
-    if (target && target.closest && target.closest(own)) return;
+    if (inField('#chess-board, input, select, textarea, [role="dialog"], .promotion-backdrop')) {
+        return;
+    }
     if (pageKeyHandler(event.key)) event.preventDefault();
 }
 
@@ -110,7 +128,7 @@ function listen(element, type, handler) {
  * @param {object} handlers - What the game does on a click in the move list
  *   (moveListClick) or a key there (moveListKeydown), and on the buttons: live,
  *   playHere, step, resign, draw, hint, reset, review, copyPGN, downloadPGN,
- *   copyFEN and undo. undoOffered: false hides the Undo button. pageKey: given
+ *   copyFEN, undo and redo. undoOffered: false hides Undo and Redo. pageKey: given
  *   a key pressed elsewhere on the page, returns true if it used it.
  */
 function bindControls(handlers) {
@@ -141,6 +159,13 @@ function bindControls(handlers) {
         } else {
             undoButton.hidden = true;
         }
+    }
+    // Redo is offered with Undo, as it only brings back what Undo took
+    redoHandler = handlers.undoOffered && handlers.redo ? handlers.redo : null;
+    if (redoButton) {
+        if (handlers.redo) redoButton.removeEventListener('click', handlers.redo);
+        if (redoHandler) redoButton.addEventListener('click', redoHandler);
+        else redoButton.hidden = true;
     }
 
     // The Load dialog and the past games in it
@@ -175,7 +200,7 @@ function renderStatus(text) {
  *   canView: the positions behind the moves are there to look at. shownPly:
  *   moves played in the position on screen. moveCount: moves played in the
  *   game. gameOver: the result of a finished game is on screen. canReview:
- *   that game has moves to go through. canUndo, inProgress, canHint,
+ *   that game has moves to go through. canUndo, canRedo, inProgress, canHint,
  *   hintPending, drawOffered: as named.
  */
 function renderControls(view) {
@@ -237,6 +262,7 @@ function applyControls(view) {
         }
     }
     if (undoButton) undoButton.disabled = !view.canUndo;
+    if (redoButton) redoButton.disabled = !view.canRedo;
     if (pgnButton) pgnButton.disabled = view.moveCount === 0;
     if (downloadButton) downloadButton.disabled = view.moveCount === 0;
     if (resignButton) resignButton.disabled = !view.inProgress;

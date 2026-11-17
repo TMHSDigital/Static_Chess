@@ -149,3 +149,123 @@ describe('Undo button', () => {
     expect(g.game.moveHistory).toHaveLength(0);
   });
 });
+
+describe('Redo', () => {
+  const el = (g, id) => g.window.document.getElementById(id);
+  const notations = (g) => g.game.moveHistory.map((move) => move.notation);
+  const key = (g, options) => {
+    const event = new g.window.KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      ...options,
+    });
+    g.window.document.body.dispatchEvent(event);
+    return event;
+  };
+
+  test('Undo then Redo brings back the same position, status and notation', () => {
+    const g = loadGame();
+    g.play('e2e4', 'e7e5', 'g1f3');
+    const before = g.snapshot();
+    const status = g.game.currentStatus;
+    expect(el(g, 'redo-button').disabled).toBe(true);
+
+    el(g, 'undo-button').click();
+    expect(el(g, 'redo-button').disabled).toBe(false);
+    el(g, 'redo-button').click();
+    expect(g.snapshot()).toEqual(before);
+    expect(g.game.currentStatus).toBe(status);
+    expect(notations(g)).toEqual(['e4', 'e5', 'Nf3']);
+    expect(el(g, 'redo-button').disabled).toBe(true);
+  });
+
+  test('several undos are redone one at a time, in order', () => {
+    const g = loadGame();
+    g.play('e2e4', 'e7e5', 'g1f3');
+    g.game.undoLastMove();
+    g.game.undoLastMove();
+    expect(notations(g)).toEqual(['e4']);
+    g.game.redoMove();
+    expect(notations(g)).toEqual(['e4', 'e5']);
+    g.game.redoMove();
+    expect(notations(g)).toEqual(['e4', 'e5', 'Nf3']);
+  });
+
+  test('a new move forgets what could be redone', () => {
+    const g = loadGame();
+    g.play('e2e4', 'e7e5');
+    g.game.undoLastMove();
+    g.play('c7c5');
+    expect(el(g, 'redo-button').disabled).toBe(true);
+    g.game.redoMove();
+    expect(notations(g)).toEqual(['e4', 'c5']);
+  });
+
+  test('New Game forgets it too', () => {
+    const g = loadGame();
+    g.play('e2e4');
+    g.game.undoLastMove();
+    g.game.resetGame();
+    g.game.redoMove();
+    expect(g.game.moveHistory).toHaveLength(0);
+  });
+
+  test('against the computer, Redo brings back both moves', () => {
+    jest.useFakeTimers();
+    try {
+      const g = loadGame();
+      g.game.setOpponent('easy', 'w');
+      g.play('e2e4');
+      jest.runAllTimers(); // The computer replies
+      const before = g.snapshot();
+      g.game.undoLastMove(); // Takes back both
+      expect(g.game.moveHistory).toHaveLength(0);
+      g.game.redoMove();
+      expect(g.snapshot()).toEqual(before);
+      expect(g.game.currentPlayer).toBe('w');
+      jest.runAllTimers();
+      expect(g.game.moveHistory).toHaveLength(2); // The computer does not move again
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('a mating move redone ends the game again', () => {
+    const g = loadGame();
+    g.play('f2f3', 'e7e5', 'g2g4', 'd8h4');
+    g.game.undoLastMove();
+    g.game.redoMove();
+    expect(g.game.isGameOver).toBe(true);
+    expect(g.game.gameResult).toBe('0-1');
+    expect(notations(g)[3]).toBe('Qh4#');
+  });
+
+  test('Ctrl+Y and Ctrl+Shift+Z redo, but not in a text field', () => {
+    const g = loadGame();
+    g.play('e2e4', 'e7e5');
+    g.game.undoLastMove();
+    g.game.undoLastMove();
+    expect(key(g, { key: 'y', ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(notations(g)).toEqual(['e4']);
+    expect(key(g, { key: 'Z', ctrlKey: true, shiftKey: true }).defaultPrevented).toBe(true);
+    expect(notations(g)).toEqual(['e4', 'e5']);
+
+    g.game.undoLastMove();
+    const field = el(g, 'import-text');
+    const event = new g.window.KeyboardEvent('keydown', {
+      key: 'y',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    field.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+    expect(notations(g)).toEqual(['e4']);
+    expect(key(g, { key: 'z', ctrlKey: true }).defaultPrevented).toBe(false); // Plain Ctrl+Z is not Redo
+  });
+
+  test('is hidden when Undo is switched off', () => {
+    const g = loadGame({ configure: (config) => (config.FEATURES.UNDO_MOVE = false) });
+    expect(el(g, 'redo-button').hidden).toBe(true);
+  });
+});

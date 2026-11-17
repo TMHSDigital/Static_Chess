@@ -13,6 +13,7 @@ let kingPositions = initialPosition().kingPositions; // Kept for check detection
 let currentStatus = "White's turn";
 let enPassantTarget = null; // Stores coords {row, col} of square vulnerable to en passant, or null
 let positionHistory = []; // Undo stack: one pre-move snapshot per move played
+let redoStack = []; // Moves Undo took back, the last taken back on top: { from, to, promotion }
 let halfmoveClock = 0; // Half-moves since the last pawn move or capture (fifty-move rule)
 let gameResult = null; // '1-0', '0-1' or '1/2-1/2' once the game is over, else null
 let endedWithoutMove = false; // True when the game ended by resignation or agreement, not by a move
@@ -120,6 +121,7 @@ function initializeGame() {
         copyFEN,
         copyLink,
         undo: undoLastMove,
+        redo: redoMove,
         undoOffered: CONFIG.FEATURES.UNDO_MOVE,
     });
     // Keep the clock times when the page is closed in the middle of a turn
@@ -181,6 +183,7 @@ function startGameFrom(position = initialPosition(), player = WHITE, startClock 
     recordPlayers();
     moveHistory = [];
     positionHistory = [];
+    redoStack = [];
     gameResult = null;
     endedWithoutMove = false;
     drawOffered = false;
@@ -437,6 +440,7 @@ function playFromHere() {
     restoreSnapshot(positionHistory[ply]); // Taken before the move that followed, as for undo
     moveHistory = moveHistory.slice(0, ply);
     positionHistory = positionHistory.slice(0, ply);
+    redoStack = [];
     isGameOver = false;
     gameResult = null;
     endedWithoutMove = false;
@@ -578,6 +582,7 @@ function makeMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
     }
     viewPly = null; // A move (for example the computer's reply) brings the live game back
     drawOffered = false; // Playing on declines a draw offer
+    redoStack = []; // A new move: what was taken back cannot come back on top of it
     clearHint();
     cancelConfirms();
     // The mover's clock stops and gains the increment. White's first move is not timed.
@@ -745,7 +750,8 @@ function undoLastMove() {
     endedWithoutMove = false;
     const takeBack = () => {
         restoreSnapshot(positionHistory.pop());
-        moveHistory.pop(); // Each snapshot is taken right before exactly one move is recorded
+        const move = moveHistory.pop(); // Each snapshot is taken right before exactly one move is recorded
+        redoStack.push({ from: move.from, to: move.to, promotion: move.promotion || QUEEN });
     };
     if (reopen) {
         isGameOver = false;
@@ -767,6 +773,34 @@ function undoLastMove() {
     announce(reopen ? `Game reopened. ${currentStatus}` : `Move taken back. ${currentStatus}`);
     saveGameState();
     requestAIMove(); // The computer's first move was taken back, or the game was reopened on its turn
+}
+
+/**
+ * Plays again the move Undo took back last, and against the computer its
+ * reply too, as Undo took both back. Any other move forgets what can be redone.
+ */
+function redoMove() {
+    if (clock || isGameOver || redoStack.length === 0) return;
+    cancelPendingPromotion();
+    cancelAIMove();
+    cancelConfirms();
+    clearHint();
+    viewPly = null;
+    drawOffered = false;
+    const replay = () => {
+        const { from, to, promotion } = redoStack.pop();
+        const played = playMove(from.row, from.col, to.row, to.col, promotion);
+        endIfAutomaticDraw(played.move);
+        return played;
+    };
+    let last = replay();
+    if (redoStack.length > 0 && !isGameOver && currentPlayer === computerColor()) last = replay();
+
+    clearSelectedSquare();
+    clearPossibleMoves();
+    showMoveResult(last.move, last.kingInCheck);
+    saveGameState();
+    requestAIMove();
 }
 
 // --- Ending the game without a move ---
@@ -1435,6 +1469,7 @@ function controlsView() {
         moveCount: moveHistory.length,
         // There must be a move, or a resignation or agreed draw, to take back; never on the clock
         canUndo: !clock && (positionHistory.length > 0 || endedWithoutMove),
+        canRedo: !clock && !isGameOver && redoStack.length > 0,
         inProgress: isGameInProgress(),
         canHint: canHint(),
         hintPending,
@@ -1679,6 +1714,7 @@ if (typeof module !== 'undefined' && module.exports) {
         copyLink,
         setTimeControl,
         setSideListener,
+        redoMove,
         clockRemaining,
         formatClock,
         stopAllTimers,
