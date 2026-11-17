@@ -27,6 +27,24 @@ describe('reading PGN', () => {
     expect(notations(g)).toContain('O-O');
   });
 
+  test.each([
+    ['gives check', '5k2/8/8/8/8/8/8/4K2R w K - 0 1', 'e1g1', 'O-O+', false],
+    ['gives check, queenside', '3k4/8/8/8/8/8/8/R3K3 w Q - 0 1', 'e1c1', 'O-O-O+', false],
+    ['mates', '4rkr1/4p1p1/8/8/8/8/8/4K2R w K - 0 1', 'e1g1', 'O-O#', true],
+  ])('castling that %s is written with its mark and loads back', (_, fen, move, san, mate) => {
+    const first = loadGame();
+    first.game.importFEN(fen);
+    first.play(move);
+    expect(notations(first)).toEqual([san]);
+    expect(first.game.isGameOver).toBe(mate);
+    const pgn = first.game.buildPGN();
+    expect(pgn).toContain(`1. ${san}`);
+
+    const g = loadGame();
+    expect(g.game.importPGN(pgn)).toEqual({ ok: true, moves: 1 });
+    expect(g.snapshot()).toEqual(first.snapshot());
+  });
+
   test('en passant, promotion and mate survive the round trip', () => {
     const first = loadGame();
     first.play('e2e4', 'a7a6', 'e4e5', 'd7d5', 'e5d6', 'a6a5', 'd6c7', 'a5a4');

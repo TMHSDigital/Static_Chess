@@ -16,12 +16,9 @@
 function writeSAN(move, positionBefore, positionAfter) {
     const piece = move.piece;
     const toAlg = coordsToAlgebraic(move.to.row, move.to.col);
-    if (move.isCastling) {
-        return move.to.col > move.from.col ? 'O-O' : 'O-O-O';
-    }
 
     let disambiguation = '';
-    if (piece.type !== PAWN) {
+    if (piece.type !== PAWN && !move.isCastling) {
         // Other pieces of the same type that could legally have gone to the square.
         // A piece that is pinned could not, so it does not count, which is also
         // how findSANMove reads the move back.
@@ -48,17 +45,22 @@ function writeSAN(move, positionBefore, positionAfter) {
     }
 
     let notation = '';
-    if (piece.type !== PAWN) {
-        notation += piece.type.toUpperCase() + disambiguation;
-    }
-    if (move.captured) {
-        if (piece.type === PAWN) {
-            notation += coordsToAlgebraic(move.from.row, move.from.col)[0];
+    if (move.isCastling) {
+        // Castling is written on its own, but takes a check or mate mark like any move
+        notation = move.to.col > move.from.col ? 'O-O' : 'O-O-O';
+    } else {
+        if (piece.type !== PAWN) {
+            notation += piece.type.toUpperCase() + disambiguation;
         }
-        notation += 'x';
+        if (move.captured) {
+            if (piece.type === PAWN) {
+                notation += coordsToAlgebraic(move.from.row, move.from.col)[0];
+            }
+            notation += 'x';
+        }
+        notation += toAlg;
+        if (move.promotion) notation += '=' + move.promotion.toUpperCase();
     }
-    notation += toAlg;
-    if (move.promotion) notation += '=' + move.promotion.toUpperCase();
     const opponent = opponentOf(piece.color);
     if (isInCheck(positionAfter, opponent)) {
         notation += allLegalMoves(positionAfter, opponent).length === 0 ? '#' : '+';
