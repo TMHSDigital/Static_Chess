@@ -105,6 +105,71 @@ describe('tab order', () => {
   });
 });
 
+describe('playing with the keyboard', () => {
+  const square = (g, name) => {
+    const { row, col } = g.utils.algebraicToCoords(name);
+    return g.board.getSquareElement(row, col);
+  };
+  /** Presses a key on the focused element; returns the event, to see whether it was prevented. */
+  const press = (g, key) => {
+    const event = new g.window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+    doc(g).activeElement.dispatchEvent(event);
+    return event;
+  };
+
+  test('Enter picks up a piece and Space plays it', () => {
+    const g = loadGame();
+    square(g, 'e2').focus();
+    const enter = press(g, 'Enter');
+    expect(enter.defaultPrevented).toBe(true);
+    expect(g.board.getSelectedSquare()).toEqual({ row: 6, col: 4 });
+
+    press(g, 'ArrowUp');
+    press(g, 'ArrowUp');
+    expect(doc(g).activeElement).toBe(square(g, 'e4'));
+    const space = press(g, ' ');
+    expect(space.defaultPrevented).toBe(true);
+    expect(g.game.moveHistory.map((move) => move.notation)).toEqual(['e4']);
+    expect(g.game.currentPlayer).toBe('b');
+  });
+
+  test('on a flipped board, Enter on a piece of the side not to move selects nothing', () => {
+    const g = loadGame();
+    g.board.setBoardFlipped(true);
+    square(g, 'e7').focus();
+    press(g, 'Enter');
+    expect(g.board.getSelectedSquare()).toBeNull();
+    expect(g.game.moveHistory).toHaveLength(0);
+  });
+
+  test('Enter on a promotion square opens the chooser, and the focus comes back to the board', () => {
+    const g = loadGame();
+    g.game.importFEN('7k/P7/8/8/8/8/8/K7 w - - 0 1');
+    square(g, 'a7').focus();
+    press(g, 'Enter');
+    press(g, 'ArrowUp');
+    press(g, 'Enter');
+    const choice = doc(g).activeElement;
+    expect(choice.classList.contains('promotion-choice')).toBe(true);
+
+    doc(g).querySelector('.promotion-choice[data-piece="q"]').click();
+    expect(g.game.moveHistory.map((move) => move.notation)).toEqual(['a8=Q+']);
+    expect(doc(g).activeElement.classList.contains('square')).toBe(true);
+  });
+
+  test('a square pressed with a pointer gives up the focus; one reached by keyboard keeps it', () => {
+    const g = loadGame();
+    const e2 = square(g, 'e2');
+    e2.focus();
+    press(g, 'ArrowUp'); // e3, reached by keyboard
+    expect(doc(g).activeElement).toBe(square(g, 'e3'));
+
+    e2.focus(); // As a mouse press on the square does
+    e2.dispatchEvent(new g.window.Event('pointerup', { bubbles: true }));
+    expect(doc(g).activeElement.classList.contains('square')).toBe(false);
+  });
+});
+
 describe('square labels', () => {
   test('name the piece in words', () => {
     const g = loadGame();
