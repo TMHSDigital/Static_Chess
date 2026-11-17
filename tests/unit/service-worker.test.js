@@ -21,7 +21,7 @@ const settled = () => new Promise((resolve) => setTimeout(resolve, 0)); // Lets 
 /**
  * Loads sw.js with the service worker globals stubbed: Cache Storage is a Map
  * of Maps, and the network is the function passed in.
- * @param {(request: object) => Promise<object>} [network]
+ * @param {(request: object, options: object) => Promise<object>} [network]
  * @param {() => Promise<void>|void} [beforePut]
  */
 function startServiceWorker(
@@ -163,13 +163,17 @@ describe('service worker', () => {
     expect(network).not.toHaveBeenCalled();
   });
 
-  test('a page that loads from the network is returned and a copy is saved', async () => {
+  test('the HTTP cache is revalidated and the network response is saved', async () => {
     const fresh = response(true, 'new version');
-    const sw = startServiceWorker(async () => fresh);
+    const network = jest.fn(async () => fresh);
+    const sw = startServiceWorker(network);
     await sw.lifecycle('install');
     const request = get(`${PAGE}js/game.js`);
 
     expect(await sw.fetchEvent(request)).toBe(fresh);
+    // 'no-cache' revalidates with the server instead of trusting a fresh entry
+    expect(network).toHaveBeenCalledTimes(1);
+    expect(network).toHaveBeenCalledWith(request, { cache: 'no-cache' });
     await settled();
     const [saved] = sw.stores.values();
     expect(saved.get(request.url)).toEqual({ ok: true, body: 'new version', copy: true });
@@ -240,18 +244,6 @@ describe('service worker', () => {
     await expect(sw.kept[0]).resolves.toBeUndefined();
     const [saved] = sw.stores.values();
     expect(saved.get(request.url).body).toBe('js/game.js'); // The old copy stays
-  });
-
-  test("the server is asked every time, past the browser's own HTTP cache", async () => {
-    const network = jest.fn(async () => response(true, 'new version'));
-    const sw = startServiceWorker(network);
-    await sw.lifecycle('install');
-    const request = get(`${PAGE}js/rules.js`);
-
-    await sw.fetchEvent(request);
-    // 'no-cache' revalidates with the server instead of trusting a fresh entry
-    expect(network).toHaveBeenCalledTimes(1);
-    expect(network).toHaveBeenCalledWith(request, { cache: 'no-cache' });
   });
 
   test('a failed response is returned but not saved', async () => {

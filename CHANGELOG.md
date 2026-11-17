@@ -63,6 +63,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- Service worker tests check HTTP revalidation and response caching together, without a duplicate fetch test
 - **Side panel**: The buttons used during a game (Undo, Hint, Offer draw, Resign) come first, next to the board on any screen. New Game is the one filled button; Copy PGN, Save PGN, Copy FEN and Load are quieter; the four step buttons are a strip joined to the move list
 - **Layout**: The page fits a 1440x900 and a 1280x720 window without scrolling, the move list takes the height that is left, and the board grows up to 720px on large screens
 - **Player bars**: Against the computer the bars read "You" and "Computer (level)"; the bar of the side to move is tinted, and "thinking" shows beside the computer's name while it works out its move
