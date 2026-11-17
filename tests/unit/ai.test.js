@@ -283,7 +283,7 @@ describe('opponent settings', () => {
       return element;
     };
     const opponent = select('opponent-select', ['human', 'easy', 'medium', 'hard']);
-    const side = select('side-select', ['w', 'b']);
+    const side = select('side-select', ['w', 'b', 'random']);
     const flip = doc.createElement('input');
     flip.type = 'checkbox';
     flip.id = 'flip-toggle';
@@ -384,6 +384,66 @@ describe('opponent settings', () => {
     const saved = earlier.window.localStorage.getItem(key);
     return startApp({ opponent: 'easy', playerSide: 'b', [key]: saved }, { deferStart: true });
   }
+
+  describe('a random side', () => {
+    afterEach(() => jest.restoreAllMocks());
+    const sideAfterNewGame = (app) => {
+      app.game.resetGame();
+      return app.game.computerColor() === 'w' ? 'b' : 'w';
+    };
+
+    test('each New Game draws a side, and the board turns to it', () => {
+      const app = startApp({ opponent: 'easy', playerSide: 'random' });
+      const draw = jest.spyOn(Math, 'random');
+      draw.mockReturnValue(0.9);
+      expect(sideAfterNewGame(app)).toBe('b');
+      expect(app.boardIsFlipped()).toBe(true);
+      expect(app.flip.checked).toBe(true);
+      jest.runAllTimers();
+      expect(app.game.moveHistory).toHaveLength(1); // The computer opened as White
+
+      draw.mockReturnValue(0.1);
+      expect(sideAfterNewGame(app)).toBe('w');
+      expect(app.boardIsFlipped()).toBe(false);
+      expect(app.stored('playerSide')).toBe('random');
+    });
+
+    test('choosing Random before the first move draws the side at once', () => {
+      const app = startApp({ opponent: 'easy' });
+      jest.spyOn(Math, 'random').mockReturnValue(0.9);
+      app.choose(app.side, 'random');
+      expect(app.game.computerColor()).toBe('w');
+      expect(app.boardIsFlipped()).toBe(true);
+    });
+
+    test('choosing Random in the middle of a game keeps the side of that game', () => {
+      const app = startApp({ opponent: 'easy' });
+      app.play('e2e4');
+      jest.runAllTimers(); // The computer replies as Black
+      jest.spyOn(Math, 'random').mockReturnValue(0.9);
+      app.choose(app.side, 'random');
+      expect(app.game.computerColor()).toBe('b');
+    });
+
+    test('a reload keeps the side of the game in progress instead of drawing again', () => {
+      const first = startApp({ opponent: 'easy', playerSide: 'random' });
+      jest.spyOn(Math, 'random').mockReturnValue(0.9);
+      first.game.resetGame(); // The person plays Black
+      jest.runAllTimers(); // The computer's first move as White
+      expect(first.game.moveHistory).toHaveLength(1);
+      const key = global.CONFIG.STORAGE_KEYS.GAME_STATE;
+      const saved = first.window.localStorage.getItem(key);
+
+      Math.random.mockReturnValue(0.1); // A new draw would give White
+      const app = startApp(
+        { opponent: 'easy', playerSide: 'random', [key]: saved },
+        { deferStart: true }
+      );
+      expect(app.game.computerColor()).toBe('w');
+      expect(app.boardIsFlipped()).toBe(true);
+      expect(app.game.moveHistory).toHaveLength(1);
+    });
+  });
 
   test("reopening a game on the player's turn as Black plays no computer move", () => {
     const app = reopen(['e2e4', 'e7e5', 'g1f3']);

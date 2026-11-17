@@ -175,8 +175,19 @@ document.addEventListener('DOMContentLoaded', () => {
             opponentSelect.value = levels.includes(savedOpponent)
                 ? savedOpponent
                 : DEFAULTS.OPPONENT;
-            sideSelect.value =
-                (readSetting(KEYS.PLAYER_SIDE) || DEFAULTS.PLAYER_SIDE) === 'b' ? 'b' : 'w';
+            const sides = Array.from(sideSelect.options).map((option) => option.value);
+            const savedSide = readSetting(KEYS.PLAYER_SIDE);
+            sideSelect.value = sides.includes(savedSide) ? savedSide : DEFAULTS.PLAYER_SIDE;
+
+            // Sit behind the pieces of a side; "Flip board" can still turn the board afterwards
+            const faceSide = (color) => {
+                const flipped = color === 'b';
+                if (flipToggle) flipToggle.checked = flipped;
+                setBoardFlipped(flipped);
+                writeSetting(KEYS.FLIP_BOARD, flipped.toString());
+            };
+            // With "Random" the game draws the side, and the board follows it
+            setSideListener(faceSide);
 
             const applyOpponent = () => {
                 const againstComputer = opponentSelect.value !== 'human';
@@ -189,11 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             sideSelect.addEventListener('change', () => {
                 writeSetting(KEYS.PLAYER_SIDE, sideSelect.value);
-                // Sit behind the pieces just chosen; "Flip board" can still turn the board afterwards
-                const flipped = sideSelect.value === 'b';
-                if (flipToggle) flipToggle.checked = flipped;
-                setBoardFlipped(flipped);
-                writeSetting(KEYS.FLIP_BOARD, flipped.toString());
+                if (sideSelect.value !== 'random') faceSide(sideSelect.value);
                 applyOpponent();
             });
             applyOpponent();

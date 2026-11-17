@@ -160,6 +160,7 @@ const appGlobals = {
     'refreshBoardVisuals',
     'isBoardLocked',
     'setOpponent',
+    'setSideListener',
     'setTimeControl',
   ]),
 };

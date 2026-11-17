@@ -104,7 +104,7 @@ describe('the real page', () => {
   test('offers two players and exactly the levels the engine has', () => {
     const { run, values } = openPage();
     expect(values('opponent-select')).toEqual(['human', ...run('Object.keys(AI_LEVELS)')]);
-    expect(values('side-select')).toEqual(['w', 'b']);
+    expect(values('side-select')).toEqual(['w', 'b', 'random']);
   });
 
   test('the player bars follow the opponent setting and the side to move', () => {

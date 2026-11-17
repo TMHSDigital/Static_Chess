@@ -38,6 +38,8 @@ let scoredGame = null; // The finished game (gameSignature) gameScores was asked
 // Computer opponent
 let opponentLevel = null; // null for two players, otherwise a key of AI_LEVELS ('easy', 'medium', 'hard')
 let humanColor = WHITE; // The side the person plays when there is a computer opponent
+let randomSide = false; // True when the person's side is drawn at each new game
+let sideListener = null; // Told when the game chooses the person's side itself
 let aiThinking = false;
 // Who plays the game on the board: the computer's level and colour, or nulls for two
 // players. Follows the settings while the game goes on and is kept once it is over, so
@@ -90,6 +92,10 @@ function initializeGame() {
         // No saved game, or one without a move: start afresh. A position that
         // was loaded from FEN is kept even before its first move.
         resetGame();
+    } else if (randomSide) {
+        // A game that goes on keeps the side it was begun with, not a new draw
+        if (gamePlayers.computer) chooseSide(opponentOf(gamePlayers.computer));
+        else drawSide();
     }
     createBoard();
     renderPieces(boardState);
@@ -193,6 +199,7 @@ function startGameFrom(position = initialPosition(), player = WHITE, startClock 
  */
 function resetGame() {
     debugLog('Resetting game...');
+    if (randomSide) drawSide(); // Before the game records who plays it
     startGameFrom();
     // Re-render board and pieces
     renderPieces(boardState);
@@ -889,12 +896,15 @@ function isBoardLocked() {
  * Chooses who plays the other side. Takes effect at once, also in the middle
  * of a game: if it is now the computer's turn, it moves.
  * @param {string|null} level - 'easy', 'medium' or 'hard'; anything else means two players.
- * @param {string} [color] - The side the person plays.
+ * @param {string} [color] - The side the person plays, or 'random' for a side
+ *   drawn at each new game. A game already begun keeps the side it has.
  */
 function setOpponent(level, color = WHITE) {
     opponentLevel = Object.prototype.hasOwnProperty.call(AI_LEVELS, level) ? level : null;
-    humanColor = color === BLACK ? BLACK : WHITE;
+    randomSide = color === 'random';
+    if (!randomSide) humanColor = color === BLACK ? BLACK : WHITE;
     if (!gameReady) return; // initializeGame applies it
+    if (randomSide && moveHistory.length === 0 && !isGameOver && !gameStart.fen) drawSide();
     drawOffered = false;
     cancelConfirms();
     cancelAIMove();
@@ -903,6 +913,28 @@ function setOpponent(level, color = WHITE) {
     refreshBoardVisuals();
     updateStatusDisplay();
     requestAIMove();
+}
+
+/**
+ * Makes a colour the person's side and tells the page, which turns the board to it.
+ * @param {string} color
+ */
+function chooseSide(color) {
+    humanColor = color;
+    if (sideListener) sideListener(color);
+}
+
+/** Draws the person's side at random, for the "Random" setting. */
+function drawSide() {
+    chooseSide(Math.random() < 0.5 ? WHITE : BLACK);
+}
+
+/**
+ * @param {((color: string) => void)|null} listener - Called when the game
+ *   chooses the person's side itself, as it does for "Random".
+ */
+function setSideListener(listener) {
+    sideListener = listener;
 }
 
 /** Drops a computer move that is being worked out or waiting to be played. */
@@ -1646,6 +1678,7 @@ if (typeof module !== 'undefined' && module.exports) {
         openArchivedGame,
         copyLink,
         setTimeControl,
+        setSideListener,
         clockRemaining,
         formatClock,
         stopAllTimers,

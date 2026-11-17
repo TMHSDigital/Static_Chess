@@ -75,7 +75,7 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
 - **Stalemate Detection:** Detects stalemate conditions (no legal moves, but not in check)
 - **Draw Detection:** Ends the game on insufficient material, threefold repetition and the fifty-move rule
 - **Local Multiplayer:** Two players can play against each other on the same device
-- **Computer Opponent:** Play against the computer at three levels, as White or Black; it thinks in a background worker so the page stays responsive
+- **Computer Opponent:** Play against the computer at three levels, as White, Black or a side drawn at random for each game; it thinks in a background worker so the page stays responsive
 - **Visual Feedback:**
   - Highlights the selected piece
   - Shows possible legal moves for the selected piece
@@ -191,7 +191,7 @@ That's it! No build process or dependencies are required.
     - The pieces each side has captured, and the material lead, are shown in that player's bar beside the board
 11. Keyboard: Tab to the board, move between squares with the arrow keys, and press Enter or Space to select a piece or move it
 12. With a clock, a player who has 20 and then 10 seconds left is warned by an announcement for screen readers and, with sound effects on, a double beep
-13. To play against the computer, pick a level under "Opponent" and a side under "Play as"; the board turns to the side you pick, and "Flip board" turns it back. Undo then takes back your move and the computer's reply
+13. To play against the computer, pick a level under "Opponent" and a side under "Play as"; the board turns to the side you pick ("Random" draws a side at each New Game, and a game in progress keeps its side after a reload), and "Flip board" turns it back. Undo then takes back your move and the computer's reply
 14. Open "Settings" to choose a board theme and a dark or light page, and to toggle:
     - Show coordinates
     - Show possible moves

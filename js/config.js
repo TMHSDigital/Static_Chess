@@ -35,7 +35,7 @@ const CONFIG = {
         ENABLE_SOUNDS: false,
         FLIP_BOARD: false, // true shows the board from Black's side
         OPPONENT: 'human', // 'human' for two players, or 'easy', 'medium', 'hard' for the computer
-        PLAYER_SIDE: 'w', // The side the person plays against the computer: 'w' or 'b'
+        PLAYER_SIDE: 'w', // The side the person plays against the computer: 'w', 'b' or 'random'
         TIME_CONTROL: 'off', // A key of TIME_CONTROLS
         BOARD_THEME: 'classic', // A key of BOARD_THEMES
         PAGE_THEME: 'dark', // 'dark', 'light', or 'auto' to follow the system setting
