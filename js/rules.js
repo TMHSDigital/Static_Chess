@@ -374,16 +374,39 @@ function positionKey(board, player, epTarget) {
             key += hasCastlingRight(board, color, side) ? '1' : '0';
         }
     }
-    // The en passant square only matters if a pawn is placed to capture on it
+    // The en passant square only matters if a capture on it is legal: a pawn
+    // beside it that is pinned, or whose capture would leave its king in check,
+    // does not make the position a different one (FIDE 9.2.3)
     if (epTarget) {
         const pawnRow = epTarget.row + (player === WHITE ? 1 : -1);
+        let position = null; // Built only when a pawn stands ready
         const canCapture = [epTarget.col - 1, epTarget.col + 1].some((col) => {
             const piece = isWithinBounds(pawnRow, col) ? board[pawnRow][col] : null;
-            return !!piece && piece.type === PAWN && piece.color === player;
+            if (!piece || piece.type !== PAWN || piece.color !== player) return false;
+            position = position || {
+                board,
+                kingPositions: kingSquares(board),
+                enPassantTarget: epTarget,
+            };
+            return legalMovesFrom(position, pawnRow, col).some(
+                (to) => to.row === epTarget.row && to.col === epTarget.col
+            );
         });
         if (canCapture) key += coordsToAlgebraic(epTarget.row, epTarget.col);
     }
     return key;
+}
+
+/** @returns {Object<string, {row: number, col: number}>} The square of each king on a board. */
+function kingSquares(board) {
+    const kings = {};
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const piece = board[r][c];
+            if (piece && piece.type === KING) kings[piece.color] = { row: r, col: c };
+        }
+    }
+    return kings;
 }
 
 /**

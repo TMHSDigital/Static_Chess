@@ -66,6 +66,38 @@ describe('threefold repetition', () => {
     expect(ctx.game.isGameOver).toBe(true);
   });
 
+  describe('after a double pawn step', () => {
+    const knights = ['g1f3', 'g8f6', 'f3g1', 'f6g8'];
+
+    test('an en passant capture a pin forbids does not make the position a different one', () => {
+      const ctx = loadGame();
+      // The e5 pawn is pinned to its king by the rook on e8, so exd6 is never legal
+      ctx.setPosition(
+        { e1: 'wk*', e5: 'wp*', g1: 'wn', h8: 'bk*', e8: 'br*', d7: 'bp', g8: 'bn' },
+        'b'
+      );
+      ctx.play('d7d5', ...knights); // The position after d7-d5, second time
+      expect(ctx.game.isGameOver).toBe(false);
+      ctx.play(...knights); // Third time
+      expect(ctx.game.isGameOver).toBe(true);
+      expect(ctx.game.currentStatus).toBe('Draw by threefold repetition.');
+    });
+
+    test('a legal en passant capture does make it a different one', () => {
+      const ctx = loadGame();
+      // Without the rook the e5 pawn may take on d6, but only right after d7-d5
+      ctx.setPosition(
+        { e1: 'wk*', e5: 'wp*', g1: 'wn', h8: 'bk*', a8: 'br*', d7: 'bp', g8: 'bn' },
+        'b'
+      );
+      ctx.play('d7d5', ...knights, ...knights);
+      // The position after d7-d5 counts apart, so this one has been seen only twice
+      expect(ctx.game.isGameOver).toBe(false);
+      ctx.play('g1f3'); // The first to come a third time is the one after Nf3
+      expect(ctx.game.currentStatus).toBe('Draw by threefold repetition.');
+    });
+  });
+
   test('undo takes the draw back and it can be reached again', () => {
     const ctx = loadGame();
     ctx.play(...shuffle, ...shuffle);
