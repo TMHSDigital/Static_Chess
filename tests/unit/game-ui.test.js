@@ -35,7 +35,7 @@ beforeEach(() => {
   jest.resetModules();
   page = new JSDOM(HTML, { url: 'http://localhost' }).window;
   global.document = page.document;
-  for (const name of ['config', 'pieces', 'rules', 'clock']) {
+  for (const name of ['config', 'utils', 'pieces', 'rules', 'clock']) {
     Object.assign(global, require(`../../js/${name}`));
   }
   ui = require('../../js/game-ui');

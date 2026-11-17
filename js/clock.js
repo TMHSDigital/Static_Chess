@@ -65,17 +65,16 @@ function lowTimeLevel(left) {
  * @returns {{result: string, status: string}} The result and what the status line says.
  */
 function timeoutResult(loser, winnerCanMate) {
-    const name = (color) => (color === WHITE ? 'White' : 'Black');
     const winner = loser === WHITE ? BLACK : WHITE;
     if (!winnerCanMate) {
         return {
             result: '1/2-1/2',
-            status: `${name(loser)} ran out of time, but ${name(winner)} cannot checkmate. Draw.`,
+            status: `${sideName(loser)} ran out of time, but ${sideName(winner)} cannot checkmate. Draw.`,
         };
     }
     return {
         result: winner === WHITE ? '1-0' : '0-1',
-        status: `${name(loser)} ran out of time. ${name(winner)} wins.`,
+        status: `${sideName(loser)} ran out of time. ${sideName(winner)} wins.`,
     };
 }
 

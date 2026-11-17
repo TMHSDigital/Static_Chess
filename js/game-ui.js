@@ -284,10 +284,7 @@ function renderClocks(clocks) {
         element.classList.toggle('running', running);
         element.classList.toggle('low', left < Math.max(...CONFIG.LOW_TIME_WARNINGS));
         // A timer is not read out on every change; the label is there when asked for
-        element.setAttribute(
-            'aria-label',
-            `${color === WHITE ? 'White' : 'Black'} clock: ${formatClock(left)}`
-        );
+        element.setAttribute('aria-label', `${sideName(color)} clock: ${formatClock(left)}`);
     }
 }
 
@@ -404,7 +401,7 @@ function renderCaptured(taken, lead) {
     for (const color of [WHITE, BLACK]) {
         const rowElement = capturedRows[color];
         if (!rowElement) continue;
-        const side = color === WHITE ? 'White' : 'Black';
+        const side = sideName(color);
         const ahead = color === WHITE ? lead : -lead;
         const types = [...taken[color]].sort((a, b) => order.indexOf(a) - order.indexOf(b));
 

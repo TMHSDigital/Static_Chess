@@ -153,6 +153,33 @@ describe('starting a game from FEN', () => {
     const bare = loadGame();
     bare.game.importFEN('4k3/8/8/8/8/8/8/4K3 w - - 0 1');
     expect(el(bare, 'game-status').textContent).toBe('Draw by insufficient material.');
+
+    // Black to move and mated: White has won
+    const blackMated = loadGame();
+    blackMated.game.importFEN('R5k1/5ppp/8/8/8/8/8/6K1 b - - 0 1');
+    expect(blackMated.game.gameResult).toBe('1-0');
+    expect(el(blackMated, 'game-status').textContent).toBe('Checkmate! White wins.');
+  });
+
+  test('a game ends with the same result and words from FEN as by a move', () => {
+    // Each pair: a FEN already decided, and the move into the same position from one before it
+    const cases = [
+      ['R5k1/5ppp/8/8/8/8/8/6K1 b - - 0 1', '6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1', 'a1a8'],
+      ['k7/8/1Q6/8/8/8/8/4K3 b - - 0 1', 'k7/8/8/1Q6/8/8/8/4K3 w - - 0 1', 'b5b6'],
+      ['4k3/8/8/8/8/8/8/4K3 b - - 0 1', '4k3/8/8/8/8/8/3n4/4K3 w - - 0 1', 'e1d2'],
+    ];
+    for (const [decided, before, move] of cases) {
+      const loaded = loadGame();
+      loaded.game.importFEN(decided);
+      const played = loadGame();
+      played.game.importFEN(before);
+      played.play(move);
+      expect([played.game.gameResult, played.game.currentStatus]).toEqual([
+        loaded.game.gameResult,
+        loaded.game.currentStatus,
+      ]);
+      expect(played.game.isGameOver).toBe(true);
+    }
   });
 
   test('a half-move count of 100 or more loads as drawn, whatever the next move would be', () => {

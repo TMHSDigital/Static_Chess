@@ -193,3 +193,44 @@ describe('the live game uses the same rules', () => {
     );
   });
 });
+
+describe('gameOutcome', () => {
+  const outcome = (g, fen, draws) => {
+    const { position, player } = g.rules.positionFromFEN(fen);
+    return g.rules.gameOutcome(position, player, draws);
+  };
+
+  test('checkmate and stalemate, for either side to move', () => {
+    const g = loadGame();
+    expect(outcome(g, 'R5k1/5ppp/8/8/8/8/8/6K1 b - - 0 1')).toEqual({
+      result: '1-0',
+      reason: 'checkmate',
+    });
+    expect(outcome(g, 'rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3')).toEqual({
+      result: '0-1',
+      reason: 'checkmate',
+    });
+    expect(outcome(g, 'k7/8/1Q6/8/8/8/8/4K3 b - - 0 1')).toEqual({
+      result: '1/2-1/2',
+      reason: 'stalemate',
+    });
+    expect(outcome(g, '7K/5q2/6k1/8/8/8/8/8 w - - 0 1')).toEqual({
+      result: '1/2-1/2',
+      reason: 'stalemate',
+    });
+  });
+
+  test('the draws only when they are asked for, mate first', () => {
+    const g = loadGame();
+    const bare = '4k3/8/8/8/8/8/8/4K3 w - - 0 1';
+    const live = '4k3/8/8/8/8/8/4P3/4K3 w - - 0 1';
+    const draw = (reason) => ({ result: '1/2-1/2', reason });
+    expect(outcome(g, bare)).toBeNull();
+    expect(outcome(g, bare, {})).toEqual(draw('insufficient material'));
+    expect(outcome(g, live, { repeated: true })).toEqual(draw('threefold repetition'));
+    expect(outcome(g, live, { halfmoveClock: 100 })).toEqual(draw('the fifty-move rule'));
+    expect(outcome(g, live, { halfmoveClock: 99, repeated: false })).toBeNull();
+    const mate = 'rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3';
+    expect(outcome(g, mate, { halfmoveClock: 100, repeated: true }).reason).toBe('checkmate');
+  });
+});

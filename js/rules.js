@@ -404,6 +404,32 @@ function hasInsufficientMaterial(board) {
 }
 
 /**
+ * Decides whether the game is over in a position, and how. Checkmate and
+ * stalemate are always looked for; the draws only when `draws` is given, since
+ * a loaded game may play on through a draw nobody claimed.
+ * @param {object} position - A rules.js position.
+ * @param {string} player - The side to move.
+ * @param {{halfmoveClock?: number, repeated?: boolean}} [draws] - The half-move
+ *   count for the fifty-move rule, and whether the position has occurred three times.
+ * @returns {{result: string, reason: string}|null} The result ('1-0', '0-1' or
+ *   '1/2-1/2') and its reason ('checkmate', 'stalemate', 'insufficient material',
+ *   'threefold repetition' or 'the fifty-move rule'), or null if the game goes on.
+ */
+function gameOutcome(position, player, draws) {
+    if (allLegalMoves(position, player).length === 0) {
+        return isInCheck(position, player)
+            ? { result: player === WHITE ? '0-1' : '1-0', reason: 'checkmate' }
+            : { result: '1/2-1/2', reason: 'stalemate' };
+    }
+    if (!draws) return null;
+    let reason = null;
+    if (hasInsufficientMaterial(position.board)) reason = 'insufficient material';
+    else if (draws.repeated) reason = 'threefold repetition';
+    else if (draws.halfmoveClock >= 100) reason = 'the fifty-move rule';
+    return reason ? { result: '1/2-1/2', reason } : null;
+}
+
+/**
  * @param {Array<Array<object|null>>} board
  * @param {string} color
  * @returns {boolean} False if that side could never give checkmate with what
@@ -634,6 +660,7 @@ if (typeof module !== 'undefined' && module.exports) {
         allLegalCaptures,
         positionKey,
         hasInsufficientMaterial,
+        gameOutcome,
         canDeliverMate,
         hasCastlingRight,
     };

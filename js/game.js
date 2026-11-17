@@ -163,7 +163,7 @@ function startGameFrom(position = initialPosition(), player = WHITE, startClock 
         currentPlayer: player,
         isGameOver: false,
         kingPositions: position.kingPositions,
-        currentStatus: `${player === WHITE ? 'White' : 'Black'}'s turn`,
+        currentStatus: `${sideName(player)}'s turn`,
         enPassantTarget: position.enPassantTarget,
         halfmoveClock: startClock,
     });
@@ -636,25 +636,36 @@ function playMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
     moveHistory.push(move);
 
     // --- Has the game ended? ---
+    // Only by mate or stalemate here; the draws are endIfAutomaticDraw's
     const opponentKingInCheck = findKingInCheck(currentPlayer);
-    if (opponentKingInCheck) {
-        move.isCheck = true;
-        if (isCheckmate(currentPlayer)) {
-            move.isCheckmate = true;
-            isGameOver = true;
-            gameResult = currentPlayer === WHITE ? '0-1' : '1-0';
-            currentStatus = `Checkmate! ${currentPlayer === WHITE ? 'Black' : 'White'} wins.`;
-        }
-    } else if (isStalemate(currentPlayer)) {
-        move.isStalemate = true;
-        isGameOver = true;
-        gameResult = '1/2-1/2';
-        currentStatus = 'Stalemate! Game is a draw.';
-    }
-    if (!isGameOver) {
-        currentStatus = `${currentPlayer === WHITE ? 'White' : 'Black'}'s turn`;
+    move.isCheck = !!opponentKingInCheck;
+    const outcome = gameOutcome(livePosition(), currentPlayer);
+    if (outcome) {
+        move.isCheckmate = outcome.reason === 'checkmate';
+        move.isStalemate = outcome.reason === 'stalemate';
+        endWith(outcome);
+    } else {
+        currentStatus = `${sideName(currentPlayer)}'s turn`;
     }
     return { move, kingInCheck: opponentKingInCheck };
+}
+
+/**
+ * @param {{result: string, reason: string}} outcome - As gameOutcome in rules.js gives it.
+ * @returns {string} The status line for a game that ended so.
+ */
+function statusForOutcome({ result, reason }) {
+    if (reason === 'checkmate')
+        return `Checkmate! ${sideName(result === '1-0' ? WHITE : BLACK)} wins.`;
+    if (reason === 'stalemate') return 'Stalemate! Game is a draw.';
+    return `Draw by ${reason}.`;
+}
+
+/** Ends the game with an outcome gameOutcome in rules.js decided. */
+function endWith(outcome) {
+    isGameOver = true;
+    gameResult = outcome.result;
+    currentStatus = statusForOutcome(outcome);
 }
 
 /**
@@ -663,12 +674,14 @@ function playMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
  * @param {object} move - The move that led to the position.
  */
 function endIfAutomaticDraw(move) {
-    const drawReason = isGameOver ? null : findDrawReason();
-    if (!drawReason) return;
+    if (isGameOver) return;
+    const outcome = gameOutcome(livePosition(), currentPlayer, {
+        halfmoveClock,
+        repeated: isThreefoldRepetition(),
+    });
+    if (!outcome) return;
     move.isDraw = true;
-    isGameOver = true;
-    gameResult = '1/2-1/2';
-    currentStatus = `Draw by ${drawReason}.`;
+    endWith(outcome);
 }
 
 /**
@@ -724,7 +737,7 @@ function undoLastMove() {
     };
     if (reopen) {
         isGameOver = false;
-        currentStatus = `${currentPlayer === WHITE ? 'White' : 'Black'}'s turn`;
+        currentStatus = `${sideName(currentPlayer)}'s turn`;
     } else {
         takeBack();
         // Against the computer, also take back its reply so it is the player's turn again
@@ -825,7 +838,7 @@ function handleDrawClick() {
     }
     drawOffered = true;
     updateStatusDisplay();
-    announce(`${currentPlayer === WHITE ? 'White' : 'Black'} offers a draw.`);
+    announce(`${sideName(currentPlayer)} offers a draw.`);
 }
 
 /** Closes the promotion chooser without playing the held move. */
@@ -1069,7 +1082,7 @@ function warnIfTimeIsLow() {
     clock.warned[currentPlayer] = level;
     if (level === null || (before !== null && level >= before)) return;
 
-    const name = currentPlayer === WHITE ? 'White' : 'Black';
+    const name = sideName(currentPlayer);
     announce(`${name} has ${level / 1000} seconds left.`);
     try {
         playSound('low_time');
@@ -1173,14 +1186,6 @@ function isThreefoldRepetition() {
         }
     }
     return false;
-}
-
-/** @returns {string|null} Why the current position is drawn, or null if it is not. */
-function findDrawReason() {
-    if (hasInsufficientMaterial(boardState)) return 'insufficient material';
-    if (isThreefoldRepetition()) return 'threefold repetition';
-    if (halfmoveClock >= 100) return 'the fifty-move rule';
-    return null;
 }
 
 /**
@@ -1341,7 +1346,7 @@ function updateCapturedDisplay() {
  * @returns {string}
  */
 function describeMove(move) {
-    const side = move.piece.color === WHITE ? 'White' : 'Black';
+    const side = sideName(move.piece.color);
     let text;
     if (move.isCastling) {
         text = `${side} castles ${move.to.col > move.from.col ? 'kingside' : 'queenside'}`;
@@ -1577,25 +1582,9 @@ function importFEN(text, validateOnly = false) {
  * stalemate, bare kings, or a half-move count that has reached the fifty-move rule.
  */
 function endIfAlreadyDecided() {
-    if (generateAllLegalMoves(currentPlayer).length === 0) {
-        isGameOver = true;
-        if (findKingInCheck(currentPlayer)) {
-            gameResult = currentPlayer === WHITE ? '0-1' : '1-0';
-            currentStatus = `Checkmate! ${currentPlayer === WHITE ? 'Black' : 'White'} wins.`;
-        } else {
-            gameResult = '1/2-1/2';
-            currentStatus = 'Stalemate! Game is a draw.';
-        }
-    } else if (hasInsufficientMaterial(boardState)) {
-        isGameOver = true;
-        gameResult = '1/2-1/2';
-        currentStatus = 'Draw by insufficient material.';
-    } else if (halfmoveClock >= 100) {
-        // As after a move here: the rule is not left to depend on which move comes next
-        isGameOver = true;
-        gameResult = '1/2-1/2';
-        currentStatus = 'Draw by the fifty-move rule.';
-    }
+    // A position that has just been set up has not been repeated
+    const outcome = gameOutcome(livePosition(), currentPlayer, { halfmoveClock, repeated: false });
+    if (outcome) endWith(outcome);
 }
 
 // Export for Node/Jest tests (CommonJS)

@@ -148,9 +148,18 @@ function debugLog(...args) {
     }
 }
 
+/**
+ * @param {string} color - 'w' or 'b'.
+ * @returns {string} The side's name as the status line and the PGN give it: "White" or "Black".
+ */
+function sideName(color) {
+    return color === 'w' ? 'White' : 'Black';
+}
+
 // Export for Node/Jest tests (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
+        sideName,
         algebraicToCoords,
         coordsToAlgebraic,
         isWithinBounds,

@@ -12,6 +12,7 @@ const appGlobals = {
   ...shared(['CONFIG']),
   // utils.js
   ...shared([
+    'sideName',
     'algebraicToCoords',
     'coordsToAlgebraic',
     'isWithinBounds',
@@ -50,6 +51,7 @@ const appGlobals = {
     'allLegalCaptures',
     'positionKey',
     'hasInsufficientMaterial',
+    'gameOutcome',
     'canDeliverMate',
     'findSANMove',
     'positionToFEN',
