@@ -16,6 +16,7 @@ const liveButton = document.getElementById('live-button');
 const reviewActions = document.getElementById('review-actions');
 const playHereButton = document.getElementById('play-here-button');
 const stepButtons = document.getElementById('step-buttons');
+const autoplayButton = document.getElementById('autoplay-button');
 const reviewScoreElement = document.getElementById('review-score');
 const resignButton = document.getElementById('resign-button');
 const drawButton = document.getElementById('draw-button');
@@ -58,6 +59,17 @@ const moreSettings = document.getElementById('more-settings');
 
 let pageKeyHandler = null; // What the game does with a key pressed outside the board and the form fields
 let redoHandler = null; // What Ctrl+Y and Ctrl+Shift+Z do, when Undo is offered
+let stopAutoplayHandler = null; // Stops the Play button stepping through the game
+
+/**
+ * Any press or key other than on the Play button itself stops it stepping:
+ * the player has taken over. Listened for before anything else sees it.
+ */
+function stopAutoplayOnInput(event) {
+    if (!stopAutoplayHandler || !autoplayButton) return;
+    if (autoplayButton.contains(event.target)) return;
+    stopAutoplayHandler();
+}
 
 /** @returns {boolean} True for Ctrl+Y or Ctrl+Shift+Z (Cmd on a Mac). */
 function isRedoKey(event) {
@@ -141,6 +153,12 @@ function bindControls(handlers) {
     listen(liveButton, 'click', handlers.live);
     listen(playHereButton, 'click', handlers.playHere);
     listen(stepButtons, 'click', handlers.step);
+    listen(autoplayButton, 'click', handlers.autoplay);
+    stopAutoplayHandler = handlers.stopAutoplay || null;
+    for (const type of ['pointerdown', 'keydown']) {
+        document.removeEventListener(type, stopAutoplayOnInput, true);
+        document.addEventListener(type, stopAutoplayOnInput, true);
+    }
     listen(resignButton, 'click', handlers.resign);
     listen(drawButton, 'click', handlers.draw);
     listen(hintButton, 'click', handlers.hint);
@@ -260,6 +278,14 @@ function applyControls(view) {
             const back = button.dataset.step === 'first' || button.dataset.step === 'previous';
             button.disabled = !view.canView || view.shownPly === (back ? 0 : view.moveCount);
         }
+    }
+    if (autoplayButton) {
+        autoplayButton.disabled = !view.canView || view.moveCount === 0;
+        autoplayButton.setAttribute(
+            'aria-label',
+            view.autoplaying ? 'Pause' : 'Play through the moves'
+        );
+        autoplayButton.classList.toggle('is-playing', !!view.autoplaying);
     }
     if (undoButton) undoButton.disabled = !view.canUndo;
     if (redoButton) redoButton.disabled = !view.canRedo;

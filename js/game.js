@@ -19,6 +19,7 @@ let gameResult = null; // '1-0', '0-1' or '1/2-1/2' once the game is over, else 
 let endedWithoutMove = false; // True when the game ended by resignation or agreement, not by a move
 let drawOffered = false; // Two-player game: a draw offer is waiting for the other side
 let viewPly = null; // Number of moves played in the position being looked at; null shows the live game
+let autoplayTimer = null; // While the Play button steps through the game
 
 let chosenTimeControl = null; // Key of CONFIG.TIME_CONTROLS for the next game; null for no clock
 // The clock of the game being played, or null: { control, base, increment,
@@ -122,6 +123,8 @@ function initializeGame() {
         copyLink,
         undo: undoLastMove,
         redo: redoMove,
+        autoplay: toggleAutoplay,
+        stopAutoplay,
         undoOffered: CONFIG.FEATURES.UNDO_MOVE,
     });
     // Keep the clock times when the page is closed in the middle of a turn
@@ -167,6 +170,7 @@ function handleBoardClickEvent(event) {
  */
 function startGameFrom(position = initialPosition(), player = WHITE, startClock = 0, fullmove = 1) {
     cancelAIMove();
+    stopAutoplay(); // A new or loaded game
     archiveCurrentGame(); // The game being replaced stays in the list of past games
     const fen = positionToFEN(position, player, startClock, fullmove);
     const usual = fen === positionToFEN(initialPosition(), WHITE, 0, 1);
@@ -548,6 +552,41 @@ function handleStepClick(event) {
         last: moveHistory.length,
     };
     viewMove(targets[button.dataset.step]);
+}
+
+/**
+ * The Play button under the move list: steps through the game a move at a
+ * time, from the start when the latest move is on screen, and stops at the
+ * end. Pressed again it pauses. The board has no animation to slow down, so
+ * a reduced-motion setting changes nothing here.
+ */
+function toggleAutoplay() {
+    if (autoplayTimer !== null) {
+        stopAutoplay();
+        return;
+    }
+    if (positionHistory.length !== moveHistory.length || moveHistory.length === 0) return;
+    if (shownPosition().ply >= moveHistory.length) viewMove(0);
+    autoplayTimer = setInterval(autoplayStep, CONFIG.AUTOPLAY_STEP_MS);
+    renderControls(controlsView());
+}
+
+/** One step of the Play button; the last one brings back the live game and stops. */
+function autoplayStep() {
+    const next = shownPosition().ply + 1;
+    if (next <= moveHistory.length) viewMove(next);
+    if (next >= moveHistory.length) stopAutoplay();
+}
+
+/**
+ * Stops the Play button stepping. Any other control, a new or loaded game,
+ * and leaving the page stop it.
+ */
+function stopAutoplay() {
+    if (autoplayTimer === null) return;
+    clearInterval(autoplayTimer);
+    autoplayTimer = null;
+    renderControls(controlsView());
 }
 
 /** @returns {boolean} True if the square holds a piece of the side to move. */
@@ -1115,6 +1154,7 @@ function stopAllTimers() {
         clearInterval(clockTimer);
         clockTimer = null;
     }
+    stopAutoplay();
     cancelAIMove();
     dropEngineRequests(REVIEW_HINT_CHANNEL);
     dropEngineRequests(REVIEW_SCORES_CHANNEL);
@@ -1166,6 +1206,7 @@ function warnIfTimeIsLow() {
 
 /** Saves a game that has started; used when the page is being closed. */
 function saveGameInProgress() {
+    stopAutoplay(); // Leaving the page
     if (moveHistory.length > 0) saveGameState();
 }
 
@@ -1470,6 +1511,7 @@ function controlsView() {
         // There must be a move, or a resignation or agreed draw, to take back; never on the clock
         canUndo: !clock && (positionHistory.length > 0 || endedWithoutMove),
         canRedo: !clock && !isGameOver && redoStack.length > 0,
+        autoplaying: autoplayTimer !== null,
         inProgress: isGameInProgress(),
         canHint: canHint(),
         hintPending,
@@ -1715,6 +1757,8 @@ if (typeof module !== 'undefined' && module.exports) {
         setTimeControl,
         setSideListener,
         redoMove,
+        toggleAutoplay,
+        stopAutoplay,
         clockRemaining,
         formatClock,
         stopAllTimers,

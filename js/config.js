@@ -174,6 +174,9 @@ const CONFIG = {
     // comments is a few thousand; this only keeps a mistaken paste from being worked on.
     IMPORT_MAX_LENGTH: 200000,
 
+    // How long the Play button under the move list shows each position, in ms
+    AUTOPLAY_STEP_MS: 1000,
+
     // Longest link "Copy link" makes with the whole game in it, in characters.
     // A longer game is shared as the position on the board, which always fits.
     SHARE_LINK_MAX_LENGTH: 4000,

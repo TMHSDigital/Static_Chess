@@ -762,7 +762,7 @@ body.coords-visible {
    the move list. The 1px gaps let the strip's own colour show as dividers. */
 .step-buttons {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 1px;
     overflow: hidden;
     border: 1px solid var(--border-color);
@@ -780,6 +780,16 @@ body.coords-visible {
 
 .step-buttons .btn:hover:not(:disabled) {
     background-color: var(--panel-bg);
+}
+
+/* Play shows a triangle, and two bars while it is stepping */
+.autoplay-button .icon-pause,
+.autoplay-button.is-playing .icon-play {
+    display: none;
+}
+
+.autoplay-button.is-playing .icon-pause {
+    display: block;
 }
 
 /* Inside the strip, so its clipped corners do not cut the ring */

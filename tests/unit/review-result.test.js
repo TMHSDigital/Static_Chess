@@ -846,3 +846,91 @@ describe('handlePageKey', () => {
     expect(g.game.viewPly).toBeNull();
   });
 });
+
+describe('Play through the moves', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+  const button = (g) => el(g, 'autoplay-button');
+  const STEP = () => global.CONFIG.AUTOPLAY_STEP_MS;
+
+  test('steps from the start, a move a second, to the end and stops', () => {
+    const g = loadGame();
+    g.play('e2e4', 'e7e5', 'g1f3');
+    expect(button(g).getAttribute('aria-label')).toBe('Play through the moves');
+
+    button(g).click();
+    expect(g.game.viewPly).toBe(0); // From the start, as the latest move was on screen
+    expect(button(g).getAttribute('aria-label')).toBe('Pause');
+    jest.advanceTimersByTime(STEP());
+    expect(g.game.viewPly).toBe(1);
+    jest.advanceTimersByTime(STEP());
+    expect(g.game.viewPly).toBe(2);
+    jest.advanceTimersByTime(STEP());
+    expect(g.game.viewPly).toBeNull(); // The live game, at the end
+    expect(button(g).getAttribute('aria-label')).toBe('Play through the moves');
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  test('starts from the position on screen when that is not the end', () => {
+    const g = loadGame();
+    g.play('e2e4', 'e7e5', 'g1f3');
+    g.game.viewMove(1);
+    button(g).click();
+    jest.advanceTimersByTime(STEP());
+    expect(g.game.viewPly).toBe(2);
+  });
+
+  test('Pause stops it, and so does any other control', () => {
+    const g = loadGame();
+    g.play('e2e4', 'e7e5', 'g1f3');
+    button(g).click();
+    jest.advanceTimersByTime(STEP());
+    button(g).click(); // Pause
+    jest.advanceTimersByTime(STEP() * 3);
+    expect(g.game.viewPly).toBe(1);
+
+    button(g).click();
+    const next = el(g, 'step-buttons').querySelector('[data-step="next"]');
+    next.dispatchEvent(new g.window.Event('pointerdown', { bubbles: true }));
+    next.click();
+    expect(g.game.viewPly).toBe(2);
+    jest.advanceTimersByTime(STEP() * 3);
+    expect(g.game.viewPly).toBe(2);
+    expect(button(g).getAttribute('aria-label')).toBe('Play through the moves');
+
+    button(g).click();
+    g.window.document.body.dispatchEvent(
+      new g.window.KeyboardEvent('keydown', { key: 'Tab', bubbles: true })
+    );
+    jest.advanceTimersByTime(STEP() * 3);
+    expect(g.game.viewPly).toBe(2);
+  });
+
+  test('a new game, a load and leaving the page stop it', () => {
+    const g = loadGame();
+    g.play('e2e4', 'e7e5');
+    button(g).click();
+    g.game.resetGame();
+    expect(button(g).getAttribute('aria-label')).toBe('Play through the moves');
+
+    g.play('d2d4', 'd7d5');
+    button(g).click();
+    g.game.importPGN('1. c4 c5');
+    expect(g.game.viewPly).toBeNull();
+    jest.advanceTimersByTime(STEP() * 3);
+    expect(g.game.viewPly).toBeNull();
+
+    button(g).click();
+    g.window.dispatchEvent(new g.window.Event('pagehide'));
+    expect(button(g).getAttribute('aria-label')).toBe('Play through the moves');
+    jest.advanceTimersByTime(STEP() * 3);
+    expect(g.game.viewPly).toBe(0);
+  });
+
+  test('is off with no moves to go through', () => {
+    const g = loadGame();
+    expect(button(g).disabled).toBe(true);
+    g.game.toggleAutoplay();
+    expect(jest.getTimerCount()).toBe(0);
+  });
+});
