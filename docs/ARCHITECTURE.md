@@ -269,14 +269,14 @@ There is one live game, saved under `chessGameState`, and an archive of the game
 3. The Load dialog lists them (`showArchive()`). A click loads the entry with `importPGN()`, which restores its result
 4. A game opened from the list and replaced again keeps its one entry and moves to the top
 
-Not implemented: named slots, deleting entries, and keeping more than one game in progress with its clock and undo stack.
+Entries can be deleted one at a time (`removeFromArchive()`) or all at once (`clearArchive()`). Not implemented: named slots, and keeping more than one game in progress with its clock and undo stack.
 
 ### 8. Draw Detection
 
 After every move that is not checkmate or stalemate, `findDrawReason()` in `game.js` checks three rules and ends the game if one applies:
 
 1. **Insufficient material**: bare kings, a single bishop or knight, or only bishops that all stand on squares of one colour
-2. **Threefold repetition**: `positionKey()` turns a position into a string (placement, side to move, castling rights, and the en passant square if a pawn can capture there). The current key is compared with the snapshots on the undo stack back to the last pawn move or capture
+2. **Threefold repetition**: `positionKey()` turns a position into a string (placement, side to move, castling rights, and the en passant square only if an en passant capture there is legal, so a pinned pawn does not count). The current key is compared with the snapshots on the undo stack back to the last pawn move or capture
 3. **Fifty-move rule**: `halfmoveClock` counts half-moves since the last pawn move or capture; the game is drawn at 100
 
 Draws are declared automatically; there is no claim button. The clock is part of the undo snapshot and the saved game, and repetition is counted from the undo stack, so both survive Undo and a reload.
