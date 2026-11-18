@@ -83,7 +83,7 @@ It is designed to be simple, lightweight, and easily deployable on static hostin
   - Highlights the last move made
 - **Move History:** Displays moves in standard algebraic notation (SAN), with a file or rank added only where two pieces could make the move
 - **Drag and Drop:** Move pieces by dragging them to valid squares (works alongside click-based movement)
-- **Undo and Redo:** Revert the last move with one click, and play it again with Redo (or Ctrl+Y) until another move is made
+- **Undo and Redo:** Revert the last move with one click, and play it again with Redo (or Ctrl+Y or Ctrl+Shift+Z) until another move is made. Both are off in a game on the clock
 - **Chess Clock:** Five time controls, with a warning at 20 and 10 seconds; the computer budgets its time against it
 - **Game Review:** Step back through the game from the move list or with the step buttons, see what the engine makes of each position, and go on playing from any of them with "Play from here"
 - **Resign and Draw Offer:** End a game by resignation or by agreement; the result is saved and exported
@@ -179,7 +179,7 @@ That's it! No build process or dependencies are required.
 6. If a move results in check, the opponent's king will be highlighted in red
 7. A pawn that reaches the last rank is promoted; choose a queen, rook, bishop or knight
 8. Game ends with checkmate, stalemate or a draw (insufficient material, threefold repetition, fifty-move rule)
-9. Click "Undo" to take back the last move ("Redo" or Ctrl+Y plays it again), or "New Game" to reset the board (a game in progress asks for a second click)
+9. Click "Undo" to take back the last move ("Redo", Ctrl+Y or Ctrl+Shift+Z plays it again; neither is offered on the clock), or "New Game" to reset the board (a game in progress asks for a second click)
 10. Click "Copy PGN" to copy the game for an analysis board or to share it, or "Save PGN" to save it as a file
     - Click a move in the Move History (or use the arrow keys, Home and End there) to look at the position after it. Left and Right also step through the moves from anywhere else on the page, and Esc returns to the game. When a game is over, "Review" beside the result starts from the first position. "Play from here" (asked twice) drops the later moves and lets you go on from the position you are looking at; the game as it was is kept under "Past games". While you look back, a line under the list says what the engine makes of the position ("Engine thinks White is ahead by 1.3"). The buttons under the list step to the starting position, the previous move, the next move and the latest move, and the one in the middle plays through the moves, one a second, until it reaches the end or you press anything else; "Back to game" returns to the live position
     - "Resign" ends the game after a second click. "Offer draw" is accepted by the other side with a second click, or answered at once by the computer. Undo reopens a game ended this way (not in a timed game, where Undo is off)
@@ -268,6 +268,11 @@ Static_Chess/
 ├── .github/             # GitHub configuration
 │   ├── workflows/       # CI/CD workflows (ci.yml, release.yml)
 │   ├── ISSUE_TEMPLATE/  # Issue templates
+│   ├── pull_request_template.md # Checklist for pull requests
+│   ├── dependabot.yml   # Dependency update schedule
+│   ├── CONTRIBUTING.md  # Development setup and conventions
+│   ├── CODE_OF_CONDUCT.md # Code of Conduct
+│   ├── SECURITY.md      # How to report a vulnerability
 │   └── CODEOWNERS       # Code ownership rules
 ├── package.json         # Dev dependencies and scripts (lint/test only)
 ├── package-lock.json    # Exact versions of the dev dependencies
@@ -356,7 +361,7 @@ See the [Development Roadmap](docs/ROADMAP.md) for a detailed plan of upcoming f
 - **Stronger Computer Opponent:** Faster move generation and a transposition table, to search deeper in the same time
 - **Sound Effects:** Recorded sounds as an alternative to the built-in synthesized tones
 - **Named Saved Games:** Keep several games in progress under names; today the last 20 games are kept as past games
-- **Game Analysis:** Deeper analysis than the quick look the engine now takes at each move of a finished game
+- **Deeper Game Analysis:** A deeper look than the quick one the engine now takes at each move of a finished game
 
 </details>
 

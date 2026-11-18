@@ -36,6 +36,18 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- On the clock, a king with a knight, or with bishops on one colour, now wins when the other side runs out of time while it still has pieces or pawns that make a mate possible; it was scored as a draw (#165)
+- With the game open in two tabs, a game saved in the other tab is put in the past games before this one is saved over it, and Delete and Open in the past games act on the game that was clicked even if the other tab changed the list (#167)
+- Going through a game no longer runs a search on the page for every step: a finished game uses the scores already worked out, other positions are asked of the engine in the background, and a newer step replaces the older question (#166)
+- If the engine answers with no move or one that cannot be played, the computer works its move out on the page instead of getting stuck (#169)
+- In games with an increment, the computer no longer thinks for longer than it has left on its clock (#177)
+- A tab left open across a release no longer talks to an engine worker of the new release; it notices and works the moves out on the page (#178)
+- A failed engine worker is replaced with a new one instead of the page doing the engine's work for the rest of the visit (#149)
+- A finished or loaded game takes its player names from the game itself, not from the current settings (#139)
+- Past games with the same moves are kept as separate entries instead of being merged (#148)
+- En passant counts toward threefold repetition only when the capture is legal (#147)
+- Load PGN: tag values with escaped quotes or brackets and "e.p." after a move are read, and a closing comment is shown as the status only when it is the app's own wording for that result (#146)
+- Notation: castling that gives check or mate is written with "+" or "#" (#145)
 - Offline support: a late network response can finish updating the saved copy, and links with query parameters refresh the same copy instead of saving duplicates (#150)
 - A move played after the player's time had run out was accepted, and the increment was credited, when the move landed before the next clock tick; such a move now ends the game on time
 - After a release, a returning visitor could get some scripts new and some from the browser's cache for up to ten minutes, which could leave the page without a board; the service worker now asks the server for every file

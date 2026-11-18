@@ -11,17 +11,17 @@ The current version includes:
 - ✅ Check/checkmate detection
 - ✅ Stalemate detection
 - ✅ Draw detection (insufficient material, threefold repetition, fifty-move rule), resignation and draw by agreement
-- ✅ Computer opponent at three levels, and a hint for the side to move
+- ✅ Computer opponent at three levels, played as White, Black or a side drawn at random, and a hint for the side to move
 - ✅ Chess clock with five time controls
 - ✅ Visual feedback (highlights, move indicators)
 - ✅ Move history in standard algebraic notation, with full disambiguation
-- ✅ Game review: stepping through the moves, an engine score, and playing on from an earlier position
-- ✅ PGN and FEN import and export, and a list of past games
+- ✅ Game review: stepping through the moves, a Play button that goes through them, an engine score, and playing on from an earlier position
+- ✅ PGN and FEN import and export, sharing a game as a link, and a list of past games that can be reopened or deleted
 - ✅ Game persistence using localStorage
 - ✅ Board and page themes
 - ✅ Responsive design for different devices
 - ✅ SVG piece representation for consistent rendering
-- ✅ Drag and drop, and undo move
+- ✅ Drag and drop, and undo and redo
 - ✅ Keyboard navigation and ARIA enhancements
 - ✅ Diff-based rendering performance improvements
 - ✅ Sound effects (synthesized tones, toggle in settings)
@@ -57,12 +57,13 @@ Features are prioritized as follows:
 
 ### Tier 3: Advanced Features
 
-| Feature                  | Complexity | Dependencies | Description                                                                               | Status       |
-| ------------------------ | ---------- | ------------ | ----------------------------------------------------------------------------------------- | ------------ |
-| **AI Opponent**          | High       | None         | Computer opponent with three levels (alpha-beta search)                                   | ✅ Completed |
-| **Multiple Saved Games** | Medium     | None         | The last 20 games are kept and can be reopened; named slots are to do                     | In progress  |
-| **Game Import/Export**   | Medium     | None         | PGN and FEN, both ways: copy, paste, and start from a position                            | ✅ Completed |
-| **Game Analysis**        | High       | AI Opponent  | A score and Hint for the position being reviewed, and marks on the moves that lost ground | Complete     |
+| Feature                  | Complexity | Dependencies  | Description                                                                               | Status       |
+| ------------------------ | ---------- | ------------- | ----------------------------------------------------------------------------------------- | ------------ |
+| **AI Opponent**          | High       | None          | Computer opponent with three levels (alpha-beta search)                                   | ✅ Completed |
+| **Multiple Saved Games** | Medium     | None          | The last 20 games are kept and can be reopened; named slots are to do                     | In progress  |
+| **Game Import/Export**   | Medium     | None          | PGN and FEN, both ways: copy, paste, and start from a position                            | ✅ Completed |
+| **Game Analysis**        | High       | AI Opponent   | A score and Hint for the position being reviewed, and marks on the moves that lost ground | ✅ Completed |
+| **Deeper Game Analysis** | High       | Game Analysis | A deeper look at each move of a finished game than the quick one taken now                | Planned      |
 
 ## Implementation Timeline
 
