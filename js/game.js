@@ -135,10 +135,7 @@ function initializeGame() {
         else drawSide();
     }
     createBoard();
-    renderPieces(boardState);
-    updateStatusDisplay();
-    updateMoveHistoryDisplay();
-    refreshBoardVisuals();
+    redraw();
 
     bindControls({
         moveListClick: handleMoveListClick,
@@ -202,8 +199,7 @@ function handleBoardClickEvent(event) {
  * @param {number} [fullmove] - Number of the move about to be played.
  */
 function startGameFrom(position = initialPosition(), player = WHITE, startClock = 0, fullmove = 1) {
-    cancelAIMove();
-    stopAutoplay(); // A new or loaded game
+    leavePosition();
     archiveCurrentGame(); // The game being replaced stays in the list of past games
     const fen = positionToFEN(position, player, startClock, fullmove);
     const usual = fen === positionToFEN(initialPosition(), WHITE, 0, 1);
@@ -215,15 +211,28 @@ function startGameFrom(position = initialPosition(), player = WHITE, startClock 
     redoStack = [];
     gameResult = null;
     endedWithoutMove = false;
-    drawOffered = false;
-    viewPly = null;
     clock = newClock();
     runClockTimer();
-    cancelConfirms();
+    clearStoredGame();
+}
+
+/**
+ * Drops everything that was about the position on the board, before the game
+ * moves to another one by anything but a move played on it: a new or loaded
+ * game, Play from here, Undo, Redo, or an ending without a move. That is a
+ * pending promotion, the engine's work on a move or hint, a question waiting
+ * for a second click, a draw offer, an earlier move being looked at or played
+ * through, and the selection.
+ */
+function leavePosition() {
+    stopAutoplay();
     cancelPendingPromotion();
+    cancelAIMove();
+    cancelConfirms();
+    drawOffered = false;
+    viewPly = null;
     clearSelectedSquare();
     clearPossibleMoves();
-    clearStoredGame();
 }
 
 /**
@@ -233,11 +242,7 @@ function resetGame() {
     debugLog('Resetting game...');
     if (randomSide) drawSide(); // Before the game records who plays it
     startGameFrom();
-    // Re-render board and pieces
-    renderPieces(boardState);
-    updateStatusDisplay();
-    updateMoveHistoryDisplay();
-    refreshBoardVisuals();
+    redraw();
     requestAIMove(); // The computer moves first when it plays White
 }
 
@@ -488,9 +493,7 @@ function handlePlayHereClick() {
 function playFromHere() {
     if (viewPly === null) return;
     const ply = viewPly;
-    cancelPendingPromotion();
-    cancelAIMove();
-    cancelConfirms();
+    leavePosition();
     archiveCurrentGame();
     restoreSnapshot(positionHistory[ply]); // Taken before the move that followed, as for undo
     moveHistory = moveHistory.slice(0, ply);
@@ -499,12 +502,8 @@ function playFromHere() {
     isGameOver = false;
     gameResult = null;
     endedWithoutMove = false;
-    drawOffered = false;
-    viewPly = null;
     clock = null;
     runClockTimer();
-    clearSelectedSquare();
-    clearPossibleMoves();
     redraw();
     saveGameState();
     announce(`Playing on from here. ${currentStatus}`);
@@ -820,11 +819,7 @@ function undoLastMove() {
     if (!reopen && (positionHistory.length === 0 || (isGameOver && moveHistory.length === 0))) {
         return;
     }
-    cancelPendingPromotion();
-    cancelAIMove();
-    cancelConfirms();
-    viewPly = null;
-    drawOffered = false;
+    leavePosition();
     gameResult = null;
     endedWithoutMove = false;
     const takeBack = () => {
@@ -843,12 +838,7 @@ function undoLastMove() {
         }
     }
 
-    clearSelectedSquare();
-    clearPossibleMoves();
-    renderPieces(boardState);
-    updateStatusDisplay();
-    updateMoveHistoryDisplay();
-    refreshBoardVisuals();
+    redraw();
     announce(reopen ? `Game reopened. ${currentStatus}` : `Move taken back. ${currentStatus}`);
     saveGameState();
     requestAIMove(); // The computer's first move was taken back, or the game was reopened on its turn
@@ -860,11 +850,7 @@ function undoLastMove() {
  */
 function redoMove() {
     if (clock || isGameOver || redoStack.length === 0) return;
-    cancelPendingPromotion();
-    cancelAIMove(); // Also drops a hint
-    cancelConfirms();
-    viewPly = null;
-    drawOffered = false;
+    leavePosition();
     const replay = () => {
         const { from, to, promotion } = redoStack.pop();
         const played = playMove(from.row, from.col, to.row, to.col, promotion);
@@ -873,9 +859,6 @@ function redoMove() {
     };
     let last = replay();
     if (redoStack.length > 0 && !isGameOver && currentPlayer === computerColor()) last = replay();
-
-    clearSelectedSquare();
-    clearPossibleMoves();
     showMoveResult(last.move, last.kingInCheck);
     saveGameState();
     requestAIMove();
@@ -889,9 +872,7 @@ function redoMove() {
  * @param {string} status - What the status line says.
  */
 function endGameWithoutMove(result, status) {
-    cancelPendingPromotion();
-    cancelAIMove();
-    cancelConfirms();
+    leavePosition();
     if (clock && clock.turnStartedAt !== null) {
         clock.remaining[currentPlayer] = clockRemaining(currentPlayer); // Stop the clock
         clock.turnStartedAt = null;
@@ -900,11 +881,7 @@ function endGameWithoutMove(result, status) {
     isGameOver = true;
     gameResult = result;
     endedWithoutMove = true;
-    drawOffered = false;
-    viewPly = null;
     currentStatus = status;
-    clearSelectedSquare();
-    clearPossibleMoves();
     redraw();
     announce(currentStatus);
     playSound('game_end');
@@ -1896,6 +1873,7 @@ if (typeof module !== 'undefined' && module.exports) {
         },
         moveCost,
         playersView,
+        controlsView,
         resign,
         handleResignClick,
         handleDrawClick,
@@ -1910,6 +1888,9 @@ if (typeof module !== 'undefined' && module.exports) {
         },
         get viewPly() {
             return viewPly;
+        },
+        get drawOffered() {
+            return drawOffered;
         },
         // Export state variables for test access
         get boardState() {

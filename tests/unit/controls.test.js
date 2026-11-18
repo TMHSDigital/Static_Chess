@@ -269,3 +269,76 @@ describe('Redo', () => {
     expect(el(g, 'redo-button').hidden).toBe(true);
   });
 });
+
+describe('a change of position clears what was about the old one', () => {
+  const resetButton = (g) => g.window.document.getElementById('reset-button');
+
+  /** A game with a draw offered, an earlier move being looked at and New Game asking to confirm. */
+  const pending = (g) => {
+    g.play('e2e4', 'e7e5', 'g1f3');
+    g.game.handleDrawClick();
+    g.game.viewMove(1);
+    resetButton(g).click();
+    expect(g.game.drawOffered).toBe(true);
+    expect(g.game.viewPly).toBe(1);
+    expect(resetButton(g).textContent).toBe('Discard game?');
+  };
+  const cleared = (g, { view = true } = {}) => {
+    expect(g.game.drawOffered).toBe(false);
+    if (view) expect(g.game.viewPly).toBeNull();
+    expect(resetButton(g).textContent).toBe('New Game');
+  };
+
+  test.each([
+    ['New Game', (g) => g.game.resetGame()],
+    ['Play from here', (g) => g.game.playFromHere()],
+    ['a move', (g) => g.game.makeMove(0, 1, 2, 2)], // 3... Nc6, as the computer's reply would come
+    ['Undo', (g) => g.game.undoLastMove()],
+    ['Resign', (g) => g.game.resign()],
+  ])('%s', (name, change) => {
+    const g = loadGame();
+    pending(g);
+    change(g);
+    cleared(g);
+  });
+
+  test('Redo', () => {
+    const g = loadGame();
+    g.play('d2d4');
+    g.game.undoLastMove();
+    pending(g);
+    g.game.undoLastMove();
+    g.game.redoMove();
+    cleared(g);
+  });
+
+  test('a new opponent: the review is left alone, as the game itself goes on', () => {
+    jest.useFakeTimers();
+    try {
+      const g = loadGame();
+      pending(g);
+      g.game.setOpponent('easy', 'w');
+      cleared(g, { view: false });
+      expect(g.game.viewPly).toBe(1);
+      g.game.setOpponent(null);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('playing through the moves stops when the position is left', () => {
+    jest.useFakeTimers();
+    try {
+      const g = loadGame();
+      g.play('e2e4', 'e7e5', 'g1f3');
+      g.game.viewMove(0);
+      g.game.toggleAutoplay();
+      expect(g.game.controlsView().autoplaying).toBe(true);
+      g.game.undoLastMove();
+      expect(g.game.controlsView().autoplaying).toBe(false);
+      expect(g.game.viewPly).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
