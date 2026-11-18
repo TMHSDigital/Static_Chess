@@ -212,10 +212,10 @@ The implementation includes:
    - Moves within a few hundredths of a pawn of the best are treated as equal and one is picked at random; a forced mate always takes the quickest line
 2. `setOpponent(level, humanColor)` in `game.js` turns the opponent on or off. `main.js` calls it from the "Opponent" and "Play as" selectors, which are saved like the other settings
 3. `requestAIMove()` runs after every move, undo, reset and load. If it is the computer's turn it asks the engine through `askEngine()` in `engine-bridge.js`, which posts the position to `ai-worker.js`, and plays the answer with `makeMove()`. Where a Worker cannot be created (a page opened from a file, or the tests) the search runs on the main thread after a `setTimeout`
-4. Each request has an id. Undo, New Game and changing the opponent call `dropEngineRequests()`, so an answer that arrives late is dropped (`isLatestEngineRequest()`). A worker cannot be interrupted, so if it is still searching at that moment `stopWorkerSearch()` terminates it and the next request starts a new one instead of waiting behind the abandoned search. A worker started after a release was deployed loads that release's scripts while the open tab runs the old ones, so every answer carries the worker's `CONFIG.ENGINE_PROTOCOL`; on a mismatch the page gives up on workers for the visit and answers on its own thread. Raise `ENGINE_PROTOCOL` with any change to the messages or the positions in them
+4. Each request has an id. Undo, Redo, New Game and changing the opponent call `dropEngineRequests()`, so an answer that arrives late is dropped (`isLatestEngineRequest()`). A worker cannot be interrupted, so if it is still searching at that moment `stopWorkerSearch()` terminates it and the next request starts a new one instead of waiting behind the abandoned search. A worker started after a release was deployed loads that release's scripts while the open tab runs the old ones, so every answer carries the worker's `CONFIG.ENGINE_PROTOCOL`; on a mismatch the page gives up on workers for the visit and answers on its own thread. Raise `ENGINE_PROTOCOL` with any change to the messages or the positions in them
 5. In a game on the clock the request carries `budgetMs` from `searchBudget()`: a thirtieth of the computer's remaining time plus the increment, between 50 ms and three times the level's usual allowance, and never more than half the time left, since the increment is only added after the move. It replaces the level's thinking time, and under 150 ms `baseDepthFor()` lowers the depth that is always searched to two half-moves, under 75 ms to one. With less than ten seconds left the computer also skips its usual pause before moving
 6. While it is the computer's turn `isBoardLocked()` is true: clicks and drags are ignored and the status line says the computer is thinking
-7. Undo takes back the computer's reply together with the player's move
+7. Undo takes back the computer's reply together with the player's move, and Redo plays both again; after a Redo that leaves the computer to move, `requestAIMove()` asks for its reply as usual
 
 To make it stronger, the limit is speed: each extra half-move costs roughly an order of magnitude in time, and a second buys `hard` only about one half-move beyond its fixed depth. Faster move generation in `rules.js` (it copies the board for every move tried) and a transposition table are the next steps; raising `depth` or `timeMs` in `AI_LEVELS` only trades time for strength.
 
@@ -238,7 +238,7 @@ To make it stronger, the limit is speed: each extra half-move costs roughly an o
 3. `makeMove()` stops the mover's clock, adds the increment and starts the other side's. White's first move is not timed
 4. `runClockTimer()` keeps an interval going (`CONFIG.CLOCK_TICK_MS`) only while a clock runs. `tickClock()` redraws it and, at zero, ends the game through `endGameWithoutMove()` with what `timeoutResult()` in `clock.js` says: a loss, or a draw if the other side could never give mate (`canDeliverMate()`)
 5. `warnIfTimeIsLow()` announces "White has 20 seconds left." and plays the `LOW_TIME` sound when the side to move goes down past a threshold in `CONFIG.LOW_TIME_WARNINGS`, once per threshold unless an increment takes the clock back above it
-6. Undo is off in a timed game
+6. Undo and Redo are off in a timed game
 7. The clock is saved with the game, as the times left and whether it was running, and the page saves again on `pagehide`. After a reload the side to move is put back on the clock from that moment
 8. A game loaded from PGN has no clock
 9. With `GAME_TIMER` off, `setTimeControl()` never chooses a clock and `main.js` hides the selector
@@ -251,14 +251,15 @@ Sound effects are feature-flagged and user-toggleable:
 2. `game.js` triggers `playSound()` for move, capture, check, castle, promotion and game end
 3. `playSound()` in `utils.js` synthesizes short tones with the Web Audio API from the definitions in `CONFIG.SOUNDS`, so no audio files are needed
 
-### 6. Undo Move
+### 6. Undo and Redo
 
 Undo is implemented using a pre-move snapshot stack:
 
 1. Before a move is applied, `playMove()` pushes `currentSnapshot()` (board, side to move, king positions, en passant target, half-move clock, status) to `positionHistory`. No copy is needed, because `applyMove()` builds a new position instead of changing the old one
 2. `undoLastMove()` restores the previous snapshot with `restoreSnapshot()`, removes the last move from the move list and rerenders
-3. The stack is saved with the game, so Undo still works after a reload
+3. The stack is not saved: after a reload `loadGameState()` rebuilds it with `replayUndoStack()`, which plays the saved moves again from where the game began, so Undo still works
 4. `index.html` includes an Undo button, which is disabled when there is nothing to undo
+5. Redo: `undoLastMove()` pushes each move it takes back onto `redoStack` (`{ from, to, promotion }`), and `redoMove()` plays the last one again through `playMove()`. Against the computer it also plays the computer's reply again, as Undo took both back. Any new move, a new or loaded game and "Play from here" empty the stack. The Redo button and Ctrl+Y or Ctrl+Shift+Z (`isRedoKey()` in `game-ui.js`, offered with Undo) work only while `canRedo` in `controlsView()` holds: not in a game on the clock, not in a finished game, and only with something to redo. The stack is not saved, so a reload forgets it
 
 ### 7. Past Games
 
