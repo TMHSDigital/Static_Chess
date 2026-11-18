@@ -57,9 +57,11 @@ let archivedFrom = null;
 let gameReady = false;
 
 /**
- * The live position as one record. These two functions are the only places
- * that list its fields: the undo stack, saving, loading and a new game all go
- * through them.
+ * The live position as one record, a snapshot. currentSnapshot, restoreSnapshot
+ * and snapshotOf are the only places in the game that list its fields: the undo
+ * stack, saving, loading and a new game all go through them. saved-game.js
+ * checks a saved one field by field (cleanSnapshot), and a test keeps its
+ * fields the same as these.
  * @returns {object}
  */
 function currentSnapshot() {
@@ -72,6 +74,38 @@ function currentSnapshot() {
         enPassantTarget,
         halfmoveClock,
     };
+}
+
+/**
+ * @param {object} position - A rules.js position in which the game goes on.
+ * @param {string} player - The side to move.
+ * @param {number} count - Half-moves since the last pawn move or capture.
+ * @returns {object} The position as a snapshot, like currentSnapshot gives.
+ */
+function snapshotOf(position, player, count) {
+    return {
+        boardState: position.board,
+        currentPlayer: player,
+        isGameOver: false,
+        kingPositions: position.kingPositions,
+        currentStatus: `${sideName(player)}'s turn`,
+        enPassantTarget: position.enPassantTarget,
+        halfmoveClock: count,
+    };
+}
+
+/** @returns {object} A snapshot as a position for the functions in rules.js. */
+function snapshotPosition(snapshot) {
+    return {
+        board: snapshot.boardState,
+        kingPositions: snapshot.kingPositions,
+        enPassantTarget: snapshot.enPassantTarget,
+    };
+}
+
+/** @returns {string} A snapshot's positionKey, which repeated positions share. */
+function snapshotKey(snapshot) {
+    return positionKey(snapshot.boardState, snapshot.currentPlayer, snapshot.enPassantTarget);
 }
 
 /** Makes a record from currentSnapshot the live position. */
@@ -179,15 +213,7 @@ function startGameFrom(position = initialPosition(), player = WHITE, startClock 
     const fen = positionToFEN(position, player, startClock, fullmove);
     const usual = fen === positionToFEN(initialPosition(), WHITE, 0, 1);
     gameStart = { player, halfmoveClock: startClock, fullmove, fen: usual ? null : fen };
-    restoreSnapshot({
-        boardState: position.board,
-        currentPlayer: player,
-        isGameOver: false,
-        kingPositions: position.kingPositions,
-        currentStatus: `${sideName(player)}'s turn`,
-        enPassantTarget: position.enPassantTarget,
-        halfmoveClock: startClock,
-    });
+    restoreSnapshot(snapshotOf(position, player, startClock));
     recordPlayers();
     moveHistory = [];
     positionHistory = [];
@@ -299,9 +325,7 @@ function shownPosition() {
     // While looking back: the snapshot taken before move number viewPly + 1
     const shown = viewPly === null ? currentSnapshot() : positionHistory[viewPly];
     return {
-        board: shown.boardState,
-        kingPositions: shown.kingPositions,
-        enPassantTarget: shown.enPassantTarget,
+        ...snapshotPosition(shown),
         halfmoveClock: shown.halfmoveClock || 0,
         player: shown.currentPlayer,
         ply: viewPly === null ? moveHistory.length : viewPly,
@@ -398,15 +422,6 @@ function positionScoreText(shown) {
 /** @returns {string} Tells one finished game from another: how it began and its moves. */
 function gameSignature() {
     return `${gameStart.fen || ''}|${moveHistory.map((move) => move.notation).join(' ')}`;
-}
-
-/** @returns {object} A snapshot of this game as a position for the functions in rules.js. */
-function snapshotPosition(snapshot) {
-    return {
-        board: snapshot.boardState,
-        kingPositions: snapshot.kingPositions,
-        enPassantTarget: snapshot.enPassantTarget,
-    };
 }
 
 /**
@@ -639,7 +654,7 @@ function isOwnPiece(row, col) {
 
 /** @returns {object} The live game as a position for the functions in rules.js. */
 function livePosition() {
-    return { board: boardState, kingPositions, enPassantTarget };
+    return snapshotPosition(currentSnapshot());
 }
 
 /**
@@ -720,17 +735,9 @@ function playMove(startRow, startCol, endRow, endCol, promotionType = QUEEN) {
     boardState = result.position.board;
     kingPositions = result.position.kingPositions;
     enPassantTarget = result.position.enPassantTarget;
-    halfmoveClock = move.piece.type === PAWN || move.captured ? 0 : halfmoveClock + 1; // Fifty-move rule counter
+    halfmoveClock = nextHalfmoveClock(halfmoveClock, move);
     switchPlayer();
-    move.notation = writeSAN(
-        move,
-        {
-            board: before.boardState,
-            kingPositions: before.kingPositions,
-            enPassantTarget: before.enPassantTarget,
-        },
-        result.position
-    );
+    move.notation = writeSAN(move, snapshotPosition(before), result.position);
     moveHistory.push(move);
 
     // --- Has the game ended? ---
@@ -1095,11 +1102,7 @@ function requestAIMove() {
                 updateStatusDisplay();
                 return;
             }
-            const legal =
-                move &&
-                generateLegalMovesForPiece(move.from.row, move.from.col).some(
-                    (target) => target.row === move.to.row && target.col === move.to.col
-                );
+            const legal = move && isLegalMove(livePosition(), move.from, move.to);
             // An answer that cannot be played is a fault in the engine, not a
             // choice: rather than leave the computer stuck, it moves from here
             const played = legal ? move : chooseAIMove(livePosition(), color, opponentLevel);
@@ -1138,9 +1141,7 @@ function askEngineAbout(
     channel = 'play',
     ply = moveHistory.length
 ) {
-    const seen = positionHistory
-        .slice(0, ply)
-        .map((past) => positionKey(past.boardState, past.currentPlayer, past.enPassantTarget));
+    const seen = positionHistory.slice(0, ply).map(snapshotKey);
     // Only the computer's own move is budgeted against the clock. A hint is for
     // the player, whose clock is running, or for a position being reviewed: it
     // gets the level's usual time
@@ -1340,14 +1341,13 @@ function showHintOnBoard() {
 
 /** @returns {boolean} True if the current position has now occurred three times. */
 function isThreefoldRepetition() {
-    const current = positionKey(boardState, currentPlayer, enPassantTarget);
+    const current = snapshotKey(currentSnapshot());
     let occurrences = 1;
     // A pawn move or capture makes every earlier position unreachable, so only
     // the positions since the last one can repeat.
     const oldest = Math.max(0, positionHistory.length - halfmoveClock);
     for (let i = positionHistory.length - 1; i >= oldest; i--) {
-        const past = positionHistory[i];
-        if (positionKey(past.boardState, past.currentPlayer, past.enPassantTarget) === current) {
+        if (snapshotKey(positionHistory[i]) === current) {
             occurrences++;
             if (occurrences >= 3) return true;
         }
@@ -1489,27 +1489,16 @@ function replayUndoStack(start, moves, saved) {
     const stack = [];
     for (const move of moves) {
         const piece = position.board[move.from.row][move.from.col];
-        const legal = legalMovesFrom(position, move.from.row, move.from.col).some(
-            (to) => to.row === move.to.row && to.col === move.to.col
-        );
-        if (!piece || piece.color !== player || !legal) return null;
-        stack.push({
-            boardState: position.board,
-            currentPlayer: player,
-            isGameOver: false,
-            kingPositions: position.kingPositions,
-            currentStatus: `${sideName(player)}'s turn`,
-            enPassantTarget: position.enPassantTarget,
-            halfmoveClock: count,
-        });
+        if (!piece || piece.color !== player || !isLegalMove(position, move.from, move.to)) {
+            return null;
+        }
+        stack.push(snapshotOf(position, player, count));
         const played = applyMove(position, move.from, move.to, move.promotion || QUEEN);
-        count = piece.type === PAWN || played.move.captured ? 0 : count + 1;
+        count = nextHalfmoveClock(count, played.move);
         position = played.position;
         player = opponentOf(player);
     }
-    const reached = positionKey(position.board, player, position.enPassantTarget);
-    const savedKey = positionKey(saved.boardState, saved.currentPlayer, saved.enPassantTarget);
-    return reached === savedKey ? stack : null;
+    return snapshotKey(snapshotOf(position, player, count)) === snapshotKey(saved) ? stack : null;
 }
 
 // --- Past games ---
@@ -1870,6 +1859,7 @@ if (typeof module !== 'undefined' && module.exports) {
         refreshBoardVisuals,
         makeMove,
         livePosition,
+        currentSnapshot,
         setOpponent,
         computerColor,
         isBoardLocked,

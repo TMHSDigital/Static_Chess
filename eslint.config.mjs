@@ -53,6 +53,8 @@ const appGlobals = {
     'hasInsufficientMaterial',
     'gameOutcome',
     'canDeliverMate',
+    'isLegalMove',
+    'nextHalfmoveClock',
     'findSANMove',
     'positionToFEN',
     'positionFromFEN',

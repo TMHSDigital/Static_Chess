@@ -59,6 +59,32 @@ describe('saving and restoring', () => {
     expect(second.window.document.getElementById('undo-button').disabled).toBe(true);
   });
 
+  test('a saved position is checked field by field, the same fields the game keeps', () => {
+    const g = loadGame();
+    g.play('e2e4');
+    const live = g.game.currentSnapshot();
+    const checked = global.cleanSnapshot(JSON.parse(JSON.stringify(live)), '');
+    expect(Object.keys(checked).sort()).toEqual(Object.keys(live).sort());
+  });
+
+  test('a game reloaded near the fifty-move rule counts on as it was played', () => {
+    const seed = loadGame();
+    seed.setPosition({ a1: 'wk*', h8: 'bk*', b2: 'wr*', g7: 'br*' });
+    seed.game.startGameFrom(seed.game.livePosition(), 'w', 96);
+    seed.play('b2b3', 'g7g6'); // 98 half-moves without a pawn move or capture
+    const g = loadGame({ storage: { [KEY]: seed.window.localStorage.getItem(KEY) } });
+    expect(g.game.halfmoveClock).toBe(98);
+    expect(g.game.positionHistory.map((past) => past.halfmoveClock)).toEqual([96, 97]);
+
+    g.game.undoLastMove(); // The counter comes back from the rebuilt undo stack
+    expect(g.game.halfmoveClock).toBe(97);
+    g.play('g7g6', 'b3b4');
+    expect(g.game.isGameOver).toBe(false);
+    g.play('g6g5');
+    expect(g.game.halfmoveClock).toBe(100);
+    expect(g.game.currentStatus).toBe('Draw by the fifty-move rule.');
+  });
+
   test('the undo stack is not saved, but played again from the moves', () => {
     const first = loadGame();
     first.play('e2e4', 'e7e5', 'g1f3');

@@ -28,10 +28,9 @@ function writeSAN(move, positionBefore, positionAfter) {
                 if (r === move.from.row && c === move.from.col) continue;
                 const other = positionBefore.board[r][c];
                 if (!other || other.type !== piece.type || other.color !== piece.color) continue;
-                const reaches = legalMovesFrom(positionBefore, r, c).some(
-                    (to) => to.row === move.to.row && to.col === move.to.col
-                );
-                if (reaches) rivals.push({ row: r, col: c });
+                if (isLegalMove(positionBefore, { row: r, col: c }, move.to)) {
+                    rivals.push({ row: r, col: c });
+                }
             }
         }
         // SAN rule: the file if it is enough to tell the pieces apart, else the

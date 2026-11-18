@@ -234,3 +234,22 @@ describe('gameOutcome', () => {
     expect(outcome(g, mate, { halfmoveClock: 100, repeated: true }).reason).toBe('checkmate');
   });
 });
+
+describe('the fifty-move rule counter', () => {
+  test('goes back to zero after a pawn move or a capture, and counts any other move', () => {
+    const { rules, pieces } = loadGame();
+    const piece = (type) => new pieces.Piece(type, 'w');
+    expect(rules.nextHalfmoveClock(7, { piece: piece('p'), captured: null })).toBe(0);
+    expect(rules.nextHalfmoveClock(7, { piece: piece('n'), captured: piece('b') })).toBe(0);
+    expect(rules.nextHalfmoveClock(7, { piece: piece('r'), captured: null })).toBe(8);
+    expect(rules.nextHalfmoveClock(0, { piece: piece('k'), captured: null })).toBe(1);
+  });
+
+  test('isLegalMove agrees with the list of legal moves', () => {
+    const { rules } = loadGame();
+    const start = rules.initialPosition();
+    expect(rules.isLegalMove(start, { row: 6, col: 4 }, { row: 4, col: 4 })).toBe(true);
+    expect(rules.isLegalMove(start, { row: 6, col: 4 }, { row: 3, col: 4 })).toBe(false);
+    expect(rules.isLegalMove(start, { row: 4, col: 4 }, { row: 3, col: 4 })).toBe(false); // An empty square
+  });
+});

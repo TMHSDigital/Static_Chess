@@ -70,7 +70,7 @@ Static_Chess/
    - Adds the click listener to the board and handles the buttons beside it
    - `makeMove()` plays a move in the live game. The change to the game itself is `playMove()`: it applies the move through `rules.js`, records it and detects checkmate and stalemate, and it refuses a finished game. `makeMove()` adds what only a move made on the page needs: the clock, automatic draws, `showMoveResult()` for the page updates, saving and the computer's reply. Load PGN plays its moves in through `playMove()` alone
    - `startGameFrom()` begins a game from a position, by default `initialPosition()` from `rules.js` with White to move. How the game began is kept in `gameStart` and saved with it, and `moveNumber()` in `notation.js` is the one place that works out move numbers from it for the move list, PGN and FEN
-   - `currentSnapshot()` and `restoreSnapshot()` are the one place that lists the fields of a position; the undo stack, saving, loading and a new game go through them
+   - `currentSnapshot()`, `restoreSnapshot()` and `snapshotOf()` are the one place that lists the fields of a position; the undo stack, saving, loading and a new game go through them. `snapshotPosition()` turns a snapshot into a `rules.js` position and `snapshotKey()` gives its `positionKey()`. `cleanSnapshot()` in `saved-game.js` checks a saved one field by field, and a test keeps its fields the same. The fifty-move counter rule (`nextHalfmoveClock()`) and the legality of one move (`isLegalMove()`) live in `rules.js`
    - Delegates rendering to board.js
 
 3. **rules.js**: The rules of chess

@@ -453,6 +453,28 @@ function gameOutcome(position, player, draws) {
 }
 
 /**
+ * @param {object} position
+ * @param {{row: number, col: number}} from
+ * @param {{row: number, col: number}} to
+ * @returns {boolean} True if the piece on from may legally move to to.
+ */
+function isLegalMove(position, from, to) {
+    return legalMovesFrom(position, from.row, from.col).some(
+        (target) => target.row === to.row && target.col === to.col
+    );
+}
+
+/**
+ * The fifty-move rule counter after a move.
+ * @param {number} count - Half-moves since the last pawn move or capture, before the move.
+ * @param {{piece: object, captured: object|null}} move - The move, as applyMove gives it.
+ * @returns {number} 0 after a pawn move or a capture, else one more.
+ */
+function nextHalfmoveClock(count, move) {
+    return move.piece.type === PAWN || move.captured ? 0 : count + 1;
+}
+
+/**
  * @param {Array<Array<object|null>>} board
  * @param {string} color
  * @returns {boolean} False if that side could never give checkmate, by any
@@ -694,6 +716,8 @@ if (typeof module !== 'undefined' && module.exports) {
         hasInsufficientMaterial,
         gameOutcome,
         canDeliverMate,
+        isLegalMove,
+        nextHalfmoveClock,
         hasCastlingRight,
     };
 }
