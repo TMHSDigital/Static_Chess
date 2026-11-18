@@ -61,7 +61,7 @@ afterEach(cleanupPreviousGame);
 /**
  * Loads a fresh copy of the game into a new JSDOM. Modules are reset first, so
  * every call gets its own DOM and game state.
- * @param {{ drag?: boolean, storage?: Object<string, string>, brokenStorage?: boolean, deferStart?: boolean }} [options]
+ * @param {{ drag?: boolean, storage?: Object<string, string>, brokenStorage?: boolean, configure?: (config: object) => void, deferStart?: boolean }} [options]
  *   drag: also load and start drag.js. storage: values to put in localStorage before
  *   the game starts. brokenStorage: make every localStorage call throw. configure:
  *   a function that may change CONFIG before the game loads. deferStart: leave

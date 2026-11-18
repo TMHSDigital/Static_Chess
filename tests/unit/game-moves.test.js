@@ -30,9 +30,9 @@ describe('game core', () => {
 describe('legal move generation', () => {
   test('20 legal moves for each side from the opening position', () => {
     const g = loadGame();
-    expect(g.game.generateAllLegalMoves('w')).toHaveLength(20);
+    expect(g.rules.allLegalMoves(g.game.livePosition(), 'w')).toHaveLength(20);
     g.play('e2e4');
-    expect(g.game.generateAllLegalMoves('b')).toHaveLength(20);
+    expect(g.rules.allLegalMoves(g.game.livePosition(), 'b')).toHaveLength(20);
   });
 
   test('sliding pieces are blocked by their own pieces', () => {

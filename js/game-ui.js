@@ -207,7 +207,6 @@ function bindControls(handlers) {
         listen(importButton, 'click', openImportDialog);
         listen(importLoadButton, 'click', handleImportLoad);
         listen(importCancelButton, 'click', closeImportDialog);
-        listen(importDialog, 'keydown', handleImportKeydown);
         // A file can be dropped anywhere on the dialog
         for (const type of ['dragover', 'dragleave', 'drop']) {
             listen(importDialog, type, handleImportDrag);
@@ -856,14 +855,6 @@ function readImportFile(file) {
             importError.textContent = 'That file could not be read.';
         }
     );
-}
-
-/** Escape closes the dialog. */
-function handleImportKeydown(event) {
-    if (event.key === 'Escape') {
-        event.preventDefault();
-        closeImportDialog();
-    }
 }
 
 /**

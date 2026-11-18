@@ -42,12 +42,15 @@ describe('values that are written down twice', () => {
     }
   });
 
-  test('the move animation lasts as long in pieces.css as config.js says', () => {
-    const { CONFIG } = require('../../js/config');
-    const seconds = css('pieces.css').match(
-      /\.piece\.moved \{\s*animation: move-piece ([\d.]+)s/
-    )[1];
-    expect(Number(seconds) * 1000).toBe(CONFIG.ANIMATIONS.PIECE_MOVE);
+  test('the move animation takes its length from config.js alone', () => {
+    const rule = css('pieces.css').match(/\.piece\.moved \{([^}]*)\}/)[1];
+    expect(rule).toContain('animation-name: move-piece');
+    expect(rule).not.toMatch(/animation(-duration)?:[^;]*\d/); // No length of its own
+    const g = loadGame();
+    g.play('e2e4');
+    const moved = g.board.getSquareElement(4, 4).querySelector('.piece');
+    expect(moved.classList.contains('moved')).toBe(true);
+    expect(moved.style.animationDuration).toBe(`${global.CONFIG.ANIMATIONS.PIECE_MOVE}ms`);
   });
 });
 

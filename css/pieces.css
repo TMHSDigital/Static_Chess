@@ -58,5 +58,7 @@
 }
 
 .piece.moved {
-    animation: move-piece 0.3s ease;
+    /* The duration is CONFIG.ANIMATIONS.PIECE_MOVE, set by board.js */
+    animation-name: move-piece;
+    animation-timing-function: ease;
 }

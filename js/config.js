@@ -112,10 +112,11 @@ const CONFIG = {
     // the side that played it fell by at least this much (hundredths of a pawn)
     REVIEW_MISTAKE_DROP: 150,
 
-    // How long New Game, Resign, Load and Play from here wait for a confirming second click (ms)
+    // How long New Game, Resign, Load, Play from here, and Delete and Clear all in
+    // the past games wait for a confirming second click (ms)
     CONFIRM_MS: 4000,
 
-    // Animation durations (ms)
+    // Animation durations (ms). The CSS takes them from here (board.js)
     ANIMATIONS: {
         PIECE_MOVE: 300,
     },

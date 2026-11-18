@@ -159,6 +159,7 @@ function renderPieces(boardState, movedPiece = null) {
 
                 if (movedPiece && movedPiece.row === row && movedPiece.col === col) {
                     pieceElement.classList.add('moved');
+                    pieceElement.style.animationDuration = `${CONFIG.ANIMATIONS.PIECE_MOVE}ms`;
                     setTimeout(
                         () => pieceElement.classList.remove('moved'),
                         CONFIG.ANIMATIONS.PIECE_MOVE

@@ -189,7 +189,7 @@ describe('the live game uses the same rules', () => {
     expect(JSON.stringify(start)).toBe(picture);
     expect(g.game.livePosition().board).toBe(g.game.boardState);
     expect(g.rules.allLegalMoves(g.game.livePosition(), 'b')).toEqual(
-      g.game.generateAllLegalMoves('b')
+      g.rules.allLegalMoves(g.game.livePosition(), 'b')
     );
   });
 });

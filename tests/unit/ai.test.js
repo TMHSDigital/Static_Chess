@@ -22,7 +22,7 @@ describe('choosing a move', () => {
     (level) => {
       const g = loadGame();
       const move = g.ai.chooseAIMove(g.game.livePosition(), 'w', level, first);
-      const legal = g.game.generateAllLegalMoves('w').map((m) => alg(g, m));
+      const legal = g.rules.allLegalMoves(g.game.livePosition(), 'w').map((m) => alg(g, m));
       expect(legal).toContain(alg(g, move));
       expect(move.promotion).toBe('q');
     }
@@ -64,7 +64,7 @@ describe('choosing a move', () => {
       const g = loadGame();
       g.setPosition({ e1: 'wk*', c3: 'wn*', h8: 'bk*', d5: 'bq*' });
       const position = g.game.livePosition();
-      const legal = g.game.generateAllLegalMoves('w').map((m) => alg(g, m));
+      const legal = g.rules.allLegalMoves(g.game.livePosition(), 'w').map((m) => alg(g, m));
       // The first number decides on the blunder, the second picks the move
       const picks =
         (...numbers) =>

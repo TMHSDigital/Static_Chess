@@ -491,7 +491,7 @@ describe('the Load PGN dialog', () => {
     el(g, 'import-cancel').click();
     expect(el(g, 'import-dialog').hidden).toBe(true);
     el(g, 'import-button').click();
-    el(g, 'import-dialog').dispatchEvent(
+    el(g, 'import-text').dispatchEvent(
       new g.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
     );
     expect(el(g, 'import-dialog').hidden).toBe(true);

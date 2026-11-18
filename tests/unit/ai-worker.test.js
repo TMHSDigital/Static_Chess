@@ -446,7 +446,7 @@ describe('the computer opponent in a Web Worker', () => {
     jest.runAllTimers();
     expect(g.game.moveHistory).toHaveLength(2);
 
-    const reply = g.game.generateAllLegalMoves('w')[0];
+    const reply = g.rules.allLegalMoves(g.game.livePosition(), 'w')[0];
     g.game.makeMove(reply.from.row, reply.from.col, reply.to.row, reply.to.col);
     jest.runAllTimers();
     expect(g.game.moveHistory).toHaveLength(4);
@@ -485,7 +485,7 @@ describe('the computer opponent in a Web Worker', () => {
       expect(workers).toHaveLength(2);
       expect(workers[1].messages).toEqual([workers[0].messages[1]]);
 
-      const legal = g.game.generateAllLegalMoves('b')[0];
+      const legal = g.rules.allLegalMoves(g.game.livePosition(), 'b')[0];
       workers[1].reply({ id: workers[1].messages[0].id, move: legal });
       jest.runAllTimers();
       expect(g.game.moveHistory).toHaveLength(4);

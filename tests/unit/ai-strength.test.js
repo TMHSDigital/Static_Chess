@@ -172,7 +172,7 @@ describe('search options', () => {
     const g = loadGame();
     g.play('e2e4', 'e7e5', 'g1f3', 'b8c6');
     const position = g.game.livePosition();
-    const legal = g.game.generateAllLegalMoves('w').map((move) => alg(g, move));
+    const legal = g.rules.allLegalMoves(g.game.livePosition(), 'w').map((move) => alg(g, move));
     // How long it takes depends on the machine, so only the move is checked
     const move = g.ai.chooseAIMove(position, 'w', 'hard', first, { timed: true });
     expect(legal).toContain(alg(g, move));

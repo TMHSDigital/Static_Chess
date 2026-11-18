@@ -99,7 +99,9 @@ let audioContext = null; // Created on first use; browsers require a user gestur
 /**
  * Plays a short synthesized sound for a game event. The tones are generated
  * with the Web Audio API, so no audio files are needed.
- * @param {string} soundType - 'move', 'capture', 'check', 'castle', 'promote' or 'game_end'.
+ * Does nothing, and throws nothing, where sound is off or not available.
+ * @param {string} soundType - 'move', 'capture', 'check', 'castle', 'promote',
+ *   'game_end' or 'low_time'.
  * @exports playSound
  */
 function playSound(soundType) {

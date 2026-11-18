@@ -226,7 +226,7 @@ function resetGame() {
  * @param {number} col
  */
 function handleBoardClick(row, col) {
-    if (isBoardLocked()) return; // Game over, promotion chooser open, or the computer's turn
+    if (isBoardLocked()) return; // Game over, looking back, chooser open, or the computer's turn
 
     const clickedPiece = boardState[row][col];
     const selected = getSelectedSquare();
@@ -309,13 +309,22 @@ function shownPosition() {
 }
 
 /**
+ * @returns {boolean} True if every move has the position before it, so the
+ *   game can be looked back through. Saves from older versions can have a move
+ *   list without the positions behind it, when its moves cannot be played again.
+ */
+function canBrowse() {
+    return positionHistory.length === moveHistory.length;
+}
+
+/**
  * Shows the position after a number of moves without changing the game. The
  * board is locked meanwhile; showing the last position returns to the game.
  * @param {number} ply - Moves played in the position to show; 0 is the starting position.
  */
 function viewMove(ply) {
     // Saves from older versions can have a move list without the positions behind it
-    if (positionHistory.length !== moveHistory.length) return;
+    if (!canBrowse()) return;
     const wanted = Math.max(0, Math.min(moveHistory.length, ply));
     viewPly = wanted === moveHistory.length ? null : wanted;
     withdrawQuestion('playHere'); // The question was about another position
@@ -407,8 +416,7 @@ function snapshotPosition(snapshot) {
  * Play from here) or another one starts.
  */
 function scoreFinishedGame() {
-    const wanted =
-        isGameOver && moveHistory.length > 0 && positionHistory.length === moveHistory.length;
+    const wanted = isGameOver && moveHistory.length > 0 && canBrowse();
     if (!wanted) {
         if (scoredGame !== null) dropEngineRequests(REVIEW_SCORES_CHANNEL);
         scoredGame = null;
@@ -556,7 +564,7 @@ function handleMoveListKeydown(event) {
  * @returns {boolean} True if the key did something.
  */
 function handlePageKey(key) {
-    if (positionHistory.length !== moveHistory.length) return false; // Nothing to look at
+    if (!canBrowse()) return false; // Nothing to look at
     const shown = shownPosition().ply;
     if (key === 'ArrowLeft' && shown > 0) {
         viewMove(shown - 1);
@@ -599,7 +607,7 @@ function toggleAutoplay() {
         stopAutoplay();
         return;
     }
-    if (positionHistory.length !== moveHistory.length || moveHistory.length === 0) return;
+    if (!canBrowse() || moveHistory.length === 0) return;
     if (shownPosition().ply >= moveHistory.length) viewMove(0);
     autoplayTimer = setInterval(autoplayStep, CONFIG.AUTOPLAY_STEP_MS);
     renderControls(controlsView());
@@ -786,22 +794,18 @@ function showMoveResult(move, kingInCheck) {
     updateMoveHistoryDisplay();
     refreshBoardVisuals(kingInCheck);
     announce(describeMove(move));
-    try {
-        if (isGameOver) {
-            playSound('game_end');
-        } else if (move.isCastling) {
-            playSound('castle');
-        } else if (move.promotion) {
-            playSound('promote');
-        } else if (move.captured) {
-            playSound('capture');
-        } else if (move.isCheck) {
-            playSound('check');
-        } else {
-            playSound('move');
-        }
-    } catch {
-        /* ignore sound errors */
+    if (isGameOver) {
+        playSound('game_end');
+    } else if (move.isCastling) {
+        playSound('castle');
+    } else if (move.promotion) {
+        playSound('promote');
+    } else if (move.captured) {
+        playSound('capture');
+    } else if (move.isCheck) {
+        playSound('check');
+    } else {
+        playSound('move');
     }
 }
 
@@ -855,9 +859,8 @@ function undoLastMove() {
 function redoMove() {
     if (clock || isGameOver || redoStack.length === 0) return;
     cancelPendingPromotion();
-    cancelAIMove();
+    cancelAIMove(); // Also drops a hint
     cancelConfirms();
-    clearHint();
     viewPly = null;
     drawOffered = false;
     const replay = () => {
@@ -902,11 +905,7 @@ function endGameWithoutMove(result, status) {
     clearPossibleMoves();
     redraw();
     announce(currentStatus);
-    try {
-        playSound('game_end');
-    } catch {
-        /* ignore sound errors */
-    }
+    playSound('game_end');
     saveGameState();
 }
 
@@ -999,7 +998,10 @@ function playerName(players, color, plain) {
     return players && players.computer === color ? `Computer (${players.level})` : plain;
 }
 
-/** @returns {boolean} True while the player cannot move: game over, chooser open, or the computer's turn. */
+/**
+ * @returns {boolean} True while the player cannot move: game over, looking back
+ *   at an earlier move, chooser open, or the computer's turn.
+ */
 function isBoardLocked() {
     return (
         isGameOver ||
@@ -1252,11 +1254,7 @@ function warnIfTimeIsLow() {
 
     const name = sideName(currentPlayer);
     announce(`${name} has ${level / 1000} seconds left.`);
-    try {
-        playSound('low_time');
-    } catch {
-        /* ignore sound errors */
-    }
+    playSound('low_time');
 }
 
 /** Saves a game that has started; used when the page is being closed. */
@@ -1367,14 +1365,6 @@ function switchPlayer() {
 // --- Rules, asked of the live game ---
 // The rules themselves live in rules.js and work on any position. These are
 // the same questions put to the game on the board.
-
-/**
- * @param {string} playerColor
- * @returns {Array<{from: {row, col}, to: {row, col}}>} Every legal move for that colour.
- */
-function generateAllLegalMoves(playerColor) {
-    return allLegalMoves(livePosition(), playerColor);
-}
 
 /**
  * @param {number} startRow
@@ -1545,7 +1535,7 @@ function archiveEntry(game) {
     return {
         pgn: gamePGN(game),
         result: (game.isGameOver && game.gameResult) || '*',
-        opponent: computer ? playerName(game.players, computer) : 'Two players',
+        opponent: computer ? playerName(game.players, computer, 'Computer') : 'Two players',
         date: new Date().toISOString(),
         moves: game.moveHistory.length,
     };
@@ -1576,7 +1566,7 @@ function updateMoveHistoryDisplay() {
     }));
     renderMoveList(moves, {
         shownPly: shownPosition().ply,
-        canView: positionHistory.length === moveHistory.length,
+        canView: canBrowse(),
         live: viewPly === null,
     });
     updateCapturedDisplay(); // Follows the same position as the list
@@ -1640,9 +1630,9 @@ function controlsView() {
         reviewing: viewPly !== null,
         gameOver: isGameOver && viewPly === null,
         finished: isGameOver,
-        canReview: moveHistory.length > 0 && positionHistory.length === moveHistory.length,
+        canReview: moveHistory.length > 0 && canBrowse(),
         // False for a save from an older version without the positions behind its moves
-        canView: positionHistory.length === moveHistory.length,
+        canView: canBrowse(),
         shownPly: shownPosition().ply,
         moveCount: moveHistory.length,
         // There must be a move, or a resignation or agreed draw, to take back; never on the clock
@@ -1885,9 +1875,7 @@ if (typeof module !== 'undefined' && module.exports) {
         isBoardLocked,
         resetGame,
         generateLegalMovesForPiece,
-        generateAllLegalMoves,
         undoLastMove,
-        findKingInCheck,
         handleResetClick,
         buildPGN,
         viewMove,
