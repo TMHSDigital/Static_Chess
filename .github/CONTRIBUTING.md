@@ -23,6 +23,7 @@ The app itself needs no tooling: open `index.html` or serve the folder. Node is 
 - **Install:** `npm ci`
 - **Scripts:**
   - `npm test` runs the Jest suite
+  - `npm run test:browser` runs the Chromium smoke tests. Install Chromium once with `npx playwright install chromium`. The test server uses Python 3.
   - `npm run coverage` runs it with a coverage report. It fails if coverage falls below the thresholds in `package.json` (`coverageThreshold`), and this is the command CI runs, so new code needs tests
   - `npm run lint` runs ESLint (`eslint.config.mjs` is the only ESLint config). Warnings fail it too
   - `npm run format` checks formatting with Prettier, and CI fails if it does not pass. Run `npx prettier --write .` to fix formatting before you push.

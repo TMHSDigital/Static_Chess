@@ -182,7 +182,7 @@ export default [
       'no-console': 'off',
     },
   },
-  // This config file is the only ES module in the repository
+  // Configuration and browser tests use ES modules.
   {
     files: ['**/*.mjs'],
     languageOptions: {

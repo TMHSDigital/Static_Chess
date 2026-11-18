@@ -10,10 +10,15 @@
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --check .",
     "test": "jest --runInBand",
+    "test:browser": "playwright test --config tests/browser/playwright.config.mjs",
     "coverage": "jest --runInBand --coverage"
   },
   "jest": {
     "testEnvironment": "<rootDir>/tests/helpers/jsdom-environment.js",
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "<rootDir>/tests/browser/"
+    ],
     "collectCoverageFrom": [
       "js/**/*.js",
       "sw.js"
@@ -41,6 +46,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.65.1",
     "eslint": "^10.14.0",
     "globals": "^17.14.0",
     "jest": "^30.5.2",

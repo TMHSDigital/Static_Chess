@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Chromium smoke tests**: CI opens a live board and checks the computer worker, offline reload and PGN download (#170)
 - **Play through a game**: A Play button between the step buttons goes through the moves one a second and stops at the end, on Pause, or when anything else is pressed (#162)
 - **Redo**: A move taken back with Undo can be played again with Redo or Ctrl+Y (Ctrl+Shift+Z), until another move is made; against the computer both moves come back (#158)
 - **Random side**: "Play as" can draw White or Black at random for each new game against the computer (#163)
