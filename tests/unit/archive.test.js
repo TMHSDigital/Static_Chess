@@ -309,6 +309,50 @@ describe('past games', () => {
       expect(g.store.readArchive()).toHaveLength(3);
     });
 
+    describe('when another tab changes the list while it is shown', () => {
+      // Games a second apart, so each entry has a date of its own
+      const shownGames = () => {
+        const g = loadGame();
+        for (const move of ['e2e4', 'd2d4', 'c2c4']) {
+          jest.advanceTimersByTime(1000);
+          g.play(move);
+          g.game.resetGame();
+        }
+        g.ui.openImportDialog();
+        return g;
+      };
+      const otherTabWrites = (g, change) => {
+        g.window.localStorage.setItem(KEY, JSON.stringify(change(stored(g))));
+      };
+
+      test('Delete removes the game that was clicked', () => {
+        const g = shownGames();
+        otherTabWrites(g, (list) => [
+          { ...list[0], pgn: '1. a4 *', date: new Date(Date.now() + 1000).toISOString() },
+          ...list,
+        ]);
+        deletes(g)[1].click(); // 1. d4 as shown
+        deletes(g)[1].click();
+        expect(firstMoves(g)).toEqual(['a4', 'c4', 'e4']);
+      });
+
+      test('Delete removes nothing when the game is already gone', () => {
+        const g = shownGames();
+        otherTabWrites(g, (list) => list.filter((entry) => !entry.pgn.includes('1. d4')));
+        deletes(g)[1].click();
+        deletes(g)[1].click();
+        expect(firstMoves(g)).toEqual(['c4', 'e4']);
+        expect(el(g, 'import-error').textContent).toBe('That game could not be deleted.');
+      });
+
+      test('a click opens the game that was clicked', () => {
+        const g = shownGames();
+        otherTabWrites(g, (list) => list.slice(1)); // 1. c4 is deleted in the other tab
+        entries(g)[1].click(); // 1. d4 as shown
+        expect(notations(g)).toEqual(['d4']);
+      });
+    });
+
     test('a game that cannot be deleted says so', () => {
       const g = threeGames();
       const setItem = jest.spyOn(g.window.Storage.prototype, 'setItem').mockImplementation(() => {
@@ -318,6 +362,62 @@ describe('past games', () => {
       deletes(g)[0].click();
       expect(el(g, 'import-error').textContent).toBe('That game could not be deleted.');
       setItem.mockRestore();
+    });
+  });
+
+  describe('with the game open in two tabs', () => {
+    const SAVED = 'chessGameState';
+    /** @returns {string} The saved game after these moves, as another tab would leave it. */
+    const savedByOtherTab = (...moves) => {
+      const other = loadGame();
+      other.play(...moves);
+      return other.window.localStorage.getItem(SAVED);
+    };
+
+    test('a different game saved by the other tab goes into the past games before this one is saved', () => {
+      const otherGame = savedByOtherTab('d2d4');
+      const g = loadGame();
+      g.play('e2e4', 'e7e5');
+      g.window.localStorage.setItem(SAVED, otherGame); // The other tab saves its game
+      g.play('g1f3');
+
+      const archive = g.store.readArchive();
+      expect(archive).toHaveLength(1);
+      expect(archive[0]).toMatchObject({ result: '*', opponent: 'Two players', moves: 1 });
+      expect(archive[0].pgn).toContain('1. d4 *');
+      expect(JSON.parse(g.window.localStorage.getItem(SAVED)).moveHistory).toHaveLength(3);
+      expect(el(g, 'announcer').textContent).toBe(
+        'The game from another tab was put in Past games.'
+      );
+
+      g.play('b8c6'); // This tab's own save is not kept a second time
+      expect(g.store.readArchive()).toHaveLength(1);
+    });
+
+    test('the same game played on or taken back in the other tab is not put in the past games', () => {
+      const longer = savedByOtherTab('e2e4', 'e7e5', 'g1f3');
+      const g = loadGame();
+      g.play('e2e4');
+      g.window.localStorage.setItem(SAVED, longer);
+      g.play('e7e5');
+      expect(g.store.readArchive()).toEqual([]);
+
+      const shorter = savedByOtherTab('e2e4');
+      const h = loadGame();
+      h.play('e2e4', 'e7e5');
+      h.window.localStorage.setItem(SAVED, shorter);
+      h.play('g1f3');
+      expect(h.store.readArchive()).toEqual([]);
+    });
+
+    test('a game the other tab began from another position is a different game', () => {
+      const otherGame = savedByOtherTab('e2e4');
+      const g = loadGame();
+      g.setPosition({ e1: 'wk*', e2: 'wp', e8: 'bk*' });
+      g.window.localStorage.setItem(SAVED, otherGame);
+      g.play('e2e4');
+      expect(g.store.readArchive()).toHaveLength(1);
+      expect(g.store.readArchive()[0].pgn).toContain('1. e4 *');
     });
   });
 

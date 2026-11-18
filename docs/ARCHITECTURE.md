@@ -268,8 +268,9 @@ There is one live game, saved under `chessGameState`, and an archive of the game
 2. An entry holds the game as PGN text (`buildPGN()`), which keeps it near a kilobyte; `addToArchive()` in `game-store.js` keeps the newest `CONFIG.ARCHIVE_LIMIT`
 3. The Load dialog lists them (`showArchive()`). A click loads the entry with `importPGN()`, which restores its result
 4. A game opened from the list and replaced again keeps its one entry and moves to the top
+5. With the game open in two tabs, `saveGameState()` first asks `readGameSavedElsewhere()` whether another tab has saved since this one last wrote or read the key. If it has, and its game is not this one played further or taken back (`isSameGameAs()`), that game goes into the archive before this one is saved over it
 
-Entries can be deleted one at a time (`removeFromArchive()`) or all at once (`clearArchive()`). Not implemented: named slots, and keeping more than one game in progress with its clock and undo stack.
+Entries can be deleted one at a time (`removeFromArchive()`, which with `findInArchive()` finds the entry by its date, so another tab changing the list does not make Delete or a click act on a different game) or all at once (`clearArchive()`). Not implemented: named slots, and keeping more than one game in progress with its clock and undo stack.
 
 ### 8. Draw Detection
 

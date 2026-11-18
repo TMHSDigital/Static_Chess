@@ -956,7 +956,17 @@ function recordPlayers() {
  * @returns {string} The name of a side of the game on the board, as the PGN and past games give it.
  */
 function recordedName(color, plain) {
-    return gamePlayers.computer === color ? `Computer (${gamePlayers.level})` : plain;
+    return playerName(gamePlayers, color, plain);
+}
+
+/**
+ * @param {{computer: string|null, level: string|null}|null} players - Who played a game.
+ * @param {string} color
+ * @param {string} plain - The name to use for a side the computer did not play.
+ * @returns {string} The name of a side of that game.
+ */
+function playerName(players, color, plain) {
+    return players && players.computer === color ? `Computer (${players.level})` : plain;
 }
 
 /** @returns {boolean} True while the player cannot move: game over, chooser open, or the computer's turn. */
@@ -1344,9 +1354,18 @@ function findKingInCheck(playerColor) {
 
 // --- Persistence ---
 
-/** Saves the game, with its undo stack and clock, so it is there after a reload. */
+/**
+ * Saves the game, with its clock, so it is there after a reload. A different
+ * game saved by another tab in the meantime goes into the past games first.
+ */
 function saveGameState() {
-    storeGame({
+    keepGameSavedElsewhere();
+    storeGame(gameRecord());
+}
+
+/** @returns {object} The live game as saveGameState writes it and validateSavedGame reads it. */
+function gameRecord() {
+    return {
         version: SAVED_GAME_VERSION,
         ...currentSnapshot(),
         gameStart: gameStart,
@@ -1364,6 +1383,39 @@ function saveGameState() {
             running: clock.turnStartedAt !== null,
         },
         // The undo stack is not saved: loadGameState plays the moves again to rebuild it
+    };
+}
+
+/**
+ * Puts the game another tab saved into the past games, unless it is this
+ * game, played further or taken back there, so that saving this one over it
+ * loses nothing.
+ */
+function keepGameSavedElsewhere() {
+    const other = readGameSavedElsewhere();
+    if (!other || other.moveHistory.length === 0 || isSameGameAs(other)) return;
+    addToArchive(archiveEntry(other), other.archivedFrom);
+    announce('The game from another tab was put in Past games.');
+}
+
+/**
+ * @param {object} other - A saved game, as validateSavedGame gives it.
+ * @returns {boolean} True if it began where this game did and one of the two
+ *   is the other with more moves played.
+ */
+function isSameGameAs(other) {
+    const start = (s) => `${s.fen} ${s.player} ${s.fullmove}`;
+    if (start(other.gameStart) !== start(gameStart)) return false;
+    const shared = Math.min(other.moveHistory.length, moveHistory.length);
+    return other.moveHistory.slice(0, shared).every((move, i) => {
+        const own = moveHistory[i];
+        return (
+            move.notation === own.notation &&
+            move.from.row === own.from.row &&
+            move.from.col === own.from.col &&
+            move.to.row === own.to.row &&
+            move.to.col === own.to.col
+        );
     });
 }
 
@@ -1439,16 +1491,23 @@ function archiveCurrentGame() {
     const from = archivedFrom;
     archivedFrom = null;
     if (moveHistory.length === 0) return;
-    addToArchive(
-        {
-            pgn: buildPGN(),
-            result: (isGameOver && gameResult) || '*',
-            opponent: gamePlayers.computer ? recordedName(gamePlayers.computer) : 'Two players',
-            date: new Date().toISOString(),
-            moves: moveHistory.length,
-        },
-        from
-    );
+    addToArchive(archiveEntry(gameRecord()), from);
+}
+
+/**
+ * @param {object} game - A game as gameRecord gives it or validateSavedGame reads it.
+ * @returns {{pgn: string, result: string, opponent: string, date: string, moves: number}}
+ *   Its entry in the past games, dated now.
+ */
+function archiveEntry(game) {
+    const computer = game.players && game.players.computer;
+    return {
+        pgn: gamePGN(game),
+        result: (game.isGameOver && game.gameResult) || '*',
+        opponent: computer ? playerName(game.players, computer) : 'Two players',
+        date: new Date().toISOString(),
+        moves: game.moveHistory.length,
+    };
 }
 
 /**
@@ -1597,15 +1656,23 @@ function handleResetClick() {
 
 /** @returns {string} This game as PGN text. */
 function buildPGN() {
+    return gamePGN(gameRecord());
+}
+
+/**
+ * @param {object} game - A game as gameRecord gives it or validateSavedGame reads it.
+ * @returns {string} The game as PGN.
+ */
+function gamePGN(game) {
     return writePGN({
-        moves: moveHistory.map((move) => move.notation),
-        start: gameStart,
-        result: (isGameOver && gameResult) || '*', // "*" marks a game still in progress
-        white: recordedName(WHITE, 'White'),
-        black: recordedName(BLACK, 'Black'),
-        timeControl: clock ? `${clock.base / 1000}+${clock.increment / 1000}` : null,
+        moves: game.moveHistory.map((move) => move.notation),
+        start: game.gameStart,
+        result: (game.isGameOver && game.gameResult) || '*', // "*" marks a game still in progress
+        white: playerName(game.players, WHITE, 'White'),
+        black: playerName(game.players, BLACK, 'Black'),
+        timeControl: game.clock ? `${game.clock.base / 1000}+${game.clock.increment / 1000}` : null,
         // A resignation or agreed draw is not visible in the moves, so it goes in as a comment
-        comment: endedWithoutMove ? currentStatus : null,
+        comment: game.endedWithoutMove ? game.currentStatus : null,
         date: new Date(),
     });
 }

@@ -686,11 +686,13 @@ function showArchive() {
         button.type = 'button';
         button.classList.add('btn', 'archive-open');
         button.dataset.index = index;
+        button.dataset.date = entry.date; // Names the game if another tab changes the list
         button.textContent = describeArchivedGame(entry);
         const remove = document.createElement('button');
         remove.type = 'button';
         remove.classList.add('btn', 'archive-delete');
         remove.dataset.delete = index;
+        remove.dataset.date = entry.date;
         remove.textContent = 'Delete';
         remove.setAttribute('aria-label', `Delete ${button.textContent}`);
         item.append(button, remove);
@@ -707,7 +709,7 @@ function showArchive() {
 function deleteArchivedGame(button) {
     if (!confirmSecondClick(button, 'Delete?')) return;
     const index = Number(button.dataset.delete);
-    if (!removeFromArchive(index)) {
+    if (!removeFromArchive(index, button.dataset.date)) {
         importError.textContent = 'That game could not be deleted.';
         return;
     }
@@ -737,7 +739,7 @@ function handleArchiveClick(event) {
     }
     const button = event.target.closest ? event.target.closest('button[data-index]') : null;
     if (!button) return;
-    const entry = readArchive()[Number(button.dataset.index)];
+    const entry = readArchive()[findInArchive(Number(button.dataset.index), button.dataset.date)];
     const result = entry
         ? gameHandlers.openArchivedGame(entry)
         : { ok: false, error: 'That game is gone.' };

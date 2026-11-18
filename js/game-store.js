@@ -8,19 +8,38 @@
 const SAVED_GAME_KEY = CONFIG.STORAGE_KEYS.GAME_STATE;
 const ARCHIVE_KEY = CONFIG.STORAGE_KEYS.GAME_ARCHIVE;
 
+// The saved game as this page last wrote or read it. Anything else found
+// under the key was written by the game open in another tab.
+let lastStoredGame = null;
+
 /**
  * Saves a game. Storage may be blocked or full, which must not stop the game.
  * @param {object} record - The game as validateSavedGame in saved-game.js expects it.
  */
 function storeGame(record) {
-    if (!writeStored(SAVED_GAME_KEY, JSON.stringify(record))) {
+    const text = JSON.stringify(record);
+    if (!writeStored(SAVED_GAME_KEY, text)) {
         console.error('The game could not be saved: storage is blocked or full.');
+        return;
     }
+    lastStoredGame = text;
 }
 
 /** Removes the saved game. Storage may be unavailable, which must not stop the game. */
 function clearStoredGame() {
     removeStored(SAVED_GAME_KEY);
+    lastStoredGame = null;
+}
+
+/**
+ * Reads the saved game if another tab has written it since this page last
+ * wrote or read it, so that game can be kept before this one is saved over it.
+ * @returns {object|null} The game as validateSavedGame gives it, or null if
+ *   the saved game is this page's own, or none that can be used.
+ */
+function readGameSavedElsewhere() {
+    const saved = readStored(SAVED_GAME_KEY);
+    return saved && saved !== lastStoredGame ? readStoredGame() : null;
 }
 
 /**
@@ -31,6 +50,7 @@ function clearStoredGame() {
  */
 function readStoredGame() {
     const saved = readStored(SAVED_GAME_KEY);
+    lastStoredGame = saved;
     if (!saved) return null;
     let state = null;
     try {
@@ -96,14 +116,31 @@ function addToArchive(game, openedFrom = null) {
 }
 
 /**
+ * Finds a past game in the list as it is now, which another tab may have
+ * changed since the list was shown.
+ * @param {number} index - Its place in the list as shown, newest first.
+ * @param {string} [date] - Its date, which names it. Without one, the place alone decides.
+ * @returns {number} Its place in the list readArchive gives now, or -1 if it is gone.
+ */
+function findInArchive(index, date) {
+    const archive = readArchive();
+    const shown = Number.isInteger(index) && index >= 0 && index < archive.length;
+    if (date === undefined) return shown ? index : -1;
+    if (shown && archive[index].date === date) return index;
+    return archive.findIndex((entry) => entry.date === date);
+}
+
+/**
  * Removes one past game.
- * @param {number} index - Its place in the list readArchive gives, newest first.
+ * @param {number} index - Its place in the list as shown, newest first.
+ * @param {string} [date] - Its date, so the right game goes even if the list changed.
  * @returns {boolean} False if there was no such game or storage could not be written.
  */
-function removeFromArchive(index) {
+function removeFromArchive(index, date) {
     const archive = readArchive();
-    if (!Number.isInteger(index) || index < 0 || index >= archive.length) return false;
-    archive.splice(index, 1);
+    const at = findInArchive(index, date);
+    if (at === -1) return false;
+    archive.splice(at, 1);
     return writeStored(ARCHIVE_KEY, JSON.stringify(archive));
 }
 
@@ -118,8 +155,10 @@ if (typeof module !== 'undefined' && module.exports) {
         storeGame,
         clearStoredGame,
         readStoredGame,
+        readGameSavedElsewhere,
         readArchive,
         addToArchive,
+        findInArchive,
         removeFromArchive,
         clearArchive,
     };
