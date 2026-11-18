@@ -252,7 +252,9 @@ function scoreRootMoves(position, color, moves, depth, tolerance) {
 /**
  * How long the computer may think about one move in a game with a clock: a
  * thirtieth of what it has left plus the increment, at least 50 ms and at most
- * three times the level's usual thinking time.
+ * three times the level's usual thinking time. Never more than half of what is
+ * left, though: the increment only arrives after the move, and a clock that
+ * runs out first loses.
  * @param {number} remainingMs - What is left on the computer's clock.
  * @param {number} incrementMs - What a move adds to it.
  * @param {string} level - A key of AI_LEVELS.
@@ -261,7 +263,8 @@ function scoreRootMoves(position, color, moves, depth, tolerance) {
 function searchBudget(remainingMs, incrementMs, level) {
     const settings = AI_LEVELS[String(level).toLowerCase()] || AI_LEVELS.easy;
     const most = (settings.timeMs || 1000) * 3;
-    return Math.round(Math.max(50, Math.min(most, remainingMs / 30 + incrementMs)));
+    const wanted = Math.max(50, Math.min(most, remainingMs / 30 + incrementMs));
+    return Math.floor(Math.min(wanted, remainingMs / 2));
 }
 
 /**

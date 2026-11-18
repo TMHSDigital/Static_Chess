@@ -100,12 +100,24 @@ describe('choosing a move', () => {
       const { searchBudget } = loadGame().ai;
       expect(searchBudget(60000, 0, 'hard')).toBe(2000);
       expect(searchBudget(9000, 0, 'hard')).toBe(300);
-      expect(searchBudget(3000, 2000, 'hard')).toBe(2100);
-      expect(searchBudget(1000, 0, 'hard')).toBe(50); // Never less
-      expect(searchBudget(0, 0, 'hard')).toBe(50);
+      expect(searchBudget(9000, 2000, 'hard')).toBe(2300);
+      expect(searchBudget(1000, 0, 'hard')).toBe(50); // Never less while there is time for it
       expect(searchBudget(900000, 10000, 'hard')).toBe(3000); // Never more than three times its usual second
       expect(searchBudget(900000, 10000, 'medium')).toBe(3000);
       expect(searchBudget(60000, 0, 'no such level')).toBe(2000);
+    });
+
+    test('never runs past the time left, which the increment only adds to after the move', () => {
+      const { searchBudget } = loadGame().ai;
+      expect(searchBudget(3000, 2000, 'hard')).toBe(1500);
+      expect(searchBudget(1000, 2000, 'hard')).toBe(500);
+      expect(searchBudget(500, 2000, 'hard')).toBe(250);
+      expect(searchBudget(2000, 10000, 'hard')).toBe(1000);
+      expect(searchBudget(60, 0, 'hard')).toBe(30); // Below the usual least of 50 ms
+      expect(searchBudget(0, 0, 'hard')).toBe(0);
+      for (const left of [1, 49, 99, 1999, 2999]) {
+        expect(searchBudget(left, 10000, 'hard')).toBeLessThan(left);
+      }
     });
 
     test('very little time lowers the depth that is always searched', () => {
