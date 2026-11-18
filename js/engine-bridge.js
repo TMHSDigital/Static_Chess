@@ -91,8 +91,10 @@ function isLatestEngineRequest(id, channelName = 'play') {
  * has been replaced or dropped by then.
  * @param {string} channelName
  * @param {object} message - What ai-worker.js is told; the request id is added.
- * @param {() => object} answerHere - Works the answer out on the page, in the
- *   shape the worker replies with.
+ * @param {(done: (answer: object) => void, wanted: () => boolean) => void} answerHere -
+ *   Works the answer out on the page, after the page has had a chance to draw,
+ *   and calls done with it in the shape the worker replies with. Work spread
+ *   over several tasks asks wanted() before each and stops once it is false.
  * @param {(answer: object) => void} onAnswer
  * @returns {number} The id of the request.
  */
@@ -100,11 +102,11 @@ function sendToEngine(channelName, message, answerHere, onAnswer) {
     const channel = engineChannel(channelName);
     const id = ++channel.id;
     stopWorkerSearch(channel); // A request still being worked on is replaced by this one
+    const wanted = () => id === channel.id;
     const thinkHere = () =>
-        setTimeout(() => {
-            if (id !== channel.id) return;
-            onAnswer(answerHere());
-        }, 0);
+        answerHere((answer) => {
+            if (wanted()) onAnswer(answer);
+        }, wanted);
 
     const send = (retried) => {
         const worker = getAIWorker(channel);
@@ -153,13 +155,21 @@ function askEngine(request, onMove, channelName = 'play') {
     return sendToEngine(
         channelName,
         { position, color, level, seen, budgetMs },
-        () => ({ move: chooseAIMove(position, color, level, Math.random, { seen, budgetMs }) }),
+        (done, wanted) =>
+            setTimeout(() => {
+                if (!wanted()) return;
+                done({
+                    move: chooseAIMove(position, color, level, Math.random, { seen, budgetMs }),
+                });
+            }, 0),
         (answer) => onMove(answer.move)
     );
 }
 
 /**
- * Asks the engine what it makes of each of a list of positions.
+ * Asks the engine what it makes of each of a list of positions. Worked out on
+ * the page, each position gets a task of its own, so the page is never held
+ * up for longer than one.
  * @param {{position: object, color: string}[]} positions - rules.js positions,
  *   each with the side to move.
  * @param {(scores: {score: number, mate: boolean, over: boolean}[]) => void} onScores -
@@ -171,7 +181,17 @@ function askEngineForScores(positions, onScores, channelName) {
     return sendToEngine(
         channelName,
         { assess: positions },
-        () => ({ scores: positions.map((entry) => assessPosition(entry.position, entry.color)) }),
+        (done, wanted) => {
+            const scores = [];
+            const next = () => {
+                if (!wanted()) return;
+                const { position, color } = positions[scores.length];
+                scores.push(assessPosition(position, color));
+                if (scores.length < positions.length) setTimeout(next, 0);
+                else done({ scores });
+            };
+            setTimeout(next, 0);
+        },
         (answer) => onScores(answer.scores)
     );
 }

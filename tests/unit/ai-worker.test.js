@@ -296,17 +296,19 @@ describe('the computer opponent in a Web Worker', () => {
     g.play('e2e4'); // The computer is thinking about its reply
     expect(workers).toHaveLength(1);
 
-    g.game.viewMove(0);
-    g.game.requestHint();
+    g.game.viewMove(0); // The score of the position shown has a worker of its own too
     expect(workers).toHaveLength(2);
+    expect(workers[1].messages[0].assess).toHaveLength(1);
+    g.game.requestHint();
+    expect(workers).toHaveLength(3);
     expect(workers[0].terminated).toBeUndefined();
-    const [question] = workers[1].messages;
+    const [question] = workers[2].messages;
     expect(question.color).toBe('w');
     expect(question.position).toEqual(g.rules.initialPosition());
     expect(question.seen).toEqual([]); // Nothing came before the starting position
     expect(question.budgetMs).toBeNull(); // Not on anybody's clock
 
-    workers[1].reply({
+    workers[2].reply({
       id: question.id,
       move: { from: { row: 6, col: 3 }, to: { row: 4, col: 3 } },
     });
@@ -317,6 +319,25 @@ describe('the computer opponent in a Web Worker', () => {
     jest.runAllTimers();
     expect(notations(g)).toEqual(['e4', 'e5']); // The reply came through
     g.game.stopAllTimers();
+  });
+
+  test('looking back in a game still on asks a worker, and each step drops the one before', () => {
+    const workers = installWorker();
+    const g = loadGame();
+    g.play('e2e4', 'e7e5');
+    g.game.viewMove(1);
+    expect(workers).toHaveLength(1);
+    const first = workers[0].messages[0];
+    expect(first.assess).toEqual([{ position: expect.objectContaining({ ply: 1 }), color: 'b' }]);
+
+    g.game.viewMove(0); // Before the worker has answered
+    expect(workers[0].terminated).toBe(true);
+    const second = workers[1].messages[0];
+    expect(second.assess[0].color).toBe('w');
+    workers[1].reply({ id: second.id, scores: [{ score: 300, mate: false, over: false }] });
+    expect(g.window.document.getElementById('review-score').textContent).toBe(
+      'Engine thinks White is ahead by 3.0.'
+    );
   });
 
   test('a finished game is sent to a worker to be scored, once', () => {

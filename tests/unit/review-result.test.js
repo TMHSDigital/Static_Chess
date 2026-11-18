@@ -275,6 +275,14 @@ describe('Looking back through the move list', () => {
 
   describe('engine score', () => {
     const score = (g) => el(g, 'review-score');
+    /** Shows a position and lets the engine answer about it. */
+    const look = (g, ply) => {
+      g.game.viewMove(ply);
+      jest.runAllTimers();
+    };
+
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
 
     test('is shown only while looking back', () => {
       const g = loadGame();
@@ -282,6 +290,8 @@ describe('Looking back through the move list', () => {
       expect(score(g).hidden).toBe(true);
       g.game.viewMove(1);
       expect(score(g).hidden).toBe(false);
+      expect(score(g).textContent).toBe('Engine is looking at the position…');
+      jest.runAllTimers();
       expect(score(g).textContent).toBe('Engine thinks the position is about equal.');
       g.game.returnToLiveGame();
       expect(score(g).hidden).toBe(true);
@@ -291,37 +301,37 @@ describe('Looking back through the move list', () => {
       const white = loadGame();
       white.setPosition({ e1: 'wk*', d1: 'wq*', e8: 'bk*', a7: 'bp' });
       white.play('e1e2', 'a7a6', 'e2e3');
-      white.game.viewMove(1);
+      look(white, 1);
       expect(score(white).textContent).toMatch(/^Engine thinks White is ahead by (7|8|9)\.\d\.$/);
 
       const black = loadGame();
       black.setPosition({ e1: 'wk*', a2: 'wp', e8: 'bk*', a8: 'br*', h8: 'br*' });
       black.play('a2a3', 'e8e7', 'a3a4');
-      black.game.viewMove(2);
+      look(black, 2);
       expect(score(black).textContent).toMatch(/^Engine thinks Black is ahead by (9|10|11)\.\d\.$/);
     });
 
     test('sees a mate that is one move away, and the mate itself', () => {
       const g = loadGame();
       g.play('f2f3', 'e7e5', 'g2g4', 'd8h4');
-      g.game.viewMove(3);
-      expect(score(g).textContent).toBe('Engine thinks Black can force mate.');
-      g.game.viewMove(0);
+      look(g, 3);
+      expect(score(g).textContent).toMatch(/^Engine thinks Black can force mate\./);
+      look(g, 0);
       expect(score(g).textContent).toBe('Engine thinks the position is about equal.');
 
       const mated = loadGame();
       mated.play('f2f3', 'e7e5', 'g2g4', 'd8h4');
       mated.game.undoLastMove();
       mated.play('d8h4');
-      mated.game.viewMove(3);
-      mated.game.viewMove(4); // The final position is the live game
+      look(mated, 3);
+      look(mated, 4); // The final position is the live game
       expect(score(mated).hidden).toBe(true);
     });
 
     test('is not read out with every step', () => {
       const g = loadGame();
       g.play('e2e4', 'e7e5');
-      g.game.viewMove(1);
+      look(g, 1);
       const announced = g.window.document.getElementById('announcer');
       expect(score(g).getAttribute('aria-live')).toBeNull();
       expect(score(g).getAttribute('role')).toBeNull();
@@ -329,19 +339,43 @@ describe('Looking back through the move list', () => {
     });
 
     test("does not hold up or drop the computer's move", () => {
-      jest.useFakeTimers();
+      const g = loadGame();
+      g.game.setOpponent('easy', 'w');
+      g.play('e2e4'); // The computer starts thinking
+      g.game.viewMove(0);
+      expect(score(g).hidden).toBe(false);
+      jest.runAllTimers();
+      expect(g.game.moveHistory).toHaveLength(2);
+      expect(g.game.viewPly).toBeNull(); // Its reply brings the live game back
+      expect(score(g).hidden).toBe(true);
+    });
+
+    test('a finished game that has been scored is gone through with no search on the page', () => {
+      const g = loadGame();
+      g.play('f2f3', 'e7e5', 'g2g4', 'd8h4');
+      jest.runAllTimers(); // The whole game is scored
+      const assess = jest.spyOn(global, 'assessPosition');
       try {
-        const g = loadGame();
-        g.game.setOpponent('easy', 'w');
-        g.play('e2e4'); // The computer starts thinking
-        g.game.viewMove(0);
-        expect(score(g).hidden).toBe(false);
-        jest.runAllTimers();
-        expect(g.game.moveHistory).toHaveLength(2);
-        expect(g.game.viewPly).toBeNull(); // Its reply brings the live game back
-        expect(score(g).hidden).toBe(true);
+        for (const ply of [3, 2, 1, 0, 2]) g.game.viewMove(ply);
+        expect(assess).not.toHaveBeenCalled();
+        expect(jest.getTimerCount()).toBe(0); // Nor one waiting to run
+        expect(score(g).textContent).toBe('Engine thinks the position is about equal.');
       } finally {
-        jest.useRealTimers();
+        assess.mockRestore();
+      }
+    });
+
+    test('each step drops the question about the step before', () => {
+      const g = loadGame();
+      g.play('e2e4', 'e7e5', 'g1f3');
+      const assess = jest.spyOn(global, 'assessPosition');
+      try {
+        for (const ply of [2, 1, 0]) g.game.viewMove(ply); // Faster than the engine answers
+        jest.runAllTimers();
+        expect(assess).toHaveBeenCalledTimes(1); // Only the position still shown
+        expect(score(g).textContent).toBe('Engine thinks the position is about equal.');
+      } finally {
+        assess.mockRestore();
       }
     });
   });
@@ -378,6 +412,37 @@ describe('Looking back through the move list', () => {
       expect(moveButton(g, 4).hasAttribute('aria-label')).toBe(false);
       expect(g.game.moveCost(2)).toMatchObject({ allowedMate: true, missedMate: false });
       expect(g.game.moveCost(3)).toBeNull(); // The mating move lost nothing
+    });
+
+    test('without a worker, each position is scored in a task of its own', () => {
+      const g = loadGame();
+      const assess = jest.spyOn(global, 'assessPosition');
+      try {
+        g.play('f2f3', 'e7e5', 'g2g4', 'd8h4');
+        for (let n = 1; n <= 5; n++) {
+          jest.advanceTimersToNextTimer();
+          expect(assess).toHaveBeenCalledTimes(n);
+        }
+        expect(g.game.gameScores).toHaveLength(5);
+      } finally {
+        assess.mockRestore();
+      }
+    });
+
+    test('scoring on the page stops when the game goes on before it is done', () => {
+      const g = loadGame();
+      const assess = jest.spyOn(global, 'assessPosition');
+      try {
+        g.play('f2f3', 'e7e5', 'g2g4', 'd8h4');
+        jest.advanceTimersToNextTimer();
+        jest.advanceTimersToNextTimer();
+        g.game.undoLastMove(); // The game is on again: its scores are not wanted
+        jest.runAllTimers();
+        expect(assess).toHaveBeenCalledTimes(2);
+        expect(g.game.gameScores).toBeNull();
+      } finally {
+        assess.mockRestore();
+      }
     });
 
     test('a piece given away is marked with about what it cost', () => {

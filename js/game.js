@@ -34,6 +34,7 @@ let hintChannel = 'play'; // The engine channel the hint was asked on
 // Engine channels for review, apart from 'play' so that neither can cancel the computer's move
 const REVIEW_HINT_CHANNEL = 'review-hint';
 const REVIEW_SCORES_CHANNEL = 'review-scores';
+const REVIEW_SCORE_CHANNEL = 'review-score'; // The position being looked at, one step at a time
 let gameScores = null; // Once the game is over: what the engine makes of every position, first to last
 let scoredGame = null; // The finished game (gameSignature) gameScores was asked for, or null
 
@@ -334,16 +335,45 @@ function viewMove(ply) {
 
 /**
  * Says what the engine makes of the position being looked at, in a line under
- * the move list. It is worked out on the page, so a computer move being
- * thought about in the worker is not disturbed, and it is not announced:
- * screen reader users find it under the move list when they want it.
+ * the move list. A finished game has every position scored already; otherwise
+ * the engine is asked on a channel of its own, so a computer move being
+ * thought about is not disturbed, and each step replaces the question of the
+ * one before. It is not announced: screen reader users find it under the move
+ * list when they want it.
  */
 function showReviewScore() {
+    dropEngineRequests(REVIEW_SCORE_CHANNEL); // Asked about a position no longer shown
     if (viewPly === null) return;
+    const ply = viewPly;
     // After a finished game has been gone through: also what the move that led here cost
-    const cost = viewPly > 0 ? moveCostText(viewPly - 1) : null;
-    const score = positionScoreText(shownPosition());
-    renderReviewScore(cost ? `${score} ${cost}` : score);
+    const cost = ply > 0 ? moveCostText(ply - 1) : null;
+    const show = (score) => {
+        const text = scoreText(score);
+        renderReviewScore(cost ? `${text} ${cost}` : text);
+    };
+    const known = knownScore(ply);
+    if (known) {
+        show(known);
+        return;
+    }
+    renderReviewScore('Engine is looking at the position…');
+    const shown = shownPosition();
+    const id = askEngineForScores(
+        [{ position: shown, color: shown.player }],
+        (scores) => {
+            if (isLatestEngineRequest(id, REVIEW_SCORE_CHANNEL) && viewPly === ply) show(scores[0]);
+        },
+        REVIEW_SCORE_CHANNEL
+    );
+}
+
+/**
+ * @param {number} ply - Moves played before the position.
+ * @returns {object|null} The engine's score of that position in a finished
+ *   game, as assessPosition gives it, or null if it has not been worked out.
+ */
+function knownScore(ply) {
+    return gameScores && gameScores.length === moveHistory.length + 1 ? gameScores[ply] : null;
 }
 
 /**
@@ -351,7 +381,7 @@ function showReviewScore() {
  * @returns {string} What the engine makes of it, as a sentence.
  */
 function positionScoreText(shown) {
-    return scoreText(assessPosition(shown, shown.player));
+    return scoreText(knownScore(shown.ply) || assessPosition(shown, shown.player));
 }
 
 // --- Review of a finished game ---
