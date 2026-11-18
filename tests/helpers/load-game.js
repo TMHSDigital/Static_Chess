@@ -99,7 +99,13 @@ function loadGame(options = {}) {
   if (!options.deferStart) game.initializeGame();
 
   if (options.drag) {
-    drag.initDragAndDrop();
+    drag.initDragAndDrop({
+      isBoardLocked: game.isBoardLocked,
+      isOwnPiece: game.isOwnPiece,
+      legalTargets: game.generateLegalMovesForPiece,
+      playMove: game.playChosenMove,
+      refresh: game.refreshBoardVisuals,
+    });
   }
 
   /** Plays moves given as algebraic pairs, for example play('e2e4', 'e7e5'). */

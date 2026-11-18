@@ -246,6 +246,12 @@ function initializeFeatureModules() {
     // Initialize drag and drop if enabled
     if (CONFIG.FEATURES.DRAG_AND_DROP) {
         debugLog('Initializing drag and drop feature');
-        initDragAndDrop();
+        initDragAndDrop({
+            isBoardLocked,
+            isOwnPiece,
+            legalTargets: generateLegalMovesForPiece,
+            playMove: playChosenMove,
+            refresh: refreshBoardVisuals,
+        });
     }
 }

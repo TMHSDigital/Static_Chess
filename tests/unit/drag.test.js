@@ -52,7 +52,6 @@ describe('drag and drop', () => {
     mouse(g, 'mouseup', g.window.document, 100 + small, 100 - small);
     mouse(g, 'click', pawn);
     expect(g.board.getSelectedSquare()).toEqual({ row: 6, col: 4 });
-    expect(g.window.dragJustEnded).toBe(false);
   });
 
   test('a drop where there is no square plays nothing and puts the piece back', () => {
@@ -76,13 +75,14 @@ describe('drag and drop', () => {
     mouse(g, 'mousemove', g.window.document, 100, 60);
     mouse(g, 'mouseup', g.window.document, 100, 60);
     expect(g.game.moveHistory).toHaveLength(1);
-    expect(g.window.dragJustEnded).toBe(true);
+    expect('dragJustEnded' in g.window).toBe(false); // Nothing is shared through the window
 
     squareEl(g, 'e7').click(); // The click the browser fires after the drag
     expect(g.board.getSelectedSquare()).toBeNull();
+    pieceOn(g, 'e7').click(); // Also when it lands on the piece itself
+    expect(g.board.getSelectedSquare()).toBeNull();
 
     jest.advanceTimersByTime(global.CONFIG.DRAG_CLICK_GUARD_MS);
-    expect(g.window.dragJustEnded).toBe(false);
     squareEl(g, 'e7').click();
     expect(g.board.getSelectedSquare()).toEqual({ row: 1, col: 4 });
   });

@@ -277,7 +277,8 @@ describe('mouse and touch input with drag and drop enabled', () => {
       touch(g, 'touchend', g.window.document, 100, 60); // A tap that lands on e4
       expect(g.game.moveHistory).toHaveLength(0);
       expect(g.at('e2').type).toBe('p');
-      expect(g.window.dragJustEnded).toBe(false); // Its click is not swallowed either
+      g.board.getSquareElement(6, 4).click(); // Its click is not swallowed either
+      expect(g.board.getSelectedSquare()).toEqual({ row: 6, col: 4 });
     });
 
     test('a press that had not become a drag is forgotten', () => {

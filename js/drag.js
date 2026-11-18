@@ -1,7 +1,8 @@
 /**
  * @fileoverview Drag and drop for chess pieces. It only handles the pointer:
- * selection lives in board.js, and the move itself is played by game.js
- * through the same function a click uses.
+ * selection lives in board.js, and what it needs to know about the game, and
+ * the move itself, it is handed by initDragAndDrop: the same function a click
+ * uses plays the move.
  */
 
 // Drag state tracking
@@ -30,26 +31,22 @@ function coordinate(value, fallback) {
     return Number.isFinite(value) ? value : fallback;
 }
 
-// Flag to prevent click events after drag
+// True for a moment after a drop, while the click the browser may fire for it is swallowed
 let dragJustEnded = false;
 
-// Expose flag globally for game.js to check
-if (typeof window !== 'undefined') {
-    Object.defineProperty(window, 'dragJustEnded', {
-        get: function () {
-            return dragJustEnded;
-        },
-        set: function (value) {
-            dragJustEnded = value;
-        },
-    });
-}
+// What drag and drop asks of the game, as initDragAndDrop was given it
+let dragHandlers = null;
 
 /**
  * Initialize drag and drop functionality for chess pieces.
  * Called from main.js when the feature is enabled.
+ * @param {object} handlers - isBoardLocked(): whether no piece may be picked
+ *   up. isOwnPiece(row, col): whether the piece there belongs to the side to
+ *   move. legalTargets(row, col): the squares it may move to. playMove(from, to):
+ *   plays a move, as a click does. refresh(): redraws the selection and marks.
  */
-function initDragAndDrop() {
+function initDragAndDrop(handlers) {
+    dragHandlers = handlers;
     if (!CONFIG.FEATURES.DRAG_AND_DROP) {
         debugLog('Drag and drop is disabled in config');
         return;
@@ -67,6 +64,8 @@ function initDragAndDrop() {
 
     // Mouse events - use capture phase to handle before click
     boardElement.addEventListener('mousedown', handleDragStart, true);
+    // Before the board's own click handler sees the click that ends a drag
+    boardElement.addEventListener('click', swallowClickAfterDrag, true);
     document.addEventListener('mousemove', handleDragMove);
     document.addEventListener('mouseup', handleDragEnd, true);
 
@@ -88,7 +87,7 @@ function handleDragStart(event) {
     if (!CONFIG.FEATURES.DRAG_AND_DROP) return;
     if (event.type === 'mousedown' && event.button !== 0) return; // Left button only
     if (dragState.isDragging && dragState.hasMoved) return; // A second finger does not take over a drag
-    if (isBoardLocked()) return; // Game over or not the player's turn
+    if (dragHandlers.isBoardLocked()) return; // Game over or not the player's turn
 
     const target = event.target;
 
@@ -111,7 +110,7 @@ function handleDragStart(event) {
     const col = parseInt(squareElement.dataset.col, 10);
 
     // Only the side to move can pick up its pieces
-    if (!isOwnPiece(row, col)) {
+    if (!dragHandlers.isOwnPiece(row, col)) {
         return;
     }
 
@@ -158,8 +157,8 @@ function beginDrag() {
     const rect = dragState.rect;
 
     setSelectedSquare(row, col);
-    setPossibleMoves(generateLegalMovesForPiece(row, col));
-    refreshBoardVisuals();
+    setPossibleMoves(dragHandlers.legalTargets(row, col));
+    dragHandlers.refresh();
 
     // Add dragging class for styling and set initial position
     pieceElement.classList.add('dragging');
@@ -233,7 +232,7 @@ function cancelDrag() {
     if (lifted) {
         clearSelectedSquare();
         clearPossibleMoves();
-        refreshBoardVisuals();
+        dragHandlers.refresh();
     }
 }
 
@@ -297,7 +296,7 @@ function handleDragEnd(event) {
             selected.row === startSquare.row &&
             selected.col === startSquare.col
         ) {
-            playChosenMove(startSquare, { row: endRow, col: endCol });
+            dragHandlers.playMove(startSquare, { row: endRow, col: endCol });
         } else {
             debugLog('Invalid drop: not a possible move or selection changed');
         }
@@ -306,15 +305,25 @@ function handleDragEnd(event) {
     // A drag always ends with nothing selected, whether or not it made a move
     clearSelectedSquare();
     clearPossibleMoves();
-    refreshBoardVisuals();
+    dragHandlers.refresh();
 
-    // Swallow the click the browser may fire after the drag
+    // Swallow the click the browser may fire after the drag (swallowClickAfterDrag)
     dragJustEnded = true;
     setTimeout(() => {
         dragJustEnded = false;
     }, CONFIG.DRAG_CLICK_GUARD_MS);
     event.stopPropagation();
     if (event.cancelable) event.preventDefault();
+}
+
+/**
+ * Stops the click the browser fires after a drop from reaching the board, so
+ * it does not also select or move. Listens on the board in the capture phase.
+ * @param {MouseEvent} event
+ */
+function swallowClickAfterDrag(event) {
+    if (!dragJustEnded) return;
+    event.stopImmediatePropagation();
 }
 
 // Export for Node/Jest tests (CommonJS)

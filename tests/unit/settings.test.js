@@ -211,14 +211,27 @@ describe('clicks on the board', () => {
     expect(g.board.selectedSquare).toBeNull();
   });
 
-  test('the click that follows a drag is ignored', () => {
-    const g = loadGame();
-    g.window.dragJustEnded = true;
-    clickOn(g, g.board.getSquareElement(6, 4).querySelector('.piece'));
-    expect(g.board.selectedSquare).toBeNull();
+  test('the click that follows a drop is ignored, and a plain tap still selects', () => {
+    jest.useFakeTimers();
+    try {
+      const g = loadGame({ drag: true });
+      const mouse = (type, target, y) =>
+        target.dispatchEvent(
+          new g.window.MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientY: y })
+        );
+      g.window.document.elementsFromPoint = () => [g.board.getSquareElement(4, 4)];
+      mouse('mousedown', g.board.getSquareElement(6, 4).querySelector('.piece'), 100);
+      mouse('mousemove', g.window.document, 60);
+      mouse('mouseup', g.window.document, 60);
+      expect(g.game.moveHistory).toHaveLength(1); // The drop made the move
+      clickOn(g, g.board.getSquareElement(4, 4).querySelector('.piece'));
+      expect(g.board.selectedSquare).toBeNull(); // It did not also make a click
 
-    g.window.dragJustEnded = false;
-    clickOn(g, g.board.getSquareElement(6, 4).querySelector('.piece'));
-    expect(g.board.selectedSquare).toEqual({ row: 6, col: 4 });
+      jest.advanceTimersByTime(global.CONFIG.DRAG_CLICK_GUARD_MS);
+      clickOn(g, g.board.getSquareElement(1, 3).querySelector('.piece'));
+      expect(g.board.selectedSquare).toEqual({ row: 1, col: 3 });
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

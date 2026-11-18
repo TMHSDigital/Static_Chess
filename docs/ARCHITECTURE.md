@@ -131,9 +131,9 @@ The scripts are plain `<script>` files in one global scope, loaded in the order 
 - `game-ui.js` draws everything on the page apart from the board: the status line, the buttons, the clocks, the move list, the captured pieces, announcements and the Load dialog. It holds no game. `game.js` tells it what to show in plain values (`renderStatus(text)`, `renderControls(view)`, `renderPlayers(players)`, `renderClocks(clocks)`, `renderMoveList(moves, view)`, `renderCaptured(taken, lead)`, `renderHint(move)`) and hands it its handlers once (`bindControls()`), among them `handlePageKey()` for keys pressed outside the board, form fields and dialogs; the Load dialog calls back into `importPGN()`, `importFEN()` and `readArchive()`. `tests/unit/game-ui.test.js` loads it without `game.js`
 - `notation.js`, `saved-game.js`, `game-store.js`, `clock.js` and `review.js` hold what needs no page and no game: writing SAN and PGN (`writeSAN()`, `writePGN()`), reading PGN and FEN into moves that have been checked (`readPGN()`, `readFEN()`), validating a saved game, reading and writing the browser's storage (`storeGame()`, `readStoredGame()`, `readArchive()`, `addToArchive()`), clock arithmetic and rules (`timeLeft()`, `lowTimeLevel()`, `timeoutResult()`), and the wording of the engine's scores (`scoreText()`, `scoreDrop()`). They take what they work on as arguments and can be loaded and tested with no document (`tests/unit/no-dom.test.js`)
 - `engine-bridge.js` is the only file that talks to the worker. It knows nothing about the game: `game.js` hands it a position and gets a move back, or a list of positions and gets a score for each. Requests travel on named channels, each with a worker of its own; only the latest request on a channel counts, and channels do not affect each other
-- `drag.js` calls `board.js` for the selection and `game.js` for `isBoardLocked()`, `isOwnPiece()`, `generateLegalMovesForPiece()`, `playChosenMove()` and `refreshBoardVisuals()`; it reads no state of the game directly
+- `drag.js` calls `board.js` for the selection. It refers to nothing in `game.js`: `main.js` hands `initDragAndDrop()` the functions it needs (`isBoardLocked()`, `isOwnPiece()`, `generateLegalMovesForPiece()`, `playChosenMove()` and `refreshBoardVisuals()`), as `bindControls()` is handed the game's handlers
 - Cross-file calls are direct, with no `window.` lookups or `typeof` guards, so a missing script is a `ReferenceError` rather than a click that does nothing. The names involved are listed once in `eslint.config.mjs`
-- The one shared flag on `window` is `dragJustEnded`, which lets the click handler ignore the click that follows a drag
+- Nothing is shared through `window`. The click the browser fires after a drop is swallowed by `drag.js` itself, with a capture-phase listener on the board (`swallowClickAfterDrag()`), before the board's click handler sees it
 
 ## Data Flow
 
@@ -184,7 +184,7 @@ Drag and drop is fully implemented and enabled. It works by:
 
 1. Feature flag `DRAG_AND_DROP` is enabled in `config.js`
 2. The `drag.js` script is included in `index.html`
-3. `initDragAndDrop()` is called in `main.js` after game initialization
+3. `initDragAndDrop(handlers)` is called in `main.js` after game initialization, with the game functions it needs
 4. A press on a piece only arms a drag. Once the pointer moves more than 5px, the piece is selected, its possible moves are shown, and it follows the pointer
 5. On drop, `playChosenMove()` in `game.js` is called if the drop square is valid, the same function a click uses, so a dropped pawn also gets the promotion chooser; either way the selection is cleared
 6. A press that never moves is an ordinary click or tap and is handled by the click handler in `game.js`
