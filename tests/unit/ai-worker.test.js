@@ -148,6 +148,105 @@ describe('the computer opponent in a Web Worker', () => {
     expect(statusText(g)).toBe("White's turn");
   });
 
+  describe('an answer that cannot be played', () => {
+    const E4 = { row: 4, col: 4 };
+    const pieceAt = (g, { row, col }) => g.game.boardState[row][col];
+
+    test('no move: the computer works one out on the page instead of getting stuck', () => {
+      const workers = installWorker();
+      const g = loadGame();
+      g.game.setOpponent('easy', 'w');
+      g.play('e2e4');
+      workers[0].reply({ id: workers[0].messages[0].id, move: null });
+      jest.runOnlyPendingTimers();
+
+      expect(notations(g)).toHaveLength(2);
+      expect(notations(g)[0]).toBe('e4');
+      expect(g.game.playersView().b.thinking).toBe(false);
+      expect(statusText(g)).toBe("White's turn");
+    });
+
+    test('an illegal move is not played; a legal one is played instead', () => {
+      const workers = installWorker();
+      const g = loadGame();
+      g.game.setOpponent('easy', 'w');
+      g.play('e2e4');
+      const e7e4 = { from: { row: 1, col: 4 }, to: E4, promotion: 'q' };
+      expect(() => {
+        workers[0].reply({ id: workers[0].messages[0].id, move: e7e4 });
+        jest.runOnlyPendingTimers();
+      }).not.toThrow();
+
+      expect(pieceAt(g, E4)).toMatchObject({ type: 'p', color: 'w' }); // Not taken by the pawn on e7
+      expect(notations(g)).toHaveLength(2);
+      expect(g.game.currentPlayer).toBe('w');
+    });
+
+    test('a move that arrives after the player undid back to the start is not played', () => {
+      const workers = installWorker();
+      const g = loadGame();
+      g.game.setOpponent('easy', 'w');
+      g.play('e2e4');
+      g.game.undoLastMove();
+      workers[0].reply({ id: workers[0].messages[0].id, move: E7E5 });
+      jest.runAllTimers();
+
+      expect(notations(g)).toEqual([]);
+      expect(pieceAt(g, { row: 1, col: 4 })).toMatchObject({ type: 'p', color: 'b' });
+    });
+
+    test('a move that arrives after the game ended on time is not played', () => {
+      const workers = installWorker();
+      const g = loadGame();
+      g.game.setTimeControl('1+0');
+      g.game.setOpponent('easy', 'w');
+      g.play('e2e4');
+      jest.advanceTimersByTime(61000); // Black's clock runs out while it thinks
+      expect(g.game.gameResult).toBe('1-0');
+
+      workers[0].reply({ id: workers[0].messages[0].id, move: E7E5 });
+      jest.runAllTimers();
+      expect(notations(g)).toEqual(['e4']);
+      expect(g.game.gameResult).toBe('1-0');
+    });
+  });
+
+  describe('a worker that fails', () => {
+    test('one that was already replaced starts no new worker and no search on the page', () => {
+      const workers = installWorker();
+      const g = loadGame();
+      g.game.setOpponent('easy', 'w');
+      g.play('e2e4');
+      g.game.undoLastMove(); // Stops the search: the next request gets a new worker
+      g.play('d2d4');
+      expect(workers).toHaveLength(2);
+
+      workers[0].onerror({ preventDefault() {} });
+      jest.runAllTimers();
+      expect(workers).toHaveLength(2);
+      expect(notations(g)).toEqual(['d4']); // Still waiting for the new worker
+      expect(workers[1].terminated).toBeUndefined();
+    });
+
+    test('after its request was dropped, it asks no new worker and hands on no move', () => {
+      const workers = installWorker();
+      const g = loadGame();
+      const onMove = jest.fn();
+      const id = global.askEngine(
+        { position: g.game.livePosition(), color: 'w', level: 'easy', seen: [], budgetMs: null },
+        onMove
+      );
+      workers[0].reply({ id, move: null }); // The worker is idle again, and stays
+      global.dropEngineRequests();
+      workers[0].onerror({});
+      jest.runAllTimers();
+
+      expect(onMove).toHaveBeenCalledTimes(1); // Only the answer it gave before
+      expect(workers[0].terminated).toBe(true);
+      expect(workers).toHaveLength(1); // No new worker for an answer nobody waits for
+    });
+  });
+
   test('a search that is no longer wanted is stopped, and the next request gets a fresh worker', () => {
     const workers = installWorker();
     const g = loadGame();

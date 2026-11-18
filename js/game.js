@@ -1059,15 +1059,26 @@ function requestAIMove() {
             if (!isLatestEngineRequest(id)) return; // Undone, reset or switched off in the meantime
             aiThinking = false;
             // The move was worked out for one position: never play it on another
-            const stillItsTurn = !isGameOver && currentPlayer === color;
+            if (isGameOver || currentPlayer !== color) {
+                updateStatusDisplay();
+                return;
+            }
             const legal =
-                stillItsTurn &&
                 move &&
                 generateLegalMovesForPiece(move.from.row, move.from.col).some(
                     (target) => target.row === move.to.row && target.col === move.to.col
                 );
-            if (legal) {
-                makeMove(move.from.row, move.from.col, move.to.row, move.to.col, move.promotion);
+            // An answer that cannot be played is a fault in the engine, not a
+            // choice: rather than leave the computer stuck, it moves from here
+            const played = legal ? move : chooseAIMove(livePosition(), color, opponentLevel);
+            if (played) {
+                makeMove(
+                    played.from.row,
+                    played.from.col,
+                    played.to.row,
+                    played.to.col,
+                    played.promotion
+                );
             } else {
                 updateStatusDisplay();
             }
