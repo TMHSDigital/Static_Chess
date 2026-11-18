@@ -32,9 +32,9 @@ function installWorker(options = {}) {
       this.terminated = true;
     }
 
-    /** Answers as ai-worker.js would. */
+    /** Answers as ai-worker.js of the page's own release would. */
     reply(data) {
-      this.onmessage({ data });
+      this.onmessage({ data: { protocol: global.CONFIG.ENGINE_PROTOCOL, ...data } });
     }
   };
   return created;
@@ -340,6 +340,34 @@ describe('the computer opponent in a Web Worker', () => {
     );
   });
 
+  test('a worker from another release is not used, and the page answers instead', () => {
+    const workers = installWorker();
+    const g = loadGame();
+    g.game.setOpponent('easy', 'w');
+    g.play('e2e4');
+    const { id } = workers[0].messages[0];
+    workers[0].onmessage({ data: { id, protocol: global.CONFIG.ENGINE_PROTOCOL + 1, move: E7E5 } });
+    expect(workers[0].terminated).toBe(true);
+    jest.runAllTimers();
+    expect(notations(g)).toHaveLength(2); // Worked out on the page
+
+    g.play(g.game.currentPlayer === 'w' ? 'd2d4' : 'd7d5');
+    jest.runAllTimers();
+    expect(workers).toHaveLength(1); // No new worker for the rest of the visit
+    expect(notations(g)).toHaveLength(4);
+  });
+
+  test('a worker from a release before the protocol number is not used either', () => {
+    const workers = installWorker();
+    const g = loadGame();
+    g.game.setOpponent('easy', 'w');
+    g.play('e2e4');
+    workers[0].onmessage({ data: { id: workers[0].messages[0].id, move: E7E5 } });
+    jest.runAllTimers();
+    expect(notations(g)).toHaveLength(2);
+    expect(workers[0].terminated).toBe(true);
+  });
+
   test('a finished game is sent to a worker to be scored, once', () => {
     const workers = installWorker();
     const g = loadGame();
@@ -518,6 +546,7 @@ describe('ai-worker.js', () => {
 
     expect(posted).toHaveLength(1);
     expect(posted[0].id).toBe(7);
+    expect(posted[0].protocol).toBe(global.CONFIG.ENGINE_PROTOCOL);
     const { from, to, promotion } = posted[0].move;
     const legal = g.rules
       .legalMovesFrom(position, from.row, from.col)
@@ -544,6 +573,7 @@ describe('ai-worker.js', () => {
 
     expect(posted).toHaveLength(1);
     expect(posted[0].id).toBe(9);
+    expect(posted[0].protocol).toBe(global.CONFIG.ENGINE_PROTOCOL);
     expect(posted[0].move).toBeUndefined();
     expect(posted[0].scores).toHaveLength(2);
     expect(posted[0].scores[0]).toEqual({ score: expect.any(Number), mate: false, over: false });

@@ -116,6 +116,13 @@ function sendToEngine(channelName, message, answerHere, onAnswer) {
         }
         worker.onmessage = (event) => {
             engineWorkerHasReplied = true;
+            if (event.data.protocol !== CONFIG.ENGINE_PROTOCOL) {
+                // Started after a new release was deployed, the worker runs an
+                // engine this page may not speak to: the page answers from now on
+                giveUpOnWorkers();
+                if (id === channel.id) thinkHere();
+                return;
+            }
             if (event.data.id !== id) return;
             channel.busy = false;
             onAnswer(event.data);

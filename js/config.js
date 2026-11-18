@@ -184,6 +184,13 @@ const CONFIG = {
     // How many past games are kept; the oldest make room for new ones
     ARCHIVE_LIMIT: 20,
 
+    // What the page and the engine worker say to each other (engine-bridge.js,
+    // ai-worker.js). Raise it with any change to those messages or to the
+    // positions in them. A worker started after a release was deployed loads
+    // the new files while an open tab still runs the old ones; its answers
+    // carry its own number, and on a mismatch the page stops using workers.
+    ENGINE_PROTOCOL: 1,
+
     // Debug mode: when true, debugLog() prints to the console
     DEBUG: false,
 };
