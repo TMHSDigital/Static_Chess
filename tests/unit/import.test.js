@@ -347,11 +347,11 @@ describe('reading PGN', () => {
 
 describe('damaged or oversized text', () => {
   const N = 100000;
-  /** Runs fn and fails if it takes a second or more; a real game takes about a millisecond. */
+  /** Runs fn and fails if it takes three seconds or more, which only runaway backtracking does: a real game takes about a millisecond, and a busy runner under coverage some hundred times that. */
   const quickly = (fn) => {
     const started = Date.now();
     const result = fn();
-    expect(Date.now() - started).toBeLessThan(1000);
+    expect(Date.now() - started).toBeLessThan(3000);
     return result;
   };
 

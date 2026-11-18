@@ -4,8 +4,24 @@ const el = (g, id) => g.window.document.getElementById(id);
 const notations = (g) => g.game.moveHistory.map((move) => move.notation);
 const GAME = '[Event "Club night"]\n\n1. e4 e5 2. Nf3 Nc6 {White resigned. Black wins.} 0-1\n';
 
-/** Waits for the file to be read, which finishes on a later turn of the event loop. */
-const fileRead = () => new Promise((resolve) => setTimeout(resolve, 30));
+const reads = []; // Every file read the page has started and the test not yet waited for
+
+/** A game whose files note each read they start, so a test can wait for it. */
+function loadWatched() {
+  const g = loadGame();
+  const text = g.window.File.prototype.text;
+  g.window.File.prototype.text = function () {
+    const read = text.call(this);
+    reads.push(read);
+    return read;
+  };
+  return g;
+}
+
+/** Waits until every file read started so far has been handed to the page. */
+async function fileRead() {
+  await Promise.allSettled(reads.splice(0));
+}
 
 /** Puts a file into the hidden file input, as the browser's file chooser does. */
 function chooseFile(g, name, content) {
@@ -25,7 +41,7 @@ function drag(g, type, files, kind = 'Files') {
 
 describe('opening a file', () => {
   test('Open file opens the file chooser', () => {
-    const g = loadGame();
+    const g = loadWatched();
     el(g, 'import-button').click();
     const opened = jest.fn();
     el(g, 'import-file').addEventListener('click', opened);
@@ -34,7 +50,7 @@ describe('opening a file', () => {
   });
 
   test('a chosen file fills the box, and Load then works as for pasted text', async () => {
-    const g = loadGame();
+    const g = loadWatched();
     g.play('d2d4');
     el(g, 'import-button').click();
     chooseFile(g, 'club-night.pgn', GAME);
@@ -54,7 +70,7 @@ describe('opening a file', () => {
   });
 
   test('a file with a move that cannot be played is reported when Load is pressed', async () => {
-    const g = loadGame();
+    const g = loadWatched();
     el(g, 'import-button').click();
     chooseFile(g, 'broken.pgn', '1. e4 e5 2. Qh7');
     await fileRead();
@@ -65,7 +81,7 @@ describe('opening a file', () => {
   });
 
   test('a position file is read like a pasted FEN', async () => {
-    const g = loadGame();
+    const g = loadWatched();
     el(g, 'import-button').click();
     chooseFile(g, 'ending.fen', '4k3/8/8/8/8/8/4P3/4K3 w - - 0 1\n');
     await fileRead();
@@ -74,7 +90,7 @@ describe('opening a file', () => {
   });
 
   test('a file that is far too large is refused without being read', async () => {
-    const g = loadGame();
+    const g = loadWatched();
     el(g, 'import-button').click();
     el(g, 'import-text').value = '1. e4';
     chooseFile(g, 'everything.pgn', 'x'.repeat(global.CONFIG.IMPORT_MAX_LENGTH + 1));
@@ -86,7 +102,7 @@ describe('opening a file', () => {
   });
 
   test('a file dropped on the dialog fills the box', async () => {
-    const g = loadGame();
+    const g = loadWatched();
     el(g, 'import-button').click();
     const file = new g.window.File([GAME], 'club-night.pgn');
 
@@ -99,10 +115,14 @@ describe('opening a file', () => {
   });
 
   test('a file that cannot be read says so', async () => {
-    const g = loadGame();
+    const g = loadWatched();
     el(g, 'import-button').click();
     const file = new g.window.File(['1. e4'], 'gone.pgn');
-    file.text = () => Promise.reject(new Error('The file was moved'));
+    file.text = () => {
+      const read = Promise.reject(new Error('The file was moved'));
+      reads.push(read);
+      return read;
+    };
     drag(g, 'drop', [file]);
     await fileRead();
     expect(el(g, 'import-error').textContent).toBe('That file could not be read.');
@@ -110,7 +130,7 @@ describe('opening a file', () => {
   });
 
   test('dragged text is left to the text box', () => {
-    const g = loadGame();
+    const g = loadWatched();
     el(g, 'import-button').click();
     expect(drag(g, 'dragover', [], 'text/plain').defaultPrevented).toBe(false);
     expect(drag(g, 'drop', [], 'text/plain').defaultPrevented).toBe(false);
@@ -142,7 +162,7 @@ describe('saving the game as a file', () => {
   });
 
   test('Save PGN is off until there is a move', () => {
-    const g = loadGame();
+    const g = loadWatched();
     expect(el(g, 'download-button').disabled).toBe(true);
     g.play('e2e4');
     expect(el(g, 'download-button').disabled).toBe(false);
@@ -152,7 +172,7 @@ describe('saving the game as a file', () => {
 
   test('saves static-chess-game.pgn although the clipboard is available', async () => {
     jest.useFakeTimers();
-    const g = loadGame();
+    const g = loadWatched();
     const saved = watchDownloads(g);
     const writeText = jest.fn(() => Promise.resolve());
     global.navigator = { clipboard: { writeText } };
@@ -173,7 +193,7 @@ describe('saving the game as a file', () => {
 
   test('the Copied notice gives way to the label again', async () => {
     jest.useFakeTimers();
-    const g = loadGame();
+    const g = loadWatched();
     global.navigator = { clipboard: { writeText: jest.fn(() => Promise.resolve()) } };
     g.play('e2e4');
     el(g, 'pgn-button').click();
@@ -187,7 +207,7 @@ describe('saving the game as a file', () => {
 
   test('Copy FEN copies the position on screen, also while looking back', async () => {
     jest.useFakeTimers();
-    const g = loadGame();
+    const g = loadWatched();
     const writeText = jest.fn(() => Promise.resolve());
     global.navigator = { clipboard: { writeText } };
     g.play('e2e4', 'e7e5');
@@ -209,7 +229,7 @@ describe('saving the game as a file', () => {
   });
 
   test('Copy PGN uses the clipboard when it can, and a file when it cannot', async () => {
-    const g = loadGame();
+    const g = loadWatched();
     const saved = watchDownloads(g);
     g.play('e2e4', 'e7e5');
 

@@ -307,6 +307,12 @@ describe('past games', () => {
       const g = threeGames();
       for (const index of [-1, 3, 1.5, '1']) expect(global.removeFromArchive(index)).toBe(false);
       expect(g.store.readArchive()).toHaveLength(3);
+      // With its date, a game is found also when the place shown is no longer in the list
+      const { date } = g.store.readArchive()[2];
+      expect(global.removeFromArchive(5, date)).toBe(true);
+      expect(g.store.readArchive()).toHaveLength(2);
+      expect(global.removeFromArchive(0)).toBe(true); // Without one, the place alone decides
+      expect(g.store.readArchive()).toHaveLength(1);
     });
 
     describe('when another tab changes the list while it is shown', () => {

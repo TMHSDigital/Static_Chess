@@ -15,6 +15,7 @@ const TOGGLES = [
 function startApp(options = {}) {
   const g = loadGame(options);
   const doc = g.window.document;
+  if (options.hash) g.window.location.hash = options.hash;
   for (const id of TOGGLES) {
     const input = doc.createElement('input');
     input.type = 'checkbox';
@@ -112,6 +113,86 @@ describe('settings', () => {
     expect(app.doc.body.classList.contains('coords-visible')).toBe(true);
     expect(() => app.flip('flip-toggle')).not.toThrow();
     expect(app.boardIsFlipped()).toBe(true);
+  });
+});
+
+describe('the start of the page', () => {
+  test('the clock setting is hidden when the clock is switched off', () => {
+    const app = startApp({ configure: (config) => (config.FEATURES.GAME_TIMER = false) });
+    expect(app.toggle('clock-setting').hidden).toBe(true);
+    expect(app.toggle('clock-select').options).toHaveLength(0);
+  });
+
+  test('a clock chosen is saved and used from the next game', () => {
+    const app = startApp();
+    const select = app.toggle('clock-select');
+    select.value = '5+0';
+    select.dispatchEvent(new app.window.Event('change'));
+    expect(app.stored('timeControl')).toBe('5+0');
+    app.game.resetGame();
+    expect(app.game.clock.base).toBe(300000);
+  });
+
+  test('the opponent settings are hidden when the computer opponent is switched off', () => {
+    const app = startApp({ configure: (config) => (config.FEATURES.AI_OPPONENT = false) });
+    expect(app.toggle('opponent-setting').hidden).toBe(true);
+    expect(app.toggle('side-setting').hidden).toBe(true);
+  });
+
+  test('a shared link is loaded, and the address forgets it', () => {
+    const app = startApp({ hash: '#pgn=1.%20e4%20e5%20*' });
+    expect(app.game.moveHistory.map((move) => move.notation)).toEqual(['e4', 'e5']);
+    expect(app.window.location.hash).toBe('');
+  });
+
+  describe('offline support', () => {
+    const saved = {};
+    beforeEach(() => {
+      for (const name of ['navigator', 'location']) {
+        saved[name] = Object.getOwnPropertyDescriptor(global, name);
+      }
+    });
+    afterEach(() => {
+      for (const [name, descriptor] of Object.entries(saved)) {
+        if (descriptor) Object.defineProperty(global, name, descriptor);
+        else delete global[name];
+      }
+    });
+    /** Starts the page as if served from protocol, with a service worker register() that does what it is told. */
+    const startServed = (protocol, register) => {
+      Object.defineProperty(global, 'navigator', {
+        value: { serviceWorker: { register } },
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(global, 'location', {
+        value: { protocol },
+        configurable: true,
+        writable: true,
+      });
+      return startApp();
+    };
+
+    test('the service worker is registered on a page served over http(s)', () => {
+      const register = jest.fn(() => Promise.resolve());
+      startServed('https:', register);
+      expect(register).toHaveBeenCalledWith('sw.js');
+    });
+
+    test('a page opened from a file registers none', () => {
+      const register = jest.fn(() => Promise.resolve());
+      startServed('file:', register);
+      expect(register).not.toHaveBeenCalled();
+    });
+
+    test('a refused registration does not stop the page', async () => {
+      const register = jest.fn(() => Promise.reject(new Error('refused')));
+      const app = startServed('http:', register);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(register).toHaveBeenCalled();
+      expect(app.game.moveHistory).toEqual([]);
+    });
   });
 });
 

@@ -20,10 +20,22 @@
     ],
     "coverageThreshold": {
       "global": {
-        "statements": 90,
-        "branches": 83,
-        "functions": 90,
-        "lines": 90
+        "statements": 96,
+        "branches": 90,
+        "functions": 97,
+        "lines": 97
+      },
+      "./js/rules.js": {
+        "branches": 98
+      },
+      "./js/notation.js": {
+        "branches": 98
+      },
+      "./js/saved-game.js": {
+        "branches": 98
+      },
+      "./js/game-store.js": {
+        "branches": 97
       }
     }
   },
