@@ -225,6 +225,23 @@ describe('Chess clock', () => {
     expect(g.game.currentStatus).toBe('Black ran out of time, but White cannot checkmate. Draw.');
   });
 
+  test('it is a win when the side with time left has a knight and the other side has a pawn', () => {
+    const g = timedGame('1+0');
+    g.setPosition({ e1: 'wk*', b1: 'wn*', e8: 'bk*', a7: 'bp*' });
+    g.play('e1e2');
+    jest.advanceTimersByTime(61000);
+    expect(g.game.gameResult).toBe('1-0');
+    expect(g.game.currentStatus).toBe('Black ran out of time. White wins.');
+  });
+
+  test('it is still a draw when a lone knight faces a bare king', () => {
+    const g = timedGame('1+0');
+    g.setPosition({ e1: 'wk*', b1: 'wn*', e8: 'bk*' });
+    g.play('e1e2');
+    jest.advanceTimersByTime(61000);
+    expect(g.game.gameResult).toBe('1/2-1/2');
+  });
+
   test('who could still give mate is decided by the rules, not by the game', () => {
     const g = loadGame();
     const mates = (placement, color = 'w') => {
@@ -240,6 +257,12 @@ describe('Chess clock', () => {
     expect(mates({ a2: 'wp*' })).toBe(true);
     expect(mates({ a1: 'wr*' })).toBe(true);
     expect(mates({ a1: 'wr*' }, 'b')).toBe(false); // Black has only its king
+    // A knight or same-shade bishops can mate if the other side can block its own king
+    expect(mates({ b1: 'wn*', a7: 'bp*' })).toBe(true);
+    expect(mates({ c1: 'wb*', a7: 'bp*' })).toBe(true);
+    expect(mates({ b1: 'wn*', h8: 'bb*' })).toBe(true);
+    expect(mates({ c1: 'wb*', a3: 'wb*', c8: 'bb*' })).toBe(true); // Black's bishop on light squares
+    expect(mates({ c1: 'wb*', a3: 'wb*', f8: 'bb*' })).toBe(false); // All bishops on dark squares
     // A board on which nobody can mate is one on which neither side can
     g.setPosition({ e1: 'wk*', e8: 'bk*', c1: 'wb*', a3: 'wb*' });
     expect(g.rules.hasInsufficientMaterial(g.game.boardState)).toBe(true);

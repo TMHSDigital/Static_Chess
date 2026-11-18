@@ -455,23 +455,32 @@ function gameOutcome(position, player, draws) {
 /**
  * @param {Array<Array<object|null>>} board
  * @param {string} color
- * @returns {boolean} False if that side could never give checkmate with what
- * it has: a lone king, a king with one knight, or a king with bishops that
- * all stand on one colour. Used when the other side runs out of time.
+ * @returns {boolean} False if that side could never give checkmate, by any
+ * legal sequence of moves: it has a lone king; or a king with one knight, or
+ * with bishops that all stand on one colour, while the other side has nothing
+ * that could block its own king in (a lone king, or for the bishops only more
+ * bishops on that same colour). Used when the other side runs out of time.
  */
 function canDeliverMate(board, color) {
-    const others = [];
+    const mine = [];
+    const theirs = [];
     for (let r = 0; r < 8; r++) {
         for (let c = 0; c < 8; c++) {
             const piece = board[r][c];
-            if (piece && piece.color === color && piece.type !== KING) {
-                others.push({ type: piece.type, shade: (r + c) % 2 });
+            if (piece && piece.type !== KING) {
+                (piece.color === color ? mine : theirs).push({
+                    type: piece.type,
+                    shade: (r + c) % 2,
+                });
             }
         }
     }
-    if (others.length === 0) return false;
-    if (others.length === 1 && others[0].type === KNIGHT) return false;
-    return !others.every((p) => p.type === BISHOP && p.shade === others[0].shade);
+    if (mine.length === 0) return false;
+    if (mine.length === 1 && mine[0].type === KNIGHT) return theirs.length > 0;
+    const shade = mine[0].shade;
+    const sameShadeBishop = (p) => p.type === BISHOP && p.shade === shade;
+    if (!mine.every(sameShadeBishop)) return true;
+    return !theirs.every(sameShadeBishop);
 }
 
 /**
