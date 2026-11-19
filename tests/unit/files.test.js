@@ -61,7 +61,7 @@ describe('opening a file', () => {
     expect(g.window.document.activeElement).toBe(el(g, 'import-load'));
 
     el(g, 'import-load').click();
-    expect(el(g, 'import-load').textContent).toBe('Discard current game?');
+    expect(el(g, 'import-load').textContent).toBe('Replace current game?');
     el(g, 'import-load').click();
     expect(notations(g)).toEqual(['e4', 'e5', 'Nf3', 'Nc6']);
     expect(g.game.gameResult).toBe('0-1');

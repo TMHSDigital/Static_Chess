@@ -37,7 +37,6 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-- On the clock, a king with a knight, or with bishops on one colour, now wins when the other side runs out of time while it still has pieces or pawns that make a mate possible; it was scored as a draw (#165)
 - With the game open in two tabs, a game saved in the other tab is put in the past games before this one is saved over it, and Delete and Open in the past games act on the game that was clicked even if the other tab changed the list (#167)
 - Going through a game no longer runs a search on the page for every step: a finished game uses the scores already worked out, other positions are asked of the engine in the background, and a newer step replaces the older question (#166)
 - If the engine answers with no move or one that cannot be played, the computer works its move out on the page instead of getting stuck (#169)
@@ -57,7 +56,7 @@ All notable changes to this project will be documented in this file.
 - Light theme: the card around the board stayed black with an unreadable title, and the move list, status and settings boxes were grey
 - The pawn promotion chooser ran off the edge of very narrow screens
 - Switches showed no keyboard focus, and white text on the teal buttons and the running clock was below AA contrast
-- Load PGN: text that cannot be played now shows its error on the first click, instead of first asking to discard the current game
+- Load: the question before loading over a game in progress now says the game will be replaced, not discarded, since it is kept in the past games; on a narrow screen the loaded board and status are brought into view instead of leaving the page at the Load button (#188)
 - Offline support: on a connection that is up but delivers nothing, the app opens from its saved copy after three seconds instead of waiting for the browser to give up
 - Load: damaged text, such as thousands of unclosed braces, nested parentheses or blank lines, no longer freezes the page, and text over 200,000 characters is refused with a message
 - New Game: a "Discard game?" question that was still showing when a move was played (for example the computer's reply) is withdrawn, as it already was for Resign, so the next click no longer discards the game

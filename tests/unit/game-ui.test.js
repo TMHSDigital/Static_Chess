@@ -339,7 +339,7 @@ describe('game-ui.js without a game', () => {
 
     el('import-load').click(); // Checked, then a question: a game is in progress
     expect(asked).toEqual([['1. e4', true]]);
-    expect(el('import-load').textContent).toBe('Discard current game?');
+    expect(el('import-load').textContent).toBe('Replace current game?');
     el('import-load').click();
     expect(asked).toEqual([
       ['1. e4', true],

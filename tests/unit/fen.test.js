@@ -319,7 +319,7 @@ describe('the Load dialog with a position', () => {
     el(g, 'import-text').value = '4k3/8/8/8/8/8/4P3/4K3 w - - 0 1';
     el(g, 'import-load').click();
     expect(notations(g)).toEqual(['e4']);
-    expect(el(g, 'import-load').textContent).toBe('Discard current game?');
+    expect(el(g, 'import-load').textContent).toBe('Replace current game?');
     el(g, 'import-load').click();
     expect(notations(g)).toEqual([]);
     expect(g.at('e2').type).toBe('p');
