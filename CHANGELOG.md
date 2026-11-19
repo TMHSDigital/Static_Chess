@@ -37,6 +37,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- In a timed game Undo and Redo now say why they are off ("No take-backs in a timed game") instead of sitting greyed out with their usual titles (#187)
 - On the clock, a king with a knight, or with bishops on one colour, now wins when the other side runs out of time while it still has pieces or pawns that make a mate possible; it was scored as a draw (#165)
 - With the game open in two tabs, a game saved in the other tab is put in the past games before this one is saved over it, and Delete and Open in the past games act on the game that was clicked even if the other tab changed the list (#167)
 - Going through a game no longer runs a search on the page for every step: a finished game uses the scores already worked out, other positions are asked of the engine in the background, and a newer step replaces the older question (#166)

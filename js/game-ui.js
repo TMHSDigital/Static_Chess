@@ -24,6 +24,9 @@ const hintButton = document.getElementById('hint-button');
 const resetButton = document.getElementById('reset-button');
 const undoButton = document.getElementById('undo-button');
 const redoButton = document.getElementById('redo-button');
+// The titles as written in the page, put back when the clock is not the reason
+const undoTitle = undoButton ? undoButton.title : '';
+const redoTitle = redoButton ? redoButton.title : '';
 const pgnButton = document.getElementById('pgn-button');
 const downloadButton = document.getElementById('download-button');
 const fenButton = document.getElementById('fen-button');
@@ -300,8 +303,16 @@ function applyControls(view) {
         );
         autoplayButton.classList.toggle('is-playing', !!view.autoplaying);
     }
-    if (undoButton) undoButton.disabled = !view.canUndo;
-    if (redoButton) redoButton.disabled = !view.canRedo;
+    if (undoButton) {
+        undoButton.disabled = !view.canUndo;
+        // On the clock the buttons are off by rule, not for want of a move:
+        // say so, instead of leaving the usual title on a dead button
+        undoButton.title = view.onClock ? 'No take-backs in a timed game' : undoTitle;
+    }
+    if (redoButton) {
+        redoButton.disabled = !view.canRedo;
+        redoButton.title = view.onClock ? 'No take-backs in a timed game' : redoTitle;
+    }
     if (pgnButton) pgnButton.disabled = view.moveCount === 0;
     if (downloadButton) downloadButton.disabled = view.moveCount === 0;
     if (resignButton) resignButton.disabled = !view.inProgress;
