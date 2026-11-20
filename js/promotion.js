@@ -61,15 +61,20 @@ function getPromotionDialog() {
 
 /** Escape cancels; Tab and the arrow keys stay inside the four buttons. */
 function handlePromotionKeydown(event) {
-    if (event.key === 'Escape') {
+    if (matchesKeyBinding('dialog-close', event)) {
         event.preventDefault();
         closePromotionChooser(null);
         return;
     }
+    if (!matchesKeyBinding('promotion-navigate', event)) return;
     const step =
-        { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key] ||
-        (event.key === 'Tab' ? (event.shiftKey ? -1 : 1) : 0);
-    if (!step) return;
+        event.key === 'Tab'
+            ? event.shiftKey
+                ? -1
+                : 1
+            : event.key === 'ArrowRight' || event.key === 'ArrowDown'
+              ? 1
+              : -1;
     event.preventDefault();
     event.stopPropagation();
     const buttons = Array.from(getPromotionDialog().querySelectorAll('.promotion-choice'));

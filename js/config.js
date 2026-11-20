@@ -196,7 +196,121 @@ const CONFIG = {
     DEBUG: false,
 };
 
+/**
+ * Every keyboard binding in one table, read both by the key handlers and by
+ * the Keyboard shortcuts panel so the two cannot drift apart.
+ */
+const KEY_BINDINGS = [
+    {
+        id: 'board-move',
+        section: 'Board',
+        keys: ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'],
+        labels: ['Arrow keys'],
+        description: 'Move between squares',
+    },
+    {
+        id: 'board-activate',
+        section: 'Board',
+        keys: ['Enter', ' '],
+        labels: ['Enter', 'Space'],
+        description: 'Pick up or move a piece',
+    },
+    {
+        id: 'step-previous',
+        section: 'Moves',
+        keys: ['ArrowLeft'],
+        labels: ['Left'],
+        description: 'Previous move',
+    },
+    {
+        id: 'step-next',
+        section: 'Moves',
+        keys: ['ArrowRight'],
+        labels: ['Right'],
+        description: 'Next move',
+    },
+    {
+        id: 'step-first',
+        section: 'Moves',
+        keys: ['Home'],
+        labels: ['Home'],
+        description: 'Starting position (in Move History)',
+    },
+    {
+        id: 'step-last',
+        section: 'Moves',
+        keys: ['End'],
+        labels: ['End'],
+        description: 'Latest move (in Move History)',
+    },
+    {
+        id: 'return-to-game',
+        section: 'Moves',
+        keys: ['Escape'],
+        labels: ['Esc'],
+        description: 'Return to the live game',
+    },
+    {
+        id: 'redo',
+        section: 'Game & dialogs',
+        combos: [
+            { key: 'y', mod: true, shift: false },
+            { key: 'z', mod: true, shift: true },
+        ],
+        labels: ['Ctrl+Y', 'Ctrl+Shift+Z'],
+        description: 'Redo an undone move',
+    },
+    {
+        id: 'promotion-navigate',
+        section: 'Game & dialogs',
+        keys: ['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Tab'],
+        labels: ['Arrow keys', 'Tab'],
+        description: 'Move between promotion choices',
+    },
+    {
+        id: 'dialog-close',
+        section: 'Game & dialogs',
+        keys: ['Escape'],
+        labels: ['Esc'],
+        description: 'Close a dialog or cancel promotion',
+    },
+    {
+        id: 'shortcuts-help',
+        section: 'Game & dialogs',
+        keys: ['?'],
+        labels: ['?'],
+        description: 'Open keyboard shortcuts',
+    },
+];
+
+/** @returns {object|undefined} The entry in KEY_BINDINGS with the given id. */
+function keyBinding(id) {
+    return KEY_BINDINGS.find((entry) => entry.id === id);
+}
+
+/**
+ * Checks whether a keyboard event matches a binding from KEY_BINDINGS.
+ * @param {string} id
+ * @param {KeyboardEvent} event
+ * @returns {boolean}
+ */
+function matchesKeyBinding(id, event) {
+    const binding = keyBinding(id);
+    if (!binding) return false;
+    if (binding.combos) {
+        if (event.altKey) return false;
+        const key = String(event.key).toLowerCase();
+        return binding.combos.some(
+            (combo) =>
+                Boolean(event.ctrlKey || event.metaKey) === combo.mod &&
+                Boolean(event.shiftKey) === combo.shift &&
+                key === combo.key
+        );
+    }
+    return binding.keys.includes(event.key);
+}
+
 // Export for Node/Jest tests (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { CONFIG };
+    module.exports = { CONFIG, KEY_BINDINGS, keyBinding, matchesKeyBinding };
 }

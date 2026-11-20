@@ -197,30 +197,19 @@ function handleBoardKeydown(event) {
     // Arrow keys follow what is on screen, so they reverse on a flipped board
     const step = boardFlipped ? -1 : 1;
 
-    switch (event.key) {
-        case 'ArrowUp':
-            event.preventDefault();
-            focusSquare(row - step, col);
-            break;
-        case 'ArrowDown':
-            event.preventDefault();
-            focusSquare(row + step, col);
-            break;
-        case 'ArrowLeft':
-            event.preventDefault();
-            focusSquare(row, col - step);
-            break;
-        case 'ArrowRight':
-            event.preventDefault();
-            focusSquare(row, col + step);
-            break;
-        case 'Enter':
-        case ' ': // Space
-            event.preventDefault();
-            active.click();
-            break;
-        default:
-            break;
+    if (matchesKeyBinding('board-move', event)) {
+        const deltas = {
+            ArrowUp: [-step, 0],
+            ArrowDown: [step, 0],
+            ArrowLeft: [0, -step],
+            ArrowRight: [0, step],
+        };
+        const [dRow, dCol] = deltas[event.key];
+        event.preventDefault();
+        focusSquare(row + dRow, col + dCol);
+    } else if (matchesKeyBinding('board-activate', event)) {
+        event.preventDefault();
+        active.click();
     }
 }
 
