@@ -347,3 +347,57 @@ describe('a button that switches itself off hands the focus on', () => {
     expect(doc(g).activeElement).toBe(step(g, 'previous'));
   });
 });
+
+describe('keyboard shortcuts panel', () => {
+  const panel = (g) => doc(g).getElementById('shortcuts-dialog');
+  const keydown = (g, target, key) =>
+    target.dispatchEvent(new g.window.KeyboardEvent('keydown', { key, bubbles: true }));
+
+  test('? opens the panel and lists every binding from the table', () => {
+    const g = loadGame();
+    keydown(g, doc(g), '?');
+    expect(panel(g).hidden).toBe(false);
+    const rows = Array.from(doc(g).querySelectorAll('#shortcuts-list tr'));
+    expect(rows).toHaveLength(g.ui.KEYBOARD_SHORTCUTS.length);
+    rows.forEach((row, index) => {
+      const cells = row.querySelectorAll('td');
+      expect(cells[0].textContent).toBe(g.ui.KEYBOARD_SHORTCUTS[index].keys);
+      expect(cells[1].textContent).toBe(g.ui.KEYBOARD_SHORTCUTS[index].where);
+      expect(cells[2].textContent).toBe(g.ui.KEYBOARD_SHORTCUTS[index].does);
+    });
+  });
+
+  test('Escape closes the panel and returns focus to the opener', () => {
+    const g = loadGame();
+    const opener = doc(g).getElementById('shortcuts-open');
+    opener.focus();
+    opener.click();
+    expect(panel(g).hidden).toBe(false);
+    keydown(g, doc(g), 'Escape');
+    expect(panel(g).hidden).toBe(true);
+    expect(doc(g).activeElement).toBe(opener);
+  });
+
+  test('the How to Play link opens the panel', () => {
+    const g = loadGame();
+    doc(g).getElementById('shortcuts-open').click();
+    expect(panel(g).hidden).toBe(false);
+  });
+
+  test('? inside a text field does not open the panel', () => {
+    const g = loadGame();
+    const field = doc(g).getElementById('import-text');
+    field.focus();
+    keydown(g, field, '?');
+    expect(panel(g).hidden).toBe(true);
+  });
+
+  test('Tab stays inside the panel', () => {
+    const g = loadGame();
+    keydown(g, doc(g), '?');
+    const close = doc(g).getElementById('shortcuts-close');
+    expect(doc(g).activeElement).toBe(close);
+    keydown(g, close, 'Tab');
+    expect(doc(g).activeElement).toBe(close);
+  });
+});

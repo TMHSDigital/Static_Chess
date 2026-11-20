@@ -57,3 +57,15 @@ test('a PGN loaded in the dialog can be downloaded with the same moves', async (
   const pgn = await readFile(await file.path(), 'utf8');
   expect(pgn).toMatch(/1\.\s+e4\s+e5\s+2\.\s+Nf3\s+Nc6\s+\*/);
 });
+
+test('? opens the shortcuts panel and Escape closes it', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('gridcell')).toHaveCount(64);
+  await page.keyboard.press('?');
+  const panel = page.getByRole('dialog', { name: 'Keyboard shortcuts' });
+  await expect(panel).toBeVisible();
+  await expect(panel.locator('tbody tr', { hasText: 'Open this panel' })).toHaveCount(1);
+  await expect(panel.locator('tbody tr').first()).toContainText('?');
+  await page.keyboard.press('Escape');
+  await expect(panel).toBeHidden();
+});

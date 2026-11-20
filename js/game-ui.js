@@ -1,9 +1,10 @@
 /**
  * @fileoverview What the game looks like on the page, apart from the board:
  * the status line, the buttons, the clocks, the move list, the captured
- * pieces, announcements for screen readers, and the Load dialog. Nothing here
- * holds or changes the state of a game. game.js says what to show, in plain
- * values, and is called back when a control is used.
+ * pieces, announcements for screen readers, and the Load dialog and the
+ * keyboard shortcuts panel. Nothing here holds or changes the state of a
+ * game. game.js says what to show, in plain values, and is called back when
+ * a control is used.
  */
 
 const moveHistoryElement = document.getElementById('move-history');
@@ -54,6 +55,50 @@ const archiveSection = document.getElementById('archive-section');
 const archiveList = document.getElementById('archive-list');
 const archiveClearButton = document.getElementById('archive-clear');
 const moreSettings = document.getElementById('more-settings');
+const shortcutsDialog = document.getElementById('shortcuts-dialog');
+const shortcutsList = document.getElementById('shortcuts-list');
+const shortcutsOpenButton = document.getElementById('shortcuts-open');
+const shortcutsCloseButton = document.getElementById('shortcuts-close');
+
+/**
+ * Every keyboard binding in the game, in one table. The shortcuts panel is
+ * built from it, and the page handler opens the panel from the row marked
+ * opensPanel, so the list and the key that opens it cannot drift apart.
+ * keys: what the panel shows. key: the KeyboardEvent key a handler matches,
+ * when one does. where: where the keys work.
+ */
+const KEYBOARD_SHORTCUTS = [
+    { keys: '?', key: '?', opensPanel: true, where: 'Anywhere', does: 'Open this panel' },
+    { keys: '← →', where: 'Anywhere', does: 'Step through the moves' },
+    { keys: 'Esc', key: 'Escape', where: 'Reviewing a move', does: 'Return to the live game' },
+    {
+        keys: 'Ctrl+Y or Ctrl+Shift+Z',
+        where: 'Anywhere',
+        does: 'Redo a move taken back with Undo (Cmd on a Mac)',
+    },
+    { keys: '↑ ↓ ← →', where: 'On the board', does: 'Move between squares' },
+    {
+        keys: 'Enter or Space',
+        where: 'On the board',
+        does: 'Select the focused square, or move there',
+    },
+    { keys: '← →', where: 'In the move list', does: 'Step through the moves' },
+    { keys: 'Home / End', where: 'In the move list', does: 'Jump to the first or last move' },
+    {
+        keys: '↑ ↓ ← → or Tab',
+        where: 'Choosing a promotion piece',
+        does: 'Move between the pieces',
+    },
+    { keys: 'Esc', key: 'Escape', where: 'Choosing a promotion piece', does: 'Cancel the move' },
+    { keys: 'Esc', key: 'Escape', where: 'In the Load dialog', does: 'Close the dialog' },
+    {
+        keys: 'Tab / Shift+Tab',
+        where: 'In the Load dialog',
+        does: 'Move between the dialog controls',
+    },
+];
+const SHORTCUTS_PANEL_KEY = KEYBOARD_SHORTCUTS.find((row) => row.opensPanel).key;
+let shortcutsReturnFocus = null; // What had the focus when the panel opened
 
 // --- Connecting the controls ---
 
@@ -95,6 +140,10 @@ function handlePageKeydown(event) {
         handleOpenDialogKey(event); // Nothing behind an open dialog reacts to keys
         return;
     }
+    if (shortcutsDialog && !shortcutsDialog.hidden) {
+        handleShortcutsDialogKey(event); // Nothing behind an open dialog reacts to keys
+        return;
+    }
     const target = event.target;
     const inField = (selector) => target && target.closest && target.closest(selector);
     // Text fields keep their own redo; the board has no use for it
@@ -102,6 +151,20 @@ function handlePageKeydown(event) {
         if (inField('input, select, textarea, [role="dialog"], .promotion-backdrop')) return;
         event.preventDefault();
         redoHandler();
+        return;
+    }
+    // '?' opens the shortcuts panel, from the row that says so in the table.
+    // Shift is allowed (it is how '?' is typed); the board, form fields and
+    // dialogs keep their own keys.
+    if (event.key === SHORTCUTS_PANEL_KEY) {
+        if (event.altKey || event.ctrlKey || event.metaKey) return;
+        if (
+            inField('#chess-board, input, select, textarea, [role="dialog"], .promotion-backdrop')
+        ) {
+            return;
+        }
+        event.preventDefault();
+        openShortcutsDialog();
         return;
     }
     if (!pageKeyHandler) return;
@@ -216,6 +279,9 @@ function bindControls(handlers) {
         listen(importFileButton, 'click', chooseImportFile);
         listen(importFile, 'change', handleImportFileChosen);
     }
+    // The keyboard shortcuts panel, opened from How to Play or with '?'
+    listen(shortcutsOpenButton, 'click', openShortcutsDialog);
+    listen(shortcutsCloseButton, 'click', closeShortcutsDialog);
 }
 
 // --- Status line, buttons and clocks ---
@@ -858,6 +924,29 @@ function readImportFile(file) {
 }
 
 /**
+ * Keeps Tab and Shift+Tab inside a dialog's own controls.
+ * @param {HTMLElement} dialog
+ * @param {KeyboardEvent} event
+ */
+function trapDialogTab(dialog, event) {
+    const controls = Array.from(
+        dialog.querySelectorAll('textarea, button, input, [tabindex="0"]')
+    ).filter((element) => !element.disabled && !element.closest('[hidden]'));
+    if (controls.length === 0) return;
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    const active = document.activeElement;
+    const inside = dialog.contains(active);
+    if (event.shiftKey && (!inside || active === first)) {
+        event.preventDefault();
+        last.focus();
+    } else if (!event.shiftKey && (!inside || active === last)) {
+        event.preventDefault();
+        first.focus();
+    }
+}
+
+/**
  * Keys pressed while the Load dialog is open, wherever the focus is, as after
  * a click on the dimmed backdrop: Escape closes it, and Tab and Shift+Tab go
  * round its own controls instead of reaching the page behind it.
@@ -869,21 +958,56 @@ function handleOpenDialogKey(event) {
         return;
     }
     if (event.key !== 'Tab') return;
-    const controls = Array.from(
-        importDialog.querySelectorAll('textarea, button, input, [tabindex="0"]')
-    ).filter((element) => !element.disabled && !element.closest('[hidden]'));
-    if (controls.length === 0) return;
-    const first = controls[0];
-    const last = controls[controls.length - 1];
-    const active = document.activeElement;
-    const inside = importDialog.contains(active);
-    if (event.shiftKey && (!inside || active === first)) {
-        event.preventDefault();
-        last.focus();
-    } else if (!event.shiftKey && (!inside || active === last)) {
-        event.preventDefault();
-        first.focus();
+    trapDialogTab(importDialog, event);
+}
+
+/** Builds the shortcuts panel's rows from KEYBOARD_SHORTCUTS. */
+function buildShortcutsList() {
+    if (!shortcutsList) return;
+    shortcutsList.replaceChildren();
+    for (const row of KEYBOARD_SHORTCUTS) {
+        const tableRow = document.createElement('tr');
+        for (const text of [row.keys, row.where, row.does]) {
+            const cell = document.createElement('td');
+            cell.textContent = text;
+            tableRow.appendChild(cell);
+        }
+        shortcutsList.appendChild(tableRow);
     }
+}
+
+/** Opens the keyboard shortcuts panel. */
+function openShortcutsDialog() {
+    if (!shortcutsDialog) return;
+    shortcutsReturnFocus = document.activeElement;
+    buildShortcutsList();
+    shortcutsDialog.hidden = false;
+    if (shortcutsCloseButton) shortcutsCloseButton.focus();
+}
+
+/** Closes the panel and gives the focus back to what opened it. */
+function closeShortcutsDialog() {
+    if (!shortcutsDialog || shortcutsDialog.hidden) return;
+    shortcutsDialog.hidden = true;
+    if (shortcutsReturnFocus && typeof shortcutsReturnFocus.focus === 'function') {
+        shortcutsReturnFocus.focus();
+    }
+    shortcutsReturnFocus = null;
+}
+
+/**
+ * Keys pressed while the shortcuts panel is open: Escape closes it, and Tab
+ * and Shift+Tab go round its own controls instead of reaching the page
+ * behind it.
+ */
+function handleShortcutsDialogKey(event) {
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        closeShortcutsDialog();
+        return;
+    }
+    if (event.key !== 'Tab') return;
+    trapDialogTab(shortcutsDialog, event);
 }
 
 // Export for Node/Jest tests (CommonJS)
@@ -908,6 +1032,9 @@ if (typeof module !== 'undefined' && module.exports) {
         downloadText,
         openImportDialog,
         closeImportDialog,
+        KEYBOARD_SHORTCUTS,
+        openShortcutsDialog,
+        closeShortcutsDialog,
         openSharedText,
         askToConfirm,
         withdrawQuestion,

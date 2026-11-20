@@ -279,7 +279,11 @@
                     </div>
                     <p class="keys-note">
                         Keys: Left and Right step through the moves, Esc returns to the game. With
-                        the keyboard on the board, the arrow keys move between squares.
+                        the keyboard on the board, the arrow keys move between squares. See
+                        <button type="button" id="shortcuts-open" class="keys-link">
+                            Keyboard shortcuts
+                        </button>
+                        for the full list, or press ?.
                     </p>
                 </details>
                 <p class="about">
@@ -325,6 +329,30 @@
                     <button id="archive-clear" class="btn archive-clear" type="button">
                         Clear all
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="shortcuts-dialog" class="promotion-backdrop" hidden>
+            <div
+                class="promotion-panel shortcuts-panel"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="shortcuts-title"
+            >
+                <h3 id="shortcuts-title">Keyboard shortcuts</h3>
+                <table class="shortcuts-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Keys</th>
+                            <th scope="col">Where</th>
+                            <th scope="col">Does</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shortcuts-list"></tbody>
+                </table>
+                <div class="buttons-row">
+                    <button id="shortcuts-close" class="btn btn-primary">Close</button>
                 </div>
             </div>
         </div>

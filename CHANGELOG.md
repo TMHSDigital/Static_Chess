@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Keyboard shortcuts panel**: Press ? anywhere on the page, or the "Keyboard shortcuts" link in How to Play, to see every key binding in one place; Escape closes it and returns the focus (#183)
 - **Chromium smoke tests**: CI opens a live board and checks the computer worker, offline reload and PGN download (#170)
 - **Play through a game**: A Play button between the step buttons goes through the moves one a second and stops at the end, on Pause, or when anything else is pressed (#162)
 - **Redo**: A move taken back with Undo can be played again with Redo or Ctrl+Y (Ctrl+Shift+Z), until another move is made; against the computer both moves come back (#158)

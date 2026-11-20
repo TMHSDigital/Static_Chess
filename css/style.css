@@ -939,6 +939,53 @@ body.coords-visible {
     color: var(--muted-text);
 }
 
+/* The button that opens the shortcuts panel reads as a link in the note */
+.keys-link {
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+/* The shortcuts panel lists the bindings; its rows come from one table */
+.shortcuts-panel {
+    text-align: left;
+    width: min(520px, 100%);
+}
+
+.shortcuts-table {
+    width: 100%;
+    margin-bottom: var(--space-3);
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+    line-height: 1.4;
+}
+
+.shortcuts-table th,
+.shortcuts-table td {
+    padding: var(--space-1) var(--space-2);
+    text-align: left;
+    vertical-align: top;
+}
+
+.shortcuts-table th {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.shortcuts-table td + td,
+.shortcuts-table th + th {
+    border-left: 1px solid var(--border-color);
+}
+
+.shortcuts-table td:first-child {
+    white-space: nowrap;
+    font-weight: 600;
+}
+
 .more-settings summary:hover {
     background-color: var(--hover-bg);
 }
