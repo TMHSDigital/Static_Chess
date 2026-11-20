@@ -9,7 +9,7 @@ const shared = (names, access = 'readonly') =>
   Object.fromEntries(names.map((name) => [name, access]));
 const appGlobals = {
   // config.js
-  ...shared(['CONFIG']),
+  ...shared(['CONFIG', 'KEY_BINDINGS', 'keyBinding', 'matchesKeyBinding']),
   // utils.js
   ...shared([
     'sideName',
@@ -142,6 +142,8 @@ const appGlobals = {
     'downloadText',
     'openImportDialog',
     'closeImportDialog',
+    'openShortcutsDialog',
+    'closeShortcutsDialog',
     'openSharedText',
     'askToConfirm',
     'withdrawQuestion',
