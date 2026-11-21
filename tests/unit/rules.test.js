@@ -84,7 +84,13 @@ describe('move generation matches the published perft counts', () => {
 
   test.each(cases)('the quick generators agree with the full ones: %s', (_name, fen) => {
     const g = loadGame();
-    const { allLegalMoves, allLegalCaptures, isSquareAttacked, isPathObstructed } = g.rules;
+    const {
+      allLegalMoves,
+      allLegalCaptures,
+      isSquareAttacked,
+      isPathObstructed,
+      pseudoMoveTargets,
+    } = g.rules;
     const start = fromFen(g, fen);
     let positions = 0;
 
@@ -109,6 +115,28 @@ describe('move generation matches the published perft counts', () => {
             return !'rbq'.includes(piece.type) || !isPathObstructed(r, c, row, col, board);
           })
         );
+      // Movement patterns: try every square in turn, as the rule is stated
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const piece = board[r][c];
+          if (!piece) continue;
+          const theSlowWay = [];
+          for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 8; col++) {
+              const target = board[row][col];
+              if (target && target.color === piece.color) continue;
+              if (!g.pieces.isPseudoLegalMove(piece, r, c, row, col, target !== null)) continue;
+              if ('rbq'.includes(piece.type) && isPathObstructed(r, c, row, col, board)) continue;
+              if (piece.type === 'p' && Math.abs(row - r) === 2 && board[(r + row) / 2][c]) {
+                continue;
+              }
+              theSlowWay.push({ row, col });
+            }
+          }
+          expect([r, c, pseudoMoveTargets(board, r, c)]).toEqual([r, c, theSlowWay]);
+        }
+      }
+
       if (positions % 7 !== 1) return; // Every square of every seventh position is plenty
       for (let row = 0; row < 8; row++) {
         for (let col = 0; col < 8; col++) {

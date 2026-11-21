@@ -234,6 +234,69 @@ function canCastleIn(position, color, side) {
 }
 
 /**
+ * Lists the squares the piece on a square can reach by its movement pattern:
+ * not onto its own pieces, not through any piece, pawns straight onto an empty
+ * square and diagonally onto an enemy piece. En passant, castling and whether
+ * the move leaves the king in check are left to the caller. Walks the piece's
+ * own steps and lines rather than trying every square of the board.
+ * @returns {Array<{row: number, col: number}>} In board order: by row, then column.
+ */
+function pseudoMoveTargets(board, startRow, startCol) {
+    const piece = board[startRow][startCol];
+    const color = piece.color;
+    const targets = [];
+    const open = (row, col) => {
+        if (!isWithinBounds(row, col)) return false;
+        const target = board[row][col];
+        return target === null || target.color !== color;
+    };
+
+    if (piece.type === PAWN) {
+        const direction = color === WHITE ? -1 : 1;
+        const ahead = startRow + direction;
+        // A double move starts from the pawn's own second rank and needs both squares empty
+        const home = color === WHITE ? 6 : 1;
+        const twoAhead = startRow + 2 * direction;
+        if (
+            !piece.hasMoved &&
+            startRow === home &&
+            board[ahead][startCol] === null &&
+            board[twoAhead][startCol] === null
+        ) {
+            targets.push({ row: twoAhead, col: startCol });
+        }
+        for (const col of [startCol - 1, startCol, startCol + 1]) {
+            if (!isWithinBounds(ahead, col)) continue;
+            const target = board[ahead][col];
+            const fits = col === startCol ? target === null : !!target && target.color !== color;
+            if (fits) targets.push({ row: ahead, col });
+        }
+    } else if (piece.type === KNIGHT || piece.type === KING) {
+        const steps = piece.type === KNIGHT ? KNIGHT_JUMPS : SLIDE_DIRECTIONS;
+        for (const [rowStep, colStep] of steps) {
+            if (open(startRow + rowStep, startCol + colStep)) {
+                targets.push({ row: startRow + rowStep, col: startCol + colStep });
+            }
+        }
+    } else {
+        const first = piece.type === BISHOP ? 4 : 0;
+        const last = piece.type === ROOK ? 4 : 8;
+        for (let index = first; index < last; index++) {
+            const [rowStep, colStep] = SLIDE_DIRECTIONS[index];
+            let row = startRow + rowStep;
+            let col = startCol + colStep;
+            while (open(row, col)) {
+                targets.push({ row, col });
+                if (board[row][col] !== null) break; // A capture ends the line
+                row += rowStep;
+                col += colStep;
+            }
+        }
+    }
+    return targets.sort((a, b) => a.row * 8 + a.col - (b.row * 8 + b.col));
+}
+
+/**
  * Lists the squares the piece on a square can legally move to.
  * @param {object} position
  * @param {number} startRow
@@ -247,32 +310,9 @@ function legalMovesFrom(position, startRow, startCol) {
 
     const color = piece.color;
     const opponent = opponentOf(color);
-    const candidates = [];
 
-    // 1. The piece's movement pattern, with blocked paths removed.
-    // isPseudoLegalMove already keeps pawns from moving straight onto a piece
-    // or diagonally onto an empty square.
-    for (let endRow = 0; endRow < 8; endRow++) {
-        for (let endCol = 0; endCol < 8; endCol++) {
-            const targetPiece = board[endRow][endCol];
-            if (targetPiece && targetPiece.color === color) continue; // Own piece in the way
-            const isCapture = targetPiece !== null;
-
-            if (!isPseudoLegalMove(piece, startRow, startCol, endRow, endCol, isCapture)) continue;
-            if (piece.type === ROOK || piece.type === BISHOP || piece.type === QUEEN) {
-                if (isPathObstructed(startRow, startCol, endRow, endCol, board)) continue;
-            }
-            // A pawn's double move needs the square it passes over to be empty
-            if (
-                piece.type === PAWN &&
-                Math.abs(endRow - startRow) === 2 &&
-                board[(startRow + endRow) / 2][startCol] !== null
-            ) {
-                continue;
-            }
-            candidates.push({ row: endRow, col: endCol });
-        }
-    }
+    // 1. The piece's movement pattern, with blocked paths removed
+    const candidates = pseudoMoveTargets(board, startRow, startCol);
 
     // 2. En passant lands on an empty square, so it is not covered above
     if (piece.type === PAWN && enPassantTarget) {
@@ -335,20 +375,13 @@ function allLegalCaptures(position, color) {
         for (let c = 0; c < 8; c++) {
             const piece = board[r][c];
             if (!piece || piece.color !== color) continue;
-            const slides = piece.type === ROOK || piece.type === BISHOP || piece.type === QUEEN;
             const from = { row: r, col: c };
-            for (let endRow = 0; endRow < 8; endRow++) {
+            for (const to of pseudoMoveTargets(board, r, c)) {
                 // An empty square only counts for a pawn stepping onto the last rank
-                const pawnArrives = piece.type === PAWN && (endRow === 0 || endRow === 7);
-                for (let endCol = 0; endCol < 8; endCol++) {
-                    const target = board[endRow][endCol];
-                    if (target ? target.color === color : !pawnArrives) continue;
-                    if (!isPseudoLegalMove(piece, r, c, endRow, endCol, target !== null)) continue;
-                    if (slides && isPathObstructed(r, c, endRow, endCol, board)) continue;
-                    const to = { row: endRow, col: endCol };
-                    if (!isInCheck(applyMove(position, from, to).position, color)) {
-                        moves.push({ from, to });
-                    }
+                const pawnArrives = piece.type === PAWN && (to.row === 0 || to.row === 7);
+                if (board[to.row][to.col] === null && !pawnArrives) continue;
+                if (!isInCheck(applyMove(position, from, to).position, color)) {
+                    moves.push({ from, to });
                 }
             }
         }
@@ -709,6 +742,7 @@ if (typeof module !== 'undefined' && module.exports) {
         isInCheck,
         applyMove,
         canCastleIn,
+        pseudoMoveTargets,
         legalMovesFrom,
         allLegalMoves,
         allLegalCaptures,
