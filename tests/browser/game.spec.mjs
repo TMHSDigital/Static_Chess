@@ -57,3 +57,34 @@ test('a PGN loaded in the dialog can be downloaded with the same moves', async (
   const pgn = await readFile(await file.path(), 'utf8');
   expect(pgn).toMatch(/1\.\s+e4\s+e5\s+2\.\s+Nf3\s+Nc6\s+\*/);
 });
+
+test('opening Settings keeps the move list and step buttons usable on desktop', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await page.locator('#more-settings').evaluate((el) => {
+    el.open = true;
+  });
+
+  const steps = page.locator('#step-buttons');
+  await expect(steps).toBeVisible();
+  await page.waitForTimeout(150); // let layout settle after opening Settings
+  const geometry = await page.evaluate(() => {
+    const box = (sel) => document.querySelector(sel).getBoundingClientRect();
+    const list = box('.move-history');
+    const settings = box('#more-settings');
+    return {
+      stepsHeight: box('#step-buttons').height,
+      listBottom: list.bottom,
+      settingsTop: settings.top,
+      panelScrolls: (() => {
+        const p = document.querySelector('.game-info');
+        return p.scrollHeight > p.clientHeight;
+      })(),
+    };
+  });
+  expect(geometry.stepsHeight).toBeGreaterThanOrEqual(30);
+  expect(geometry.listBottom).toBeLessThanOrEqual(geometry.settingsTop + 2);
+  expect(geometry.panelScrolls).toBe(true);
+});
