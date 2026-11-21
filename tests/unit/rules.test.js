@@ -90,6 +90,9 @@ describe('move generation matches the published perft counts', () => {
       isSquareAttacked,
       isPathObstructed,
       pseudoMoveTargets,
+      canCastleIn,
+      isInCheck,
+      applyMove,
     } = g.rules;
     const start = fromFen(g, fen);
     let positions = 0;
@@ -105,6 +108,41 @@ describe('move generation matches the published perft counts', () => {
           (board[from.row][from.col].type === 'p' && (to.row === 0 || to.row === 7))
       );
       expect(allLegalCaptures(position, color)).toEqual(forcing);
+
+      // Legality: the moves left are those after which the king is not attacked,
+      // with every candidate move played out, not only those that look risky
+      const ep = position.enPassantTarget;
+      const playedOut = [];
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const piece = board[r][c];
+          if (!piece || piece.color !== color) continue;
+          const from = { row: r, col: c };
+          const tries = pseudoMoveTargets(board, r, c);
+          const victim = ep && board[r][ep.col];
+          if (
+            piece.type === 'p' &&
+            ep &&
+            r === ep.row + (color === 'w' ? 1 : -1) &&
+            Math.abs(c - ep.col) === 1 &&
+            victim &&
+            victim.type === 'p' &&
+            victim.color !== color
+          ) {
+            tries.push({ row: ep.row, col: ep.col });
+          }
+          if (piece.type === 'k' && !piece.hasMoved) {
+            if (canCastleIn(position, color, 'kingside')) tries.push({ row: r, col: c + 2 });
+            if (canCastleIn(position, color, 'queenside')) tries.push({ row: r, col: c - 2 });
+          }
+          for (const to of tries) {
+            if (!isInCheck(applyMove(position, from, to).position, color)) {
+              playedOut.push({ from, to });
+            }
+          }
+        }
+      }
+      expect(allLegalMoves(position, color)).toEqual(playedOut);
 
       // Attacked squares: ask every piece in turn, as the rule is stated
       const attackedTheSlowWay = (row, col, attacker) =>

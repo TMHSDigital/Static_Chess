@@ -297,6 +297,47 @@ function pseudoMoveTargets(board, startRow, startCol) {
 }
 
 /**
+ * Whether a move of the piece on a square could leave its own king attacked,
+ * so that each of its moves has to be played out and looked at: always for the
+ * king itself, and for every piece while the king is in check. Otherwise only
+ * a pinned piece can do that: one on a line from its own king, with nothing
+ * between them, and next behind it on that line an enemy queen, or rook or
+ * bishop as the line runs. (En passant, which takes a second piece off the
+ * board, is for the caller to look at.)
+ * @param {object} position
+ * @param {number} row
+ * @param {number} col
+ * @param {boolean} inCheck - Whether the piece's king is in check now.
+ * @returns {boolean}
+ */
+function movesNeedCheckTest(position, row, col, inCheck) {
+    const board = position.board;
+    const piece = board[row][col];
+    if (inCheck || piece.type === KING) return true;
+    const king = position.kingPositions[piece.color];
+    const rowDiff = row - king.row;
+    const colDiff = col - king.col;
+    const straight = rowDiff === 0 || colDiff === 0;
+    if (!straight && Math.abs(rowDiff) !== Math.abs(colDiff)) return false;
+    if (isPathObstructed(king.row, king.col, row, col, board)) return false;
+
+    const rowStep = Math.sign(rowDiff);
+    const colStep = Math.sign(colDiff);
+    let behindRow = row + rowStep;
+    let behindCol = col + colStep;
+    while (isWithinBounds(behindRow, behindCol) && board[behindRow][behindCol] === null) {
+        behindRow += rowStep;
+        behindCol += colStep;
+    }
+    if (!isWithinBounds(behindRow, behindCol)) return false;
+    const behind = board[behindRow][behindCol];
+    return (
+        behind.color !== piece.color &&
+        (behind.type === QUEEN || behind.type === (straight ? ROOK : BISHOP))
+    );
+}
+
+/**
  * Lists the squares the piece on a square can legally move to.
  * @param {object} position
  * @param {number} startRow
@@ -304,10 +345,18 @@ function pseudoMoveTargets(board, startRow, startCol) {
  * @returns {Array<{row: number, col: number}>}
  */
 function legalMovesFrom(position, startRow, startCol) {
+    const piece = position.board[startRow][startCol];
+    if (!piece) return [];
+    return legalTargets(position, startRow, startCol, isInCheck(position, piece.color));
+}
+
+/**
+ * legalMovesFrom for a square that holds a piece, told whether that piece's
+ * king is in check, so a caller asking about every piece works that out once.
+ */
+function legalTargets(position, startRow, startCol, inCheck) {
     const { board, enPassantTarget } = position;
     const piece = board[startRow][startCol];
-    if (!piece) return [];
-
     const color = piece.color;
     const opponent = opponentOf(color);
 
@@ -337,9 +386,16 @@ function legalMovesFrom(position, startRow, startCol) {
             candidates.push({ row: startRow, col: startCol - 2 });
     }
 
-    // 4. Drop the moves that would leave the mover's own king in check
+    // 4. Drop the moves that would leave the mover's own king in check. Only
+    // the moves that could do so are played out: those of a king, a pinned
+    // piece or a king in check, and en passant
+    const testAll = movesNeedCheckTest(position, startRow, startCol, inCheck);
     const from = { row: startRow, col: startCol };
-    return candidates.filter((to) => !isInCheck(applyMove(position, from, to).position, color));
+    return candidates.filter((to) => {
+        const enPassant = piece.type === PAWN && to.col !== startCol && !board[to.row][to.col];
+        if (!testAll && !enPassant) return true;
+        return !isInCheck(applyMove(position, from, to).position, color);
+    });
 }
 
 /**
@@ -348,11 +404,12 @@ function legalMovesFrom(position, startRow, startCol) {
  */
 function allLegalMoves(position, color) {
     const moves = [];
+    const inCheck = isInCheck(position, color);
     for (let r = 0; r < 8; r++) {
         for (let c = 0; c < 8; c++) {
             const piece = position.board[r][c];
             if (!piece || piece.color !== color) continue;
-            for (const to of legalMovesFrom(position, r, c)) {
+            for (const to of legalTargets(position, r, c, inCheck)) {
                 moves.push({ from: { row: r, col: c }, to });
             }
         }
@@ -371,16 +428,18 @@ function allLegalMoves(position, color) {
 function allLegalCaptures(position, color) {
     const board = position.board;
     const moves = [];
+    const inCheck = isInCheck(position, color);
     for (let r = 0; r < 8; r++) {
         for (let c = 0; c < 8; c++) {
             const piece = board[r][c];
             if (!piece || piece.color !== color) continue;
             const from = { row: r, col: c };
+            const testEach = movesNeedCheckTest(position, r, c, inCheck);
             for (const to of pseudoMoveTargets(board, r, c)) {
                 // An empty square only counts for a pawn stepping onto the last rank
                 const pawnArrives = piece.type === PAWN && (to.row === 0 || to.row === 7);
                 if (board[to.row][to.col] === null && !pawnArrives) continue;
-                if (!isInCheck(applyMove(position, from, to).position, color)) {
+                if (!testEach || !isInCheck(applyMove(position, from, to).position, color)) {
                     moves.push({ from, to });
                 }
             }
