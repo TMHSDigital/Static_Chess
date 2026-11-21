@@ -24,6 +24,9 @@ const hintButton = document.getElementById('hint-button');
 const resetButton = document.getElementById('reset-button');
 const undoButton = document.getElementById('undo-button');
 const redoButton = document.getElementById('redo-button');
+// The titles as written in the page, put back when the clock is not the reason
+const undoTitle = undoButton ? undoButton.title : '';
+const redoTitle = redoButton ? redoButton.title : '';
 const pgnButton = document.getElementById('pgn-button');
 const downloadButton = document.getElementById('download-button');
 const fenButton = document.getElementById('fen-button');
@@ -59,6 +62,7 @@ const shortcutsDialog = document.getElementById('shortcuts-dialog');
 const shortcutsList = document.getElementById('shortcuts-list');
 const shortcutsCloseButton = document.getElementById('shortcuts-close');
 let shortcutsReturnFocus = null; // Focus restored when the Keyboard shortcuts dialog closes
+const boardContainer = document.querySelector('.board-container');
 
 // --- Connecting the controls ---
 
@@ -341,8 +345,16 @@ function applyControls(view) {
         );
         autoplayButton.classList.toggle('is-playing', !!view.autoplaying);
     }
-    if (undoButton) undoButton.disabled = !view.canUndo;
-    if (redoButton) redoButton.disabled = !view.canRedo;
+    if (undoButton) {
+        undoButton.disabled = !view.canUndo;
+        // On the clock the buttons are off by rule, not for want of a move:
+        // say so, instead of leaving the usual title on a dead button
+        undoButton.title = view.onClock ? 'No take-backs in a timed game' : undoTitle;
+    }
+    if (redoButton) {
+        redoButton.disabled = !view.canRedo;
+        redoButton.title = view.onClock ? 'No take-backs in a timed game' : redoTitle;
+    }
     if (pgnButton) pgnButton.disabled = view.moveCount === 0;
     if (downloadButton) downloadButton.disabled = view.moveCount === 0;
     if (resignButton) resignButton.disabled = !view.inProgress;
@@ -788,6 +800,7 @@ function handleArchiveClick(event) {
         return;
     }
     closeImportDialog();
+    revealBoardAfterLoad();
 }
 
 /** Opens the dialog for pasting a game or a position. */
@@ -808,6 +821,22 @@ function closeImportDialog() {
 }
 
 /**
+ * Brings the board into view after a game was loaded. In the stacked layout
+ * the Load button sits at the bottom of the panel, so without this the loaded
+ * board and status stay off-screen. Beside the board the page does not scroll,
+ * so nothing is moved there. Motion follows the reduced-motion setting.
+ */
+function revealBoardAfterLoad() {
+    if (!boardContainer || typeof boardContainer.scrollIntoView !== 'function') return;
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    if (!window.matchMedia('(max-width: 900px)').matches) return;
+    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'auto'
+        : 'smooth';
+    boardContainer.scrollIntoView({ behavior, block: 'start' });
+}
+
+/**
  * Loads the pasted game or position. A game in progress needs a confirming
  * second click first.
  */
@@ -824,7 +853,7 @@ function handleImportLoad() {
     importError.textContent = '';
     if (
         gameHandlers.isGameInProgress() &&
-        !confirmSecondClick(importLoadButton, 'Discard current game?')
+        !confirmSecondClick(importLoadButton, 'Replace current game?')
     ) {
         return;
     }
@@ -835,6 +864,7 @@ function handleImportLoad() {
     }
     importText.value = '';
     closeImportDialog();
+    revealBoardAfterLoad();
 }
 
 /**

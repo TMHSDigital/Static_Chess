@@ -183,7 +183,11 @@ body {
 
 .moves-group {
     flex: 1 1 auto;
-    min-height: 0;
+    /* Let the group's automatic minimum cover the heading, list and step
+       buttons. With min-height:0 the group shrank below its content when
+       Settings opened, so the buttons collapsed and the list drew over the
+       rows below instead of the panel scrolling. */
+    min-height: auto;
     display: flex;
     flex-direction: column;
 }

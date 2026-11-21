@@ -1598,6 +1598,7 @@ function controlsView() {
         // There must be a move, or a resignation or agreed draw, to take back; never on the clock
         canUndo: !clock && (positionHistory.length > 0 || endedWithoutMove),
         canRedo: !clock && !isGameOver && redoStack.length > 0,
+        onClock: !!clock,
         autoplaying: autoplayTimer !== null,
         inProgress: isGameInProgress(),
         canHint: canHint(),

@@ -2,6 +2,22 @@ const { loadGame } = require('../helpers/load-game');
 
 const el = (g, id) => g.window.document.getElementById(id);
 const notations = (g) => g.game.moveHistory.map((move) => move.notation);
+
+// Pretends the page is in its stacked layout (or not), for the board reveal
+// after a load. jsdom does not lay the page out, so matchMedia is stubbed.
+const setStackedLayout = (g, stacked, reducedMotion = false) => {
+  g.window.matchMedia = (query) => ({
+    matches:
+      query === '(max-width: 900px)'
+        ? stacked
+        : query === '(prefers-reduced-motion: reduce)'
+          ? reducedMotion
+          : false,
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  });
+};
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 describe('reading PGN', () => {
@@ -438,19 +454,53 @@ describe('the Load PGN dialog', () => {
     expect(el(g, 'import-text').value).toBe('');
   });
 
-  test('asks before discarding a game in progress', () => {
+  test('asks before replacing a game in progress', () => {
     const g = loadGame();
     g.play('d2d4');
     el(g, 'import-button').click();
     el(g, 'import-text').value = '1. e4 e5';
     el(g, 'import-load').click();
-    expect(el(g, 'import-load').textContent).toBe('Discard current game?');
+    expect(el(g, 'import-load').textContent).toBe('Replace current game?');
     expect(notations(g)).toEqual(['d4']);
     el(g, 'import-load').click();
     expect(notations(g)).toEqual(['e4', 'e5']);
   });
 
-  test('validates an invalid PGN before asking to discard a game', () => {
+  test('brings the board into view after loading on a narrow screen', () => {
+    const g = loadGame();
+    setStackedLayout(g, true);
+    const board = g.window.document.querySelector('.board-container');
+    board.scrollIntoView = jest.fn();
+    el(g, 'import-button').click();
+    el(g, 'import-text').value = '1. e4 e5';
+    el(g, 'import-load').click();
+    expect(board.scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(board.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+  });
+
+  test('scrolls without animation when reduced motion is set', () => {
+    const g = loadGame();
+    setStackedLayout(g, true, true);
+    const board = g.window.document.querySelector('.board-container');
+    board.scrollIntoView = jest.fn();
+    el(g, 'import-button').click();
+    el(g, 'import-text').value = '1. e4 e5';
+    el(g, 'import-load').click();
+    expect(board.scrollIntoView).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' });
+  });
+
+  test('leaves the page alone after loading beside the board', () => {
+    const g = loadGame();
+    setStackedLayout(g, false);
+    const board = g.window.document.querySelector('.board-container');
+    board.scrollIntoView = jest.fn();
+    el(g, 'import-button').click();
+    el(g, 'import-text').value = '1. e4 e5';
+    el(g, 'import-load').click();
+    expect(board.scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  test('validates an invalid PGN before asking to replace a game', () => {
     const g = loadGame();
     g.play('d2d4');
     el(g, 'import-button').click();
@@ -462,7 +512,7 @@ describe('the Load PGN dialog', () => {
     expect(el(g, 'import-dialog').hidden).toBe(false);
     el(g, 'import-text').value = '1. e4 e5';
     el(g, 'import-load').click();
-    expect(el(g, 'import-load').textContent).toBe('Discard current game?');
+    expect(el(g, 'import-load').textContent).toBe('Replace current game?');
     expect(notations(g)).toEqual(['d4']);
     el(g, 'import-load').click();
     expect(notations(g)).toEqual(['e4', 'e5']);
