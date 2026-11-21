@@ -347,3 +347,101 @@ describe('a button that switches itself off hands the focus on', () => {
     expect(doc(g).activeElement).toBe(step(g, 'previous'));
   });
 });
+
+describe('keyboard shortcuts panel', () => {
+  const pressOn = (g, target, key, extra = {}) => {
+    const event = new g.window.KeyboardEvent('keydown', {
+      key,
+      bubbles: true,
+      cancelable: true,
+      ...extra,
+    });
+    target.dispatchEvent(event);
+    return event;
+  };
+
+  test('pressing ? outside text fields opens the panel, and Escape closes it and returns focus', () => {
+    const g = loadGame();
+    const dialog = doc(g).getElementById('shortcuts-dialog');
+    const close = doc(g).getElementById('shortcuts-close');
+    const e2 = g.board.getSquareElement(6, 4);
+    e2.focus();
+
+    expect(dialog.hidden).toBe(true);
+    const openEvent = pressOn(g, e2, '?', { shiftKey: true });
+    expect(openEvent.defaultPrevented).toBe(true);
+    expect(dialog.hidden).toBe(false);
+    expect(doc(g).activeElement).toBe(close);
+
+    // Tab and Shift+Tab keep focus inside the dialog
+    const tab = pressOn(g, close, 'Tab');
+    expect(tab.defaultPrevented).toBe(true);
+    expect(doc(g).activeElement).toBe(close);
+    const shiftTab = pressOn(g, close, 'Tab', { shiftKey: true });
+    expect(shiftTab.defaultPrevented).toBe(true);
+    expect(doc(g).activeElement).toBe(close);
+
+    // Escape closes the panel and puts focus back on the square that was focused
+    const esc = pressOn(g, close, 'Escape');
+    expect(esc.defaultPrevented).toBe(true);
+    expect(dialog.hidden).toBe(true);
+    expect(doc(g).activeElement).toBe(e2);
+  });
+
+  test('opens from the Keyboard shortcuts button and closes via Close or the dimmed backdrop', () => {
+    const g = loadGame();
+    const button = doc(g).getElementById('shortcuts-button');
+    const dialog = doc(g).getElementById('shortcuts-dialog');
+    const close = doc(g).getElementById('shortcuts-close');
+
+    button.click();
+    expect(dialog.hidden).toBe(false);
+    expect(doc(g).activeElement).toBe(close);
+
+    // Clicking inside the panel does not close it; clicking the backdrop does
+    doc(g).querySelector('.shortcuts-panel').click();
+    expect(dialog.hidden).toBe(false);
+    dialog.click();
+    expect(dialog.hidden).toBe(true);
+    expect(doc(g).activeElement).toBe(button);
+
+    // Reopening does not duplicate the list, and Close closes it again
+    const countBefore = doc(g).querySelectorAll('#shortcuts-list .shortcuts-row').length;
+    button.click();
+    expect(doc(g).querySelectorAll('#shortcuts-list .shortcuts-row')).toHaveLength(countBefore);
+    close.click();
+    expect(dialog.hidden).toBe(true);
+    expect(doc(g).activeElement).toBe(button);
+  });
+
+  test('pressing ? inside a form field or another open dialog does not open the panel', () => {
+    const g = loadGame();
+    const dialog = doc(g).getElementById('shortcuts-dialog');
+
+    const select = doc(g).getElementById('opponent-select');
+    const selectEvent = pressOn(g, select, '?', { shiftKey: true });
+    expect(selectEvent.defaultPrevented).toBe(false);
+    expect(dialog.hidden).toBe(true);
+
+    const textarea = doc(g).getElementById('import-text');
+    doc(g).getElementById('import-button').click();
+    const textEvent = pressOn(g, textarea, '?', { shiftKey: true });
+    expect(textEvent.defaultPrevented).toBe(false);
+    expect(dialog.hidden).toBe(true);
+  });
+
+  test('lists every binding from the shared KEY_BINDINGS table', () => {
+    const g = loadGame();
+    doc(g).getElementById('shortcuts-button').click();
+
+    const rows = Array.from(doc(g).querySelectorAll('#shortcuts-list .shortcuts-row'));
+    const { KEY_BINDINGS, matchesKeyBinding } = globalThis;
+    expect(rows).toHaveLength(KEY_BINDINGS.length);
+    KEY_BINDINGS.forEach((binding, index) => {
+      const kbds = Array.from(rows[index].querySelectorAll('dt kbd')).map((el) => el.textContent);
+      expect(kbds).toEqual(binding.labels);
+      expect(rows[index].querySelector('dd').textContent).toBe(binding.description);
+    });
+    expect(matchesKeyBinding('nonexistent-binding', { key: '?' })).toBe(false);
+  });
+});

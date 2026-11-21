@@ -57,6 +57,11 @@ const archiveSection = document.getElementById('archive-section');
 const archiveList = document.getElementById('archive-list');
 const archiveClearButton = document.getElementById('archive-clear');
 const moreSettings = document.getElementById('more-settings');
+const shortcutsButton = document.getElementById('shortcuts-button');
+const shortcutsDialog = document.getElementById('shortcuts-dialog');
+const shortcutsList = document.getElementById('shortcuts-list');
+const shortcutsCloseButton = document.getElementById('shortcuts-close');
+let shortcutsReturnFocus = null; // Focus restored when the Keyboard shortcuts dialog closes
 const boardContainer = document.querySelector('.board-container');
 
 // --- Connecting the controls ---
@@ -83,9 +88,18 @@ function stopAutoplayOnInput(event) {
 
 /** @returns {boolean} True for Ctrl+Y or Ctrl+Shift+Z (Cmd on a Mac). */
 function isRedoKey(event) {
-    if (!(event.ctrlKey || event.metaKey) || event.altKey) return false;
-    const key = String(event.key).toLowerCase();
-    return (key === 'y' && !event.shiftKey) || (key === 'z' && event.shiftKey);
+    return matchesKeyBinding('redo', event);
+}
+
+/** @returns {{dialog: HTMLElement, close: () => void}|null} The open modal dialog, if any. */
+function openModalDialog() {
+    if (shortcutsDialog && !shortcutsDialog.hidden) {
+        return { dialog: shortcutsDialog, close: closeShortcutsDialog };
+    }
+    if (importDialog && !importDialog.hidden) {
+        return { dialog: importDialog, close: closeImportDialog };
+    }
+    return null;
 }
 
 /**
@@ -95,8 +109,9 @@ function isRedoKey(event) {
  */
 function handlePageKeydown(event) {
     if (event.defaultPrevented) return;
-    if (importDialog && !importDialog.hidden) {
-        handleOpenDialogKey(event); // Nothing behind an open dialog reacts to keys
+    const modal = openModalDialog();
+    if (modal) {
+        handleOpenDialogKey(event, modal.dialog, modal.close); // Nothing behind an open dialog reacts to keys
         return;
     }
     const target = event.target;
@@ -106,6 +121,25 @@ function handlePageKeydown(event) {
         if (inField('input, select, textarea, [role="dialog"], .promotion-backdrop')) return;
         event.preventDefault();
         redoHandler();
+        return;
+    }
+    // "?" opens the keyboard shortcuts panel (Shift is held on most layouts)
+    if (
+        shortcutsDialog &&
+        !event.altKey &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        matchesKeyBinding('shortcuts-help', event)
+    ) {
+        if (
+            inField(
+                'input, select, textarea, [contenteditable], [role="dialog"], .promotion-backdrop'
+            )
+        ) {
+            return;
+        }
+        event.preventDefault();
+        openShortcutsDialog();
         return;
     }
     if (!pageKeyHandler) return;
@@ -219,6 +253,13 @@ function bindControls(handlers) {
     if (importFileButton && importFile) {
         listen(importFileButton, 'click', chooseImportFile);
         listen(importFile, 'change', handleImportFileChosen);
+    }
+
+    // The Keyboard shortcuts dialog
+    if (shortcutsDialog) {
+        listen(shortcutsButton, 'click', handleShortcutsButtonClick);
+        listen(shortcutsCloseButton, 'click', closeShortcutsDialog);
+        listen(shortcutsDialog, 'click', handleShortcutsBackdropClick);
     }
 }
 
@@ -887,26 +928,92 @@ function readImportFile(file) {
     );
 }
 
+// --- The Keyboard shortcuts dialog ---
+
+/** Fills the Keyboard shortcuts dialog from KEY_BINDINGS so it cannot drift from the handlers. */
+function renderShortcutsList() {
+    if (!shortcutsList || shortcutsList.childElementCount > 0) return;
+    const sections = new Map();
+    for (const binding of KEY_BINDINGS) {
+        if (!sections.has(binding.section)) sections.set(binding.section, []);
+        sections.get(binding.section).push(binding);
+    }
+    for (const [heading, entries] of sections) {
+        const group = document.createElement('section');
+        group.className = 'shortcuts-section';
+        const title = document.createElement('h4');
+        title.textContent = heading;
+        group.appendChild(title);
+        const list = document.createElement('dl');
+        list.className = 'shortcuts-entries';
+        for (const entry of entries) {
+            const row = document.createElement('div');
+            row.className = 'shortcuts-row';
+            const dt = document.createElement('dt');
+            entry.labels.forEach((label, index) => {
+                if (index > 0) dt.appendChild(document.createTextNode(' / '));
+                const kbd = document.createElement('kbd');
+                kbd.textContent = label;
+                dt.appendChild(kbd);
+            });
+            const dd = document.createElement('dd');
+            dd.textContent = entry.description;
+            row.append(dt, dd);
+            list.appendChild(row);
+        }
+        group.appendChild(list);
+        shortcutsList.appendChild(group);
+    }
+}
+
+/** Opens the Keyboard shortcuts dialog and remembers where to put the focus back. */
+function openShortcutsDialog(trigger = null) {
+    if (!shortcutsDialog) return;
+    shortcutsReturnFocus = trigger || document.activeElement;
+    renderShortcutsList();
+    shortcutsDialog.hidden = false;
+    if (shortcutsCloseButton) shortcutsCloseButton.focus();
+}
+
+/** Closes the Keyboard shortcuts dialog and returns focus to where it was before. */
+function closeShortcutsDialog() {
+    if (!shortcutsDialog || shortcutsDialog.hidden) return;
+    const returnFocus = shortcutsReturnFocus;
+    shortcutsReturnFocus = null;
+    shortcutsDialog.hidden = true;
+    if (returnFocus && typeof returnFocus.focus === 'function') returnFocus.focus();
+}
+
+/** Opens the Keyboard shortcuts dialog from the link in Settings. */
+function handleShortcutsButtonClick() {
+    openShortcutsDialog(shortcutsButton);
+}
+
+/** A click on the dimmed area around the Keyboard shortcuts panel closes it. */
+function handleShortcutsBackdropClick(event) {
+    if (event.target === shortcutsDialog) closeShortcutsDialog();
+}
+
 /**
- * Keys pressed while the Load dialog is open, wherever the focus is, as after
+ * Keys pressed while a modal dialog is open, wherever the focus is, as after
  * a click on the dimmed backdrop: Escape closes it, and Tab and Shift+Tab go
  * round its own controls instead of reaching the page behind it.
  */
-function handleOpenDialogKey(event) {
-    if (event.key === 'Escape') {
+function handleOpenDialogKey(event, dialog, close) {
+    if (matchesKeyBinding('dialog-close', event)) {
         event.preventDefault();
-        closeImportDialog();
+        close();
         return;
     }
     if (event.key !== 'Tab') return;
     const controls = Array.from(
-        importDialog.querySelectorAll('textarea, button, input, [tabindex="0"]')
+        dialog.querySelectorAll('textarea, button, input, a[href], [tabindex="0"]')
     ).filter((element) => !element.disabled && !element.closest('[hidden]'));
     if (controls.length === 0) return;
     const first = controls[0];
     const last = controls[controls.length - 1];
     const active = document.activeElement;
-    const inside = importDialog.contains(active);
+    const inside = dialog.contains(active);
     if (event.shiftKey && (!inside || active === first)) {
         event.preventDefault();
         last.focus();
@@ -938,6 +1045,8 @@ if (typeof module !== 'undefined' && module.exports) {
         downloadText,
         openImportDialog,
         closeImportDialog,
+        openShortcutsDialog,
+        closeShortcutsDialog,
         openSharedText,
         askToConfirm,
         withdrawQuestion,

@@ -278,8 +278,10 @@
                         </label>
                     </div>
                     <p class="keys-note">
-                        Keys: Left and Right step through the moves, Esc returns to the game. With
-                        the keyboard on the board, the arrow keys move between squares.
+                        <button id="shortcuts-button" type="button" class="shortcuts-link">
+                            Keyboard shortcuts
+                        </button>
+                        (or press <kbd>?</kbd>).
                     </p>
                 </details>
                 <p class="about">
@@ -324,6 +326,23 @@
                     <ul id="archive-list" class="archive-list" aria-labelledby="archive-title"></ul>
                     <button id="archive-clear" class="btn archive-clear" type="button">
                         Clear all
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="shortcuts-dialog" class="promotion-backdrop" hidden>
+            <div
+                class="promotion-panel shortcuts-panel"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="shortcuts-title"
+            >
+                <h3 id="shortcuts-title">Keyboard shortcuts</h3>
+                <div id="shortcuts-list" class="shortcuts-list"></div>
+                <div class="buttons-row">
+                    <button id="shortcuts-close" class="btn btn-primary" type="button">
+                        Close
                     </button>
                 </div>
             </div>

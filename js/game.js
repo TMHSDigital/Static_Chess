@@ -553,15 +553,14 @@ function handleMoveListClick(event) {
 /** Left and Right step through the game from the move list; Home and End jump to its ends. */
 function handleMoveListKeydown(event) {
     const shown = shownPosition().ply;
-    const targets = {
-        ArrowLeft: shown - 1,
-        ArrowRight: shown + 1,
-        Home: 0,
-        End: moveHistory.length,
-    };
-    if (!(event.key in targets)) return;
+    let target = null;
+    if (matchesKeyBinding('step-previous', event)) target = shown - 1;
+    else if (matchesKeyBinding('step-next', event)) target = shown + 1;
+    else if (matchesKeyBinding('step-first', event)) target = 0;
+    else if (matchesKeyBinding('step-last', event)) target = moveHistory.length;
+    if (target === null) return;
     event.preventDefault();
-    viewMove(targets[event.key]);
+    viewMove(target);
     focusCurrentMove();
 }
 
@@ -575,15 +574,15 @@ function handleMoveListKeydown(event) {
 function handlePageKey(key) {
     if (!canBrowse()) return false; // Nothing to look at
     const shown = shownPosition().ply;
-    if (key === 'ArrowLeft' && shown > 0) {
+    if (keyBinding('step-previous').keys.includes(key) && shown > 0) {
         viewMove(shown - 1);
         return true;
     }
-    if (key === 'ArrowRight' && shown < moveHistory.length) {
+    if (keyBinding('step-next').keys.includes(key) && shown < moveHistory.length) {
         viewMove(shown + 1);
         return true;
     }
-    if (key === 'Escape' && viewPly !== null) {
+    if (keyBinding('return-to-game').keys.includes(key) && viewPly !== null) {
         returnToLiveGame();
         return true;
     }

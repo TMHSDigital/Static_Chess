@@ -943,6 +943,40 @@ body.coords-visible {
     color: var(--muted-text);
 }
 
+.shortcuts-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: var(--text-color);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+.shortcuts-link:hover,
+.shortcuts-link:focus-visible {
+    color: var(--accent-color);
+}
+
+.shortcuts-link:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+}
+
+.keys-note kbd,
+.shortcuts-panel kbd {
+    display: inline-block;
+    padding: 1px 6px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 0.85em;
+    color: var(--text-color);
+    background-color: var(--inset-bg);
+    border: 1px solid var(--control-border);
+    border-radius: var(--radius-sm);
+}
+
 .more-settings summary:hover {
     background-color: var(--hover-bg);
 }
@@ -1165,4 +1199,56 @@ body.coords-visible {
 
 .archive-clear {
     margin-top: var(--space-2);
+}
+
+/* The dialog listing every keyboard shortcut */
+.shortcuts-panel {
+    width: 440px;
+    max-height: calc(100vh - 2 * var(--space-4));
+    overflow-y: auto;
+    text-align: left;
+}
+
+.shortcuts-section + .shortcuts-section {
+    margin-top: var(--space-3);
+}
+
+.shortcuts-section h4 {
+    margin: 0 0 var(--space-1);
+    font-size: 0.9rem;
+    color: var(--muted-text);
+}
+
+.shortcuts-entries {
+    margin: 0;
+}
+
+.shortcuts-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-3);
+    padding: var(--space-1) 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+}
+
+.shortcuts-row:last-child {
+    border-bottom: none;
+}
+
+.shortcuts-row dt {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.shortcuts-row dd {
+    margin: 0;
+    text-align: right;
+    color: var(--text-color);
+}
+
+.shortcuts-panel .buttons-row {
+    justify-content: flex-end;
+    margin-top: var(--space-3);
 }
