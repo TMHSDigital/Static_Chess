@@ -57,6 +57,7 @@ const archiveSection = document.getElementById('archive-section');
 const archiveList = document.getElementById('archive-list');
 const archiveClearButton = document.getElementById('archive-clear');
 const moreSettings = document.getElementById('more-settings');
+const boardContainer = document.querySelector('.board-container');
 
 // --- Connecting the controls ---
 
@@ -758,6 +759,7 @@ function handleArchiveClick(event) {
         return;
     }
     closeImportDialog();
+    revealBoardAfterLoad();
 }
 
 /** Opens the dialog for pasting a game or a position. */
@@ -778,6 +780,22 @@ function closeImportDialog() {
 }
 
 /**
+ * Brings the board into view after a game was loaded. In the stacked layout
+ * the Load button sits at the bottom of the panel, so without this the loaded
+ * board and status stay off-screen. Beside the board the page does not scroll,
+ * so nothing is moved there. Motion follows the reduced-motion setting.
+ */
+function revealBoardAfterLoad() {
+    if (!boardContainer || typeof boardContainer.scrollIntoView !== 'function') return;
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    if (!window.matchMedia('(max-width: 900px)').matches) return;
+    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'auto'
+        : 'smooth';
+    boardContainer.scrollIntoView({ behavior, block: 'start' });
+}
+
+/**
  * Loads the pasted game or position. A game in progress needs a confirming
  * second click first.
  */
@@ -794,7 +812,7 @@ function handleImportLoad() {
     importError.textContent = '';
     if (
         gameHandlers.isGameInProgress() &&
-        !confirmSecondClick(importLoadButton, 'Discard current game?')
+        !confirmSecondClick(importLoadButton, 'Replace current game?')
     ) {
         return;
     }
@@ -805,6 +823,7 @@ function handleImportLoad() {
     }
     importText.value = '';
     closeImportDialog();
+    revealBoardAfterLoad();
 }
 
 /**

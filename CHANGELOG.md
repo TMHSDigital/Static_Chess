@@ -37,6 +37,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Load: the question before loading over a game in progress now says the game will be replaced, not discarded, since it is kept in the past games; on a narrow screen the loaded board and status are brought into view instead of leaving the page at the Load button (#188)
 - In a timed game Undo and Redo now say why they are off ("No take-backs in a timed game") instead of sitting greyed out with their usual titles (#187)
 - Opening Settings on a desktop-width screen no longer collapses the step buttons or draws the move list over the Opponent and Clock rows: the moves group keeps its content height and the side panel scrolls instead (#186)
 - On the clock, a king with a knight, or with bishops on one colour, now wins when the other side runs out of time while it still has pieces or pawns that make a mate possible; it was scored as a draw (#165)

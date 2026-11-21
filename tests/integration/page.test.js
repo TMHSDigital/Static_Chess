@@ -305,7 +305,7 @@ describe('a shared link', () => {
     });
     expect(byId('import-dialog').hidden).toBe(false);
     expect(byId('import-text').value).toBe(FEN);
-    expect(byId('import-load').textContent).toBe('Discard current game?');
+    expect(byId('import-load').textContent).toBe('Replace current game?');
     expect(run('moveHistory.length')).toBe(1);
 
     byId('import-load').click();
