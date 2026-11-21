@@ -30,6 +30,13 @@ const AI_ENDGAME_MATERIAL = 1700; // Pieces (not pawns) left on the board, both 
 const AI_WINNING_LEAD = 400; // Material lead from which the engine goes after the enemy king
 const AI_REPEAT_PENALTY = 60; // What a move back into an earlier position costs the side that is better
 
+// How far each square is from the centre, by its row * 8 + column: 0.5 on the
+// four centre squares, 3.5 on the rim. Worked out once, as evaluatePosition
+// needs it for nearly every piece of every position the search looks at.
+const AI_FROM_CENTRE = Array.from({ length: 64 }, (_, square) =>
+    Math.max(Math.abs(Math.floor(square / 8) - 3.5), Math.abs((square % 8) - 3.5))
+);
+
 // Timed searches stop by throwing this once the deadline has passed
 const AI_SEARCH_STOPPED = {};
 let aiSearchDeadline = Infinity;
@@ -65,7 +72,7 @@ function evaluatePosition(position, color) {
         }
     }
     const endgame = piecesLeft <= AI_ENDGAME_MATERIAL;
-    const fromCentreOf = (r, c) => Math.max(Math.abs(r - 3.5), Math.abs(c - 3.5)); // 0.5 in the centre, 3.5 on the rim
+    const fromCentreOf = (r, c) => AI_FROM_CENTRE[r * 8 + c];
 
     let score = 0;
     for (let r = 0; r < 8; r++) {
