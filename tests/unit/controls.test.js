@@ -148,6 +148,27 @@ describe('Undo button', () => {
     expect(g.at('e2').type).toBe('p');
     expect(g.game.moveHistory).toHaveLength(0);
   });
+
+  test('says why it is off in a timed game', () => {
+    const g = loadGame();
+    g.game.setTimeControl('1+0');
+    g.play('e2e4');
+    const undo = g.window.document.getElementById('undo-button');
+    const redo = g.window.document.getElementById('redo-button');
+    expect(undo.disabled).toBe(true);
+    expect(redo.disabled).toBe(true);
+    expect(undo.title).toBe('No take-backs in a timed game');
+    expect(redo.title).toBe('No take-backs in a timed game');
+  });
+
+  test('keeps its usual title in an untimed game', () => {
+    const g = loadGame();
+    g.play('e2e4');
+    expect(g.window.document.getElementById('undo-button').title).toBe('Undo last move');
+    expect(g.window.document.getElementById('redo-button').title).toBe(
+      'Play the undone move again (Ctrl+Y)'
+    );
+  });
 });
 
 describe('Redo', () => {
